@@ -26,7 +26,7 @@
     .primary{background:var(--accent);color:var(--accent-contrast)}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
     .order-btn{background:#fff!important;color:var(--text)!important;border:1px solid var(--border-strong)!important}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
     .car{background:#fff;border-radius:var(--radius);padding:16px;min-height:110px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;border:1px solid var(--border);border-left:4px solid var(--border-strong);transition:box-shadow .15s ease,transform .1s ease}
     .car:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-1px)}
 
@@ -150,6 +150,21 @@
       #printReportArea th{background:#111827!important;color:white!important;text-align:left}
       #printReportArea th,#printReportArea td{border:1px solid #cbd5e1;padding:6px;vertical-align:top}
       #printReportArea .pr-foot{margin-top:16px;color:#64748b;font-size:11px}
+    }
+
+    @media(min-width:1101px){
+      .box{padding:32px}
+      .box h2{font-size:22px}
+      .box.compact{padding:30px}
+      .box.compact h2{font-size:21px;margin-bottom:14px}
+      .box.compact .step-title{font-size:15px;margin-bottom:12px}
+      .box.compact .form{gap:16px}
+      .box.compact .form input,.box.compact .form textarea{padding:12px 14px;font-size:15px;border-radius:9px}
+      .box.compact .form label{font-size:13px}
+      .box.compact .hint{font-size:12.5px;margin-top:5px}
+      .box.compact .actions,.box.compact .two-actions{margin-top:18px}
+      .box.compact .actions button,.box.compact .two-actions button{padding:11px 18px;font-size:14.5px}
+      .box.compact .quick-btn{padding:10px 15px;font-size:14px}
     }
 
     @media(min-width:1600px){
@@ -3396,9 +3411,8 @@ function setCloudStatus(text){
     if(!el) return;
     const t=String(text||'').toLowerCase();
     const offline=t.includes('нет связи')||t.includes('ошибка');
-    el.textContent=offline?'Сервер: нет связи':'Сервер: онлайн';
-    if(offline){el.style.background='#7f1d1d'; el.style.borderColor='#ef4444';}
-    else {el.style.background='#14532d'; el.style.borderColor='#22c55e';}
+    el.title=offline?'Сервер: нет связи':'Сервер: онлайн';
+    el.style.background=offline?'#dc2626':'#111111';
   }catch(e){}
 }
 function cloudDeviceId(){let id=storeGet('pandora_cloud_device_id',''); if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(16).slice(2); storeSet('pandora_cloud_device_id',id);} return id;}
@@ -3516,7 +3530,7 @@ function openCloudSyncPanel(){const localScore=cloudScore(cloudPayload());docume
 function cloudManualMerge(){cloudSyncNow(true);closeModal();}
 function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);closeModal();}
 function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
-function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.style.cssText='position:fixed;right:12px;bottom:12px;z-index:9999;background:#111;color:#fff;border:1px solid #333;border-radius:999px;padding:7px 11px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:.95;cursor:pointer;font-weight:700';bar.textContent=cloudStatusText;document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
+function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#111;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 1px 4px rgba(0,0,0,.25);opacity:.9;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
 /* === /Pandora34 Cloud Sync MERGE v3 === */
 
 
