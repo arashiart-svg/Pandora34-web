@@ -5,134 +5,139 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pandora34 CRM</title>
   <style>
-    :root{--bg:#ffffff;--panel:#fafafa;--card:#ffffff;--text:#111111;--muted:#6f6f6f;--border:#e4e4e4;--border-strong:#c7c7c7;--accent:#111111;--accent-contrast:#ffffff;--green:#111111;--orange:#111111;--gray:#8a8a8a;--red:#dc2626;--yellow:#111111;--radius:12px}
+    :root{--bg:#05080d;--panel:#0a0f16;--card:#0d141d;--text:#eef6fc;--muted:#8ba0b4;--border:#1a2530;--border-strong:#00e5ff;--accent:#00e5ff;--accent-contrast:#04141c;--green:#00e5ff;--orange:#ffb020;--gray:#5b6b7a;--red:#ff3b5c;--yellow:#00e5ff;--radius:0;--glow:0 0 10px rgba(0,229,255,.35);--glow-strong:0 0 20px rgba(0,229,255,.6)}
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
     button{font-family:inherit}
+    button:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:0;cursor:pointer}
+    input:not([style]),select:not([style]),textarea:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:0;color-scheme:dark}
     .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-    .side{padding:24px 18px;background:var(--panel);border-right:1px solid var(--border)}
-    .logo{font-size:18px;font-weight:800;margin-bottom:26px;letter-spacing:.2px}
-    .menu button{width:100%;padding:11px 14px;margin:2px 0;border:0;border-radius:9px;background:transparent;color:var(--text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease}
-    .menu button:hover{background:#ececec}
-    .menu button.active{background:var(--accent);color:var(--accent-contrast);font-weight:700}
+    .side{padding:24px 18px;background:var(--panel);border-right:1px solid var(--border-strong);box-shadow:2px 0 16px rgba(0,229,255,.08)}
+    .logo{font-size:18px;font-weight:800;margin-bottom:26px;letter-spacing:.2px;color:var(--text);text-shadow:0 0 12px rgba(0,229,255,.55)}
+    .menu button{width:100%;padding:11px 14px;margin:2px 0;border:1px solid transparent;border-radius:0;background:transparent;color:var(--text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease,border-color .12s ease}
+    .menu button:hover{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.3)}
+    .menu button.active{background:rgba(0,229,255,.14);color:var(--text);font-weight:700;border-color:var(--border-strong);box-shadow:inset 0 0 12px rgba(0,229,255,.25)}
     main{padding:32px 40px;max-width:1400px;margin:0 auto;width:100%}
     .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:16px;flex-wrap:wrap}
-    .title{font-size:22px;font-weight:800;letter-spacing:-.2px}
+    .title{font-size:22px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
     .date{font-size:13px;color:var(--muted);margin-top:2px}
     .tabs{display:flex;gap:8px;margin-bottom:16px}
-    .tabs button,.primary{border:1px solid var(--border-strong);border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer}
-    .tabs button{background:#fff;color:var(--text)}
-    .tabs button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent)}
-    .primary{background:var(--accent);color:var(--accent-contrast)}
+    .tabs button,.primary{border:1px solid var(--border-strong);border-radius:0;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease}
+    .tabs button{background:var(--card);color:var(--text)}
+    .tabs button:hover{box-shadow:var(--glow)}
+    .tabs button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
+    .primary{background:var(--accent);color:var(--accent-contrast);box-shadow:var(--glow)}
+    .primary:hover{box-shadow:var(--glow-strong)}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .order-btn{background:#fff!important;color:var(--text)!important;border:1px solid var(--border-strong)!important}
+    .order-btn{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border-strong)!important;box-shadow:var(--glow)!important}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-    .car{background:#fff;border-radius:var(--radius);padding:16px;min-height:110px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;border:1px solid var(--border);border-left:4px solid var(--border-strong);transition:box-shadow .15s ease,transform .1s ease}
-    .car:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-1px)}
+    .car{background:linear-gradient(180deg,#0d151f,#0a0f16);border-radius:0;padding:16px;min-height:110px;box-shadow:0 0 0 1px rgba(0,229,255,.14),0 8px 18px rgba(0,0,0,.5);cursor:pointer;border:1px solid var(--border-strong);border-left:4px solid var(--border-strong);transition:box-shadow .2s ease,transform .15s ease,border-color .2s ease}
+    .car:hover{box-shadow:0 0 24px rgba(0,229,255,.5),0 10px 24px rgba(0,0,0,.6);transform:translateY(-2px);border-left-color:#6df3ff}
 
-    .priority-high{border-left-color:#111111}
-    .priority-mid{border-left-color:#6f6f6f}
-    .priority-low{border-left-color:#c7c7c7}
-    .work{border-left-color:#e4e4e4}
-    .done{background:#fafafa;border-left-color:#e4e4e4;opacity:.85}
-    .urgent{background:#111111;border-left-color:#111111}
-    .urgent .num,.urgent .brand,.urgent .small{color:#fff}
-    .urgent .badge{background:#fff;color:#111}
-    .num{font-size:18px;font-weight:800;letter-spacing:.2px}
+    .priority-high{border-left-color:#ff3b5c;box-shadow:0 0 0 1px rgba(255,59,92,.28),0 8px 18px rgba(0,0,0,.5)}
+    .priority-mid{border-left-color:#ffb020;box-shadow:0 0 0 1px rgba(255,176,32,.22),0 8px 18px rgba(0,0,0,.5)}
+    .priority-low{border-left-color:#3d5566}
+    .work{border-left-color:var(--border-strong)}
+    .done{background:#0a0f16;border-left-color:#293846;opacity:.75}
+    .urgent{background:linear-gradient(135deg,#00202b,#000);border-left-color:var(--accent);box-shadow:0 0 26px rgba(0,229,255,.55)}
+    .urgent .num,.urgent .brand,.urgent .small{color:#eafcff}
+    .urgent .badge{background:var(--accent);color:var(--accent-contrast)}
+    .num{font-size:18px;font-weight:800;letter-spacing:.2px;color:var(--text)}
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
-    .small{color:#333;font-size:12.5px;margin-top:4px;line-height:1.3}
-    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:999px;background:#111;color:#fff;font-weight:700;font-size:12px}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:20px}
-    .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:#fff;border:1px solid var(--border);border-radius:16px;padding:26px;box-shadow:0 24px 60px rgba(0,0,0,.18)}
-    .box h2{margin:0 0 16px;font-size:20px;font-weight:800}
+    .small{color:#bcccdb;font-size:12.5px;margin-top:4px;line-height:1.3}
+    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:0;background:var(--accent);color:var(--accent-contrast);font-weight:700;font-size:12px;box-shadow:var(--glow)}
+    .modal{position:fixed;inset:0;background:rgba(0,4,8,.75);display:none;align-items:center;justify-content:center;padding:20px}
+    .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:26px;box-shadow:0 0 50px rgba(0,229,255,.18),0 24px 60px rgba(0,0,0,.7)}
+    .box h2{margin:0 0 16px;font-size:20px;font-weight:800;color:var(--text)}
     .form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .form label{font-size:12.5px;color:var(--muted);font-weight:600}
-    .form input,.form textarea{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border-strong);background:#fff;color:var(--text);font-size:14px}
-    .form input:focus,.form textarea:focus,.form select:focus,select:focus{outline:none;border-color:#111}
+    .form input,.form textarea{width:100%;padding:11px 12px;border-radius:0;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:14px;color-scheme:dark}
+    .form input:focus,.form textarea:focus,.form select:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 10px rgba(0,229,255,.45)}
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
     .wide{grid-column:1/-1}
     .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-    .actions button,.two-actions button{border:1px solid var(--accent);border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;background:var(--accent);color:var(--accent-contrast);cursor:pointer}
+    .actions button,.two-actions button{border:1px solid var(--accent);border-radius:0;padding:10px 18px;font-size:14px;font-weight:700;background:var(--accent);color:var(--accent-contrast);cursor:pointer;box-shadow:var(--glow)}
+    .actions button:hover,.two-actions button:hover{box-shadow:var(--glow-strong)}
     .two-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
     .two-actions .left,.two-actions .right{display:flex;gap:10px;flex-wrap:wrap}
-    .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:var(--radius);color:var(--muted);font-size:15px;text-align:center}
+    .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:0;color:var(--muted);font-size:15px;text-align:center;background:rgba(0,229,255,.03)}
     .combo{position:relative}
-    .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--border-strong);border-radius:12px;padding:6px;box-shadow:0 20px 50px rgba(0,0,0,.15)}
+    .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:6px;box-shadow:0 0 24px rgba(0,229,255,.2),0 20px 50px rgba(0,0,0,.6)}
     .suggest.show{display:block}
-    .suggest button{display:block;width:100%;border:0;text-align:left;margin:2px 0;padding:10px 12px;border-radius:8px;background:transparent;color:var(--text);font-size:14px;cursor:pointer}
-    .suggest button:hover,.suggest button:active{background:#f0f0f0}
+    .suggest button{display:block;width:100%;border:0;text-align:left;margin:2px 0;padding:10px 12px;border-radius:0;background:transparent;color:var(--text);font-size:14px;cursor:pointer}
+    .suggest button:hover,.suggest button:active{background:rgba(0,229,255,.14)}
     .empty{padding:14px;color:var(--muted)}
     .step-title{font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)}
     .quick-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .quick-btn{border:1px solid var(--border-strong);border-radius:9px;padding:9px 13px;background:#fff;color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .quick-btn.selected{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent)}
+    .quick-btn{border:1px solid var(--border-strong);border-radius:0;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
+    .quick-btn.selected{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
 
     .box.compact{padding:18px}
     .box.compact h2{font-size:18px;margin-bottom:10px}
     .box.compact .step-title{font-size:14px;margin-bottom:8px}
     .box.compact .form{gap:8px}
-    .box.compact .form input,.box.compact .form textarea{padding:9px;font-size:13.5px;border-radius:8px}
+    .box.compact .form input,.box.compact .form textarea{padding:9px;font-size:13.5px;border-radius:0}
     .box.compact .form label{font-size:11.5px}
     .box.compact .hint{font-size:11px;margin-top:3px}
     .box.compact .actions,.box.compact .two-actions{margin-top:10px}
     .box.compact .actions button,.box.compact .two-actions button{padding:9px 14px;font-size:13.5px}
-    .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:9px;padding:10px 12px;background:#fff;color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
-    .photo-btn:hover,.photo-btn:active{background:#f0f0f0}
+    .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:0;padding:10px 12px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
+    .photo-btn:hover,.photo-btn:active{background:rgba(0,229,255,.12)}
     .photo-btn span{color:var(--text);margin-right:8px}
 
 
-    .report-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px}
-    .report-num{font-size:24px;font-weight:800;margin-top:6px}
+    .report-card{background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:18px;box-shadow:0 0 16px rgba(0,229,255,.1)}
+    .report-num{font-size:24px;font-weight:800;margin-top:6px;color:var(--text)}
 
 
     .report-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
     .report-controls button,.report-controls select{
-      border:1px solid var(--border-strong);border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:700;
-      background:#fff;color:var(--text);cursor:pointer
+      border:1px solid var(--border-strong);border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:700;
+      background:var(--panel);color:var(--text);cursor:pointer
     }
-    .report-controls button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent)}
-    .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:#333;font-size:14px}
+    .report-controls button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
+    .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
     .report-line:first-child{border-top:0}
 
 
     .day-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-    .day-buttons button{border:1px solid var(--border-strong);border-radius:9px;padding:9px 13px;background:#fff;color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .day-buttons button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent)}
+    .day-buttons button{border:1px solid var(--border-strong);border-radius:0;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
+    .day-buttons button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
     .pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-    .pie{width:160px;height:160px;border-radius:50%;background:conic-gradient(#e4e4e4 0 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+    .pie{width:160px;height:160px;border-radius:50%;background:conic-gradient(var(--border) 0 100%);box-shadow:0 0 24px rgba(0,229,255,.18),inset 0 0 0 1px rgba(0,229,255,.35)}
     .legend{display:grid;gap:8px;min-width:220px}
-    .legend-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px}
-    .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+    .legend-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--text)}
+    .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
 
 
-    .product-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .product-name{font-size:16px;font-weight:800}
+    .product-card{background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:16px;box-shadow:0 0 16px rgba(0,229,255,.1)}
+    .product-name{font-size:16px;font-weight:800;color:var(--text)}
     .product-meta{color:var(--muted);font-size:13px;margin-top:6px}
-    .client-card{padding:9px 11px;border-radius:10px;box-shadow:none}
+    .client-card{padding:9px 11px;border-radius:0;box-shadow:none}
     .client-card .product-name{font-size:14px;line-height:1.1}
     .client-card .product-meta{font-size:11.5px;margin-top:3px}
-    .client-chip{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;margin-top:6px;background:#f0f0f0;font-size:11px;font-weight:700;color:#333}
+    .client-chip{display:inline-flex;align-items:center;border-radius:0;padding:3px 8px;margin-top:6px;background:rgba(0,229,255,.14);font-size:11px;font-weight:700;color:var(--text)}
     .client-card .actions{margin-top:7px;gap:6px}
-    .client-card .actions button{padding:6px 9px;border-radius:8px;font-size:12px}
+    .client-card .actions button{padding:6px 9px;border-radius:0;font-size:12px}
     .stock-journal-row{border-top:1px solid var(--border);padding:12px 0}
     .stock-journal-row:first-child{border-top:0}
 
 
-    .product-color-0{border-left:4px solid #111111}
-    .product-color-1{border-left:4px solid #444444}
-    .product-color-2{border-left:4px solid #6f6f6f}
-    .product-color-3{border-left:4px solid #999999}
-    .product-color-4{border-left:4px solid #bbbbbb}
-    .product-color-5{border-left:4px solid #d8d8d8}
+    .product-color-0{border-left:4px solid #00e5ff}
+    .product-color-1{border-left:4px solid #00bcd4}
+    .product-color-2{border-left:4px solid #0093ad}
+    .product-color-3{border-left:4px solid #036e85}
+    .product-color-4{border-left:4px solid #054a5c}
+    .product-color-5{border-left:4px solid #123642}
 
 
     .brand-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:55vh;overflow:auto;padding-right:4px}
-    .brand-picker-grid button{border:1px solid var(--border-strong);border-radius:9px;padding:12px;background:#fff;color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
-    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:#f0f0f0}
+    .brand-picker-grid button{border:1px solid var(--border-strong);border-radius:0;padding:12px;background:var(--panel);color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:rgba(0,229,255,.14)}
     .readonly-pick{cursor:pointer}
 
 
-    .appointment-card{background:#fff;border:1px solid var(--border);border-left:4px solid #111111;border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .appointment-card{background:var(--card);border:1px solid var(--border-strong);border-left:4px solid var(--accent);border-radius:0;padding:16px;box-shadow:0 0 16px rgba(0,229,255,.1)}
 
     #printReportArea{display:none}
     .danger{background:var(--red)!important;border-color:var(--red)!important;color:white!important;box-shadow:none!important}
@@ -159,7 +164,7 @@
       .box.compact h2{font-size:21px;margin-bottom:14px}
       .box.compact .step-title{font-size:15px;margin-bottom:12px}
       .box.compact .form{gap:16px}
-      .box.compact .form input,.box.compact .form textarea{padding:12px 14px;font-size:15px;border-radius:9px}
+      .box.compact .form input,.box.compact .form textarea{padding:12px 14px;font-size:15px;border-radius:0}
       .box.compact .form label{font-size:13px}
       .box.compact .hint{font-size:12.5px;margin-top:5px}
       .box.compact .actions,.box.compact .two-actions{margin-top:18px}
@@ -175,17 +180,17 @@
       .app{grid-template-columns:210px 1fr}
       .side{display:block;padding:16px 12px}
       .logo{font-size:16px;margin-bottom:16px}
-      .menu button{font-size:13.5px;padding:10px 12px;border-radius:9px}
+      .menu button{font-size:13.5px;padding:10px 12px;border-radius:0}
       main{padding:20px 20px}
       .title{font-size:20px}
       .grid{grid-template-columns:1fr}
     }
     @media(max-width:620px){
       .app{display:block}
-      .side{position:sticky;top:0;z-index:10;padding:10px;background:#fff;border-right:0;border-bottom:1px solid var(--border)}
+      .side{position:sticky;top:0;z-index:10;padding:10px;background:var(--panel);border-right:0;border-bottom:1px solid var(--border-strong)}
       .logo{font-size:15px;margin-bottom:8px}
       .menu{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
-      .menu button{min-width:max-content;margin:0;font-size:13px;padding:10px 12px;border-radius:9px}
+      .menu button{min-width:max-content;margin:0;font-size:13px;padding:10px 12px;border-radius:0}
       main{padding:16px 14px}
       .top{align-items:flex-start;gap:12px}
       .primary{padding:11px 14px;font-size:13.5px}
@@ -194,7 +199,7 @@
       .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
-  .order-edit-table th{background:#111;color:#fff;padding:8px;text-align:left}.order-edit-table td{border-bottom:1px solid #ddd;padding:6px}.order-edit-table input{width:100%;box-sizing:border-box}.mini{padding:6px 10px;border-radius:8px;background:#111;color:#fff;border:0;cursor:pointer}
+  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:0}.mini{padding:6px 10px;border-radius:0;background:var(--accent);color:var(--accent-contrast);border:0;cursor:pointer}
 
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
 .section-title{font-weight:900;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}
@@ -290,7 +295,7 @@
       </div>
 
       <div class="report-controls">
-        <input id="archiveSearch" placeholder="Поиск: госномер, марка или модель" oninput="renderArchive()" style="min-width:280px;max-width:520px;width:100%;border-radius:10px;padding:9px 14px;font-size:13.5px;font-weight:600;background:#fff;color:#111;border:1px solid #c7c7c7">
+        <input id="archiveSearch" placeholder="Поиск: госномер, марка или модель" oninput="renderArchive()" style="min-width:280px;max-width:520px;width:100%;border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
         <button id="archDay" onclick="setArchiveMode('day')">День</button>
         <button id="archWeek" onclick="setArchiveMode('week')">Неделя</button>
         <button id="archMonth" class="active" onclick="setArchiveMode('month')">Месяц</button>
@@ -311,7 +316,7 @@
         <button class="primary" onclick="openAddClient()">+ Добавить контрагента</button>
       </div>
       <div class="report-controls">
-        <input id="clientSearch" placeholder="Поиск контрагента" oninput="renderClients()" style="min-width:240px;max-width:420px;width:100%;border-radius:10px;padding:9px 14px;font-size:13.5px;font-weight:600;background:#fff;color:#111;border:1px solid #c7c7c7">
+        <input id="clientSearch" placeholder="Поиск контрагента" oninput="renderClients()" style="min-width:240px;max-width:420px;width:100%;border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
         <select id="clientGroupFilter" onchange="renderClients()"><option value="">Все группы</option></select>
         <button onclick="openClientGroups()">Группы</button>
       </div>
@@ -328,7 +333,7 @@
           <button onclick="shareAutoBackupNow()">Сохранить автокопию</button>
           <button onclick="openBackupFile()">Загрузить базу из файла</button>
         </div>
-        <div id="backupStatus" class="small" style="margin-top:14px;color:#6f6f6f">Версия: v27 · владелец Андрей · ЗП · смежные · выдача fix</div>
+        <div id="backupStatus" class="small" style="margin-top:14px;color:var(--muted)">Версия: v27 · владелец Андрей · ЗП · смежные · выдача fix</div>
       </div>
     </section>
 
@@ -808,7 +813,7 @@ function renderPieCard(title, entries){
   if(!entries.length){
     return `<div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">${title}</h2><div class="small">Нет данных</div></div>`;
   }
-  const colors=['#111111','#3a3a3a','#5c5c5c','#7e7e7e','#9c9c9c','#b8b8b8','#d0d0d0','#e4e4e4'];
+  const colors=['#00e5ff','#00c2e0','#00a0c2','#007fa3','#006080','#004a63','#083447','#123642'];
   const total=entries.reduce((s,[,v])=>s+v,0) || 1;
   let current=0;
   const segments=entries.map(([name,value],i)=>{
@@ -1284,10 +1289,10 @@ function openPriorityStep(){
     <h2>Приоритет карточки</h2>
     <div class="step-title">Выбери срочность работы</div>
     <div class="quick-row" style="flex-direction:column">
-      <button class="quick-btn" style="background:#111;color:#fff;font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
-      <button class="quick-btn" style="background:#6f6f6f;color:#fff;font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
-      <button class="quick-btn" style="background:#e4e4e4;color:#111;font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
-      <button class="quick-btn" style="background:#fff;color:#111;border:1px solid #c7c7c7;font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
+      <button class="quick-btn" style="background:#ff3b5c;color:#fff;border-color:#ff3b5c;box-shadow:0 0 10px rgba(255,59,92,.5);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
+      <button class="quick-btn" style="background:#ffb020;color:#04141c;border-color:#ffb020;box-shadow:0 0 10px rgba(255,176,32,.4);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
+      <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid #3d5566;font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
+      <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid var(--border-strong);font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
     </div>
     <div class="actions">
       <button onclick="openWorkStep()">Назад</button>
@@ -1659,11 +1664,11 @@ function openStockIn(){
     <div class="form">
       <div class="wide">
         <label>Товар</label>
-        <select id="stockProduct" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px">${productOptions()}</select>
+        <select id="stockProduct" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
       </div>
       <div>
         <label>Количество</label>
-        <select id="stockQty" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px">${qtyOptions()}</select>
+        <select id="stockQty" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
       </div>
       <div>
         <label>Поставщик</label>
@@ -1691,11 +1696,11 @@ function openStockOut(){
     <div class="form">
       <div class="wide">
         <label>Товар</label>
-        <select id="stockProduct" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px">${productOptions()}</select>
+        <select id="stockProduct" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
       </div>
       <div>
         <label>Количество</label>
-        <select id="stockQty" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px">${qtyOptions()}</select>
+        <select id="stockQty" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
       </div>
       <div>
         <label>С кем расплатились</label>
@@ -1886,7 +1891,7 @@ function renderStockAnalysis(){
   const [y,m]=selected.split('-').map(Number);
   box.innerHTML=`
     <h2 style="font-size:22px;margin:0 0 10px">Анализ склада по месяцам</h2>
-    <select id="stockMonthSelect" onchange="renderStockAnalysis()" style="width:100%;max-width:360px;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px;margin-bottom:14px">
+    <select id="stockMonthSelect" onchange="renderStockAnalysis()" style="width:100%;max-width:360px;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px;margin-bottom:14px">
       ${months.map(mm=>{
         const [yy,mo]=mm.split('-').map(Number);
         return `<option value="${mm}" ${mm===selected?'selected':''}>${new Date(yy,mo-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`;
@@ -2015,7 +2020,7 @@ function openSettingsSubsection(type){
         <button onclick="shareAutoBackupNow()">Сохранить автокопию</button>
         <button onclick="openBackupFile()">Загрузить базу из файла</button>
       </div>
-      <div id="backupStatusSettings" class="small" style="margin-top:14px;color:#6f6f6f"></div>`;
+      <div id="backupStatusSettings" class="small" style="margin-top:14px;color:var(--muted)"></div>`;
     renderBackupStatus();
     return;
   }
@@ -2079,7 +2084,7 @@ function linkedRowHtml(idx,name,percent,ownerName){
   const options=masterNames().filter(n=>n!==ownerName).map(n=>`<option value="${escapeHtml(n)}" ${n===name?'selected':''}>${escapeHtml(n)}</option>`).join('');
   return `<div class="stock-journal-row linked-row">
     <div class="form" style="grid-template-columns:1fr 120px auto">
-      <select class="linked-name" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px">${options}</select>
+      <select class="linked-name" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${options}</select>
       <input class="linked-percent" type="number" value="${Number(percent)||0}" placeholder="%">
       <button class="quick-btn" onclick="this.closest('.linked-row').remove()">Удалить</button>
     </div>
@@ -2788,7 +2793,7 @@ function openClientGroups(){
   document.getElementById('modalBox').className='box compact';
   const rows=clientGroups.map((g,i)=>{
     const count=clients.filter(c=>normalizeClient(c).group===g).length;
-    return `<div class="v28-row" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${escapeHtml(g)}</b><div class="small">${count} контраг.</div></div><div style="display:flex;gap:8px"><button type="button" onclick="renameClientGroup(${i})">Переименовать</button><button type="button" style="background:#ef4444;color:white" onclick="confirmDeleteClientGroup(${i})">Удалить</button></div></div></div>`;
+    return `<div class="v28-row" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${escapeHtml(g)}</b><div class="small">${count} контраг.</div></div><div style="display:flex;gap:8px"><button type="button" onclick="renameClientGroup(${i})">Переименовать</button><button type="button" style="background:#ff3b5c;color:white;border-color:#ff3b5c" onclick="confirmDeleteClientGroup(${i})">Удалить</button></div></div></div>`;
   }).join('') || '<div class="empty">Групп пока нет</div>';
   document.getElementById('modalBox').innerHTML=`
     <h2>Группы контрагентов</h2>
@@ -2842,7 +2847,7 @@ function confirmDeleteClientGroup(i){
   document.getElementById('modalBox').innerHTML=`
     <h2>Удалить группу?</h2>
     <div class="report-card" style="margin:8px 0 14px"><b>${escapeHtml(g)}</b><div class="small" style="margin-top:6px">У ${count} контрагентов группа очистится. Сами контрагенты не удалятся.</div></div>
-    <div class="actions"><button onclick="openClientGroups()">Отмена</button><button style="background:#ef4444;color:white" onclick="deleteClientGroup(${i})">Удалить</button></div>`;
+    <div class="actions"><button onclick="openClientGroups()">Отмена</button><button style="background:#ff3b5c;color:white;border-color:#ff3b5c" onclick="deleteClientGroup(${i})">Удалить</button></div>`;
 }
 function deleteClientGroup(i){
   const old=clientGroups[i];
@@ -2890,7 +2895,7 @@ function showAllClientsFlat(targetId){
   document.getElementById('modalBox').innerHTML=`
     <h2>Все контрагенты</h2>
     <div class="brand-picker-grid">
-      ${clients.map((raw,i)=>{const c=normalizeClient(raw);const phone=c.phone?`<div class="small">${escapeHtml(c.phone)}</div>`:'';const group=c.group?`<div style="font-size:12px;color:#6f6f6f;margin-top:4px">${escapeHtml(c.group)}</div>`:'';return `<button type="button" onclick="pickClient('${targetId}',${i})"><b>${escapeHtml(c.name)}</b>${phone}${group}</button>`;}).join('') || '<div class="empty">Список пуст</div>'}
+      ${clients.map((raw,i)=>{const c=normalizeClient(raw);const phone=c.phone?`<div class="small">${escapeHtml(c.phone)}</div>`:'';const group=c.group?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${escapeHtml(c.group)}</div>`:'';return `<button type="button" onclick="pickClient('${targetId}',${i})"><b>${escapeHtml(c.name)}</b>${phone}${group}</button>`;}).join('') || '<div class="empty">Список пуст</div>'}
     </div>
     <div class="actions"><button onclick="showClientGroupPicker('${targetId}')">К группам</button><button onclick="manualClient('${targetId}')">Вручную</button></div>`;
 }
@@ -3016,13 +3021,13 @@ backupPayload=function(){const data=oldBackupPayload();data.version='v27';data.c
 (function(){
   const st=document.createElement('style');
   st.textContent=`
-    .v28-card{background:linear-gradient(135deg,#1e293b,#0f766e);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:18px;box-shadow:0 14px 30px rgba(0,0,0,.22);cursor:pointer;margin-bottom:12px}
+    .v28-card{background:linear-gradient(135deg,#0d1f2e,#08303a);border:1px solid var(--border-strong);border-radius:0;padding:18px;box-shadow:0 0 16px rgba(0,229,255,.15),0 14px 30px rgba(0,0,0,.4);cursor:pointer;margin-bottom:12px}
     .v28-card:hover,.v28-card:active{filter:brightness(1.08)}
     .v28-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
     .v28-card-title{font-size:22px;font-weight:1000}.v28-card-meta{color:rgba(255,255,255,.82);font-size:15px;margin-top:7px;line-height:1.35}
     .v28-pill{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.18);font-weight:900;font-size:13px;white-space:nowrap}
-    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.12);font-size:13px;color:#e2e8f0}
-    .v28-modal-list{display:grid;gap:10px;margin-top:10px}.v28-row{background:rgba(15,23,42,.72);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:12px}
+    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:0;background:rgba(0,229,255,.14);border:1px solid rgba(0,229,255,.3);font-size:13px;color:#eafcff}
+    .v28-modal-list{display:grid;gap:10px;margin-top:10px}.v28-row{background:rgba(0,229,255,.06);border:1px solid var(--border);border-radius:0;padding:12px}
   `;document.head.appendChild(st);
 })();
 const v28OldOpenSettingsSubsection=openSettingsSubsection;
@@ -3412,7 +3417,7 @@ function setCloudStatus(text){
     const t=String(text||'').toLowerCase();
     const offline=t.includes('нет связи')||t.includes('ошибка');
     el.title=offline?'Сервер: нет связи':'Сервер: онлайн';
-    el.style.background=offline?'#dc2626':'#111111';
+    el.style.background=offline?'#ff3b5c':'#00e5ff';
   }catch(e){}
 }
 function cloudDeviceId(){let id=storeGet('pandora_cloud_device_id',''); if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(16).slice(2); storeSet('pandora_cloud_device_id',id);} return id;}
@@ -3530,7 +3535,7 @@ function openCloudSyncPanel(){const localScore=cloudScore(cloudPayload());docume
 function cloudManualMerge(){cloudSyncNow(true);closeModal();}
 function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);closeModal();}
 function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
-function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#111;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 1px 4px rgba(0,0,0,.25);opacity:.9;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
+function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#00e5ff;box-shadow:0 0 0 3px rgba(5,8,13,.9),0 0 10px rgba(0,229,255,.9);opacity:.95;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
 /* === /Pandora34 Cloud Sync MERGE v3 === */
 
 
@@ -3607,7 +3612,7 @@ renderReport=function(){aslanovaOldRenderReport();};
 function openAslanovaReport(){const range=getReportRange();const done=getDoneCarsInRange(range.from,range.to).filter(c=>c.isAslanova).sort((a,b)=>new Date(b.statusChangedAt||b.doneAt||b.updatedAt||0)-new Date(a.statusChangedAt||a.doneAt||a.updatedAt||0));const total=done.reduce((s,c)=>s+(Number(c.price||c.aslanovaAmount||c.agreedPrice)||0),0);const local=done.filter(c=>c.aslanovaType!=='remote'),remote=done.filter(c=>c.aslanovaType==='remote');const byMaster={};done.forEach(c=>{const m=c.master||'Не указан';if(!byMaster[m])byMaster[m]={count:0,sum:0};byMaster[m].count++;byMaster[m].sum+=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;});const masters=Object.entries(byMaster).map(([n,v])=>`<div class="report-line"><span>${escapeHtml(n)}</span><b>${v.count} авто / ${Math.round(v.sum).toLocaleString('ru-RU')} ₽</b></div>`).join('')||'<div class="small">Нет машин за выбранный период</div>';const rows=done.map(c=>{const sum=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;const car=[c.brand,c.model].filter(Boolean).join(' ');return `<div class="report-line" style="align-items:flex-start"><span><b>${escapeHtml(c.number||'БЕЗ НОМЕРА')}</b><br><span class="small">${escapeHtml(car||'Авто')} · ${escapeHtml(aslanovaTypeLabel(c.aslanovaType))} · мастер: ${escapeHtml(c.master||'Не указан')}</span></span><b>${sum.toLocaleString('ru-RU')} ₽</b></div>`;}).join('')||'<div class="small">Нет машин Аслановой за период</div>';document.getElementById('modalBox').className='box';document.getElementById('modalBox').innerHTML=`<h2>Отчёт Асланова</h2><div class="small" style="margin-bottom:12px">${escapeHtml(range.title||'Выбранный период')}</div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px"><div class="report-card"><div class="small">Всего машин</div><div class="report-num">${done.length}</div></div><div class="report-card"><div class="small">Оборот</div><div class="report-num">${total.toLocaleString('ru-RU')} ₽</div></div><div class="report-card"><div class="small">Лично / удалённо</div><div class="report-num" style="font-size:24px">${local.length} / ${remote.length}</div></div></div><div class="report-card" style="margin-bottom:14px"><h3 style="margin:0 0 8px">По мастерам</h3>${masters}</div><div class="report-card"><h3 style="margin:0 0 8px">Машины</h3>${rows}</div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;document.getElementById('modal').style.display='flex';};
 const aslanovaOldOpenSettingsSubsection=openSettingsSubsection;
 openSettingsSubsection=function(type){if(type==='aslanova')return renderAslanovaSettings();return aslanovaOldOpenSettingsSubsection(type);};
-function renderAslanovaSettings(){normalizeAslanovaSettings();const box=document.getElementById('settingsDetails');if(!box)return;box.innerHTML=`<h2 style="font-size:24px;margin:0 0 14px">Асланова</h2><div class="small" style="margin-bottom:12px">Суммы для горячей кнопки. Деньги всегда получает Андрей, процент Александра берётся из настроек мастера.</div><div class="form"><div class="wide"><label>Суммы через запятую</label><input id="aslanovaPricesEdit" value="${escapeHtml(aslanovaSettings.prices.join(', '))}"></div><div><label>Тип по умолчанию</label><select id="aslanovaTypeEdit" style="width:100%;padding:11px;border-radius:9px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px"><option value="local" ${aslanovaSettings.defaultType==='local'?'selected':''}>Прошито лично</option><option value="remote" ${aslanovaSettings.defaultType==='remote'?'selected':''}>Удалённо</option></select></div><div><label>Мастер по умолчанию</label><select id="aslanovaMasterEdit" style="width:100%;padding:11px;border-radius:9px;border:1px solid #c7c7c7;background:#fff;color:#111;font-size:14px"><option value="Андрей" ${aslanovaSettings.defaultMaster==='Андрей'?'selected':''}>Андрей</option><option value="Александр" ${aslanovaSettings.defaultMaster==='Александр'?'selected':''}>Александр</option></select></div></div><div class="actions" style="justify-content:flex-start"><button onclick="saveAslanovaSettingsForm()">Сохранить</button></div>`;}
+function renderAslanovaSettings(){normalizeAslanovaSettings();const box=document.getElementById('settingsDetails');if(!box)return;box.innerHTML=`<h2 style="font-size:24px;margin:0 0 14px">Асланова</h2><div class="small" style="margin-bottom:12px">Суммы для горячей кнопки. Деньги всегда получает Андрей, процент Александра берётся из настроек мастера.</div><div class="form"><div class="wide"><label>Суммы через запятую</label><input id="aslanovaPricesEdit" value="${escapeHtml(aslanovaSettings.prices.join(', '))}"></div><div><label>Тип по умолчанию</label><select id="aslanovaTypeEdit" style="width:100%;padding:11px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="local" ${aslanovaSettings.defaultType==='local'?'selected':''}>Прошито лично</option><option value="remote" ${aslanovaSettings.defaultType==='remote'?'selected':''}>Удалённо</option></select></div><div><label>Мастер по умолчанию</label><select id="aslanovaMasterEdit" style="width:100%;padding:11px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="Андрей" ${aslanovaSettings.defaultMaster==='Андрей'?'selected':''}>Андрей</option><option value="Александр" ${aslanovaSettings.defaultMaster==='Александр'?'selected':''}>Александр</option></select></div></div><div class="actions" style="justify-content:flex-start"><button onclick="saveAslanovaSettingsForm()">Сохранить</button></div>`;}
 function saveAslanovaSettingsForm(){aslanovaSettings.prices=val('aslanovaPricesEdit').split(',').map(x=>x.replace(/\D/g,'')).filter(Boolean);aslanovaSettings.defaultType=val('aslanovaTypeEdit')||'local';aslanovaSettings.defaultMaster=val('aslanovaMasterEdit')||'Андрей';saveAslanovaSettings();saveAll();renderAslanovaSettings();}
 const aslanovaOldShowSection=showSection;
 showSection=function(section){aslanovaOldShowSection(section);if(section==='settings')setTimeout(()=>{const controls=document.querySelector('#settingsSection .report-controls');if(controls&&!document.getElementById('aslanovaSettingsBtn')){const b=document.createElement('button');b.id='aslanovaSettingsBtn';b.textContent='Асланова';b.onclick=()=>openSettingsSubsection('aslanova');controls.appendChild(b);}},0);};
@@ -3682,7 +3687,7 @@ document.addEventListener('focusin', (e)=>{
   function listCars(){const r=range(); return (window.cars||cars||[]).filter(c=>c.isAslanova).map(c=>({c,d:workDate(c)})).filter(x=>x.d&&x.d>=r.from&&x.d<r.to).sort((a,b)=>b.d-a.d).map(x=>x.c)}
   function countMap(list,fn){const m={}; list.forEach(c=>{const k=fn(c)||'Не указано'; m[k]=(m[k]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))}
   function payload(){const r=range(),list=listCars(); const total=list.reduce((s,c)=>s+(c.paidByClient?0:price(c)),0); return{reportType:'aslanova',title:'Отчёт Асланова',period:r.title,createdAt:new Date().toLocaleString('ru-RU'),count:list.length,total:Math.round(total),localCount:list.filter(c=>c.aslanovaType!=='remote').length,remoteCount:list.filter(c=>c.aslanovaType==='remote').length,byBrand:countMap(list,c=>[c.brand,c.model].filter(Boolean).join(' ')||c.brand||'Не указано'),byPrice:countMap(list,c=>money(price(c))),rows:list.map((c,i)=>({n:i+1,number:c.number||'БЕЗ НОМЕРА',brand:[c.brand,c.model].filter(Boolean).join(' '),work:'Прошивка · '+aslanovaTypeLabel(c.aslanovaType),master:c.master||'',price:price(c),paidByClient:!!c.paidByClient,outAt:workDate(c)?short(workDate(c)):'',aslanovaType:aslanovaTypeLabel(c.aslanovaType)}))}}
-  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#111111','#3a3a3a','#5c5c5c','#7e7e7e','#9c9c9c','#b8b8b8','#d0d0d0','#e4e4e4']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
+  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#00e5ff','#00c2e0','#00a0c2','#007fa3','#006080','#004a63','#083447','#123642']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; openAslanovaReport()};
   window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} alert('PDF-мост недоступен')};
