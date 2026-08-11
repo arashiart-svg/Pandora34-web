@@ -21,18 +21,27 @@
     .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:16px;flex-wrap:wrap}
     .title{font-size:22px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
     .date{font-size:13px;color:var(--muted);margin-top:2px}
-    .tabs{display:flex;gap:8px;margin-bottom:16px}
-    .tabs button,.primary{border:1px solid var(--border-strong);border-radius:0;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease}
-    .tabs button{background:var(--card);color:var(--text)}
+    .tabs{display:flex;gap:14px;margin-bottom:24px;width:100%}
+    .tabs button{flex:1;border:2px solid var(--border-strong);border-radius:0;padding:22px 20px;font-size:19px;font-weight:800;letter-spacing:.4px;cursor:pointer;transition:box-shadow .15s ease,background .15s ease;background:var(--card);color:var(--text)}
     .tabs button:hover{box-shadow:var(--glow)}
-    .tabs button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
-    .primary{background:var(--accent);color:var(--accent-contrast);box-shadow:var(--glow)}
+    .tabs button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow-strong)}
+    .primary{border:1px solid var(--border-strong);border-radius:0;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease;background:var(--accent);color:var(--accent-contrast);box-shadow:var(--glow)}
     .primary:hover{box-shadow:var(--glow-strong)}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
     .order-btn{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border-strong)!important;box-shadow:var(--glow)!important}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-    .car{background:linear-gradient(180deg,#0d151f,#0a0f16);border-radius:0;padding:16px;min-height:110px;box-shadow:0 0 0 1px rgba(0,229,255,.14),0 8px 18px rgba(0,0,0,.5);cursor:pointer;border:1px solid var(--border-strong);border-left:4px solid var(--border-strong);transition:box-shadow .2s ease,transform .15s ease,border-color .2s ease}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,360px));gap:20px}
+    .car{background:linear-gradient(180deg,#0d151f,#0a0f16);border-radius:0;padding:0;overflow:hidden;box-shadow:0 0 0 1px rgba(0,229,255,.14),0 8px 18px rgba(0,0,0,.5);cursor:pointer;border:1px solid var(--border-strong);border-left:5px solid var(--border-strong);transition:box-shadow .2s ease,transform .15s ease,border-color .2s ease}
     .car:hover{box-shadow:0 0 24px rgba(0,229,255,.5),0 10px 24px rgba(0,0,0,.6);transform:translateY(-2px);border-left-color:#6df3ff}
+    .car-head{padding:18px 20px 14px;border-bottom:1px solid var(--border-strong)}
+    .car-head .num{font-size:23px}
+    .car-head .brand{margin-top:6px}
+    .car-body{padding:14px 20px;display:flex;flex-direction:column;gap:9px}
+    .car-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-bottom:9px;border-bottom:1px dashed var(--border)}
+    .car-row:last-child{border-bottom:0;padding-bottom:0}
+    .car-row .car-label{color:var(--muted);font-size:12px;white-space:nowrap}
+    .car-row .car-value{color:var(--text);font-size:13px;font-weight:700;text-align:right}
+    .car-foot{padding:14px 20px 18px;border-top:1px solid var(--border-strong);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .car-foot button{border:1px solid var(--border-strong);border-radius:0;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
 
     .priority-high{border-left-color:#ff3b5c;box-shadow:0 0 0 1px rgba(255,59,92,.28),0 8px 18px rgba(0,0,0,.5)}
     .priority-mid{border-left-color:#ffb020;box-shadow:0 0 0 1px rgba(255,176,32,.22),0 8px 18px rgba(0,0,0,.5)}
@@ -40,7 +49,7 @@
     .work{border-left-color:var(--border-strong)}
     .done{background:#0a0f16;border-left-color:#293846;opacity:.75}
     .urgent{background:linear-gradient(135deg,#00202b,#000);border-left-color:var(--accent);box-shadow:0 0 26px rgba(0,229,255,.55)}
-    .urgent .num,.urgent .brand,.urgent .small{color:#eafcff}
+    .urgent .num,.urgent .brand,.urgent .small,.urgent .car-label,.urgent .car-value{color:#eafcff}
     .urgent .badge{background:var(--accent);color:var(--accent-contrast)}
     .num{font-size:18px;font-weight:800;letter-spacing:.2px;color:var(--text)}
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
@@ -214,7 +223,8 @@
   </div></aside>
   <main>
     <section id="workSection">
-      <div class="top"><div><div class="title">Работа</div><div class="date" id="today"></div></div><div class="top-actions"><button class="primary" onclick="openAdd()">+ Добавить в работу</button><button class="primary order-btn" onclick="openOrderBlank()">+ Заказ-наряд</button></div></div>
+      <div class="top-actions" style="justify-content:flex-start;margin-bottom:14px"><button class="primary" onclick="openAdd()">+ Добавить в работу</button><button class="primary order-btn" onclick="openOrderBlank()">+ Заказ-наряд</button></div>
+      <div class="top"><div><div class="title">Работа</div><div class="date" id="today"></div></div></div>
       <div class="tabs"><button id="tabWork" class="active" onclick="setTab('work')">В работе</button><button id="tabDone" onclick="setTab('done')">Выдано</button></div>
       <div class="grid" id="grid"></div>
     </section>
@@ -630,24 +640,27 @@ function render(){
   if(tab==='done') list=list.slice().sort((a,b)=>doneSortTime(b)-doneSortTime(a));
   let g=document.getElementById('grid');
   if(!list.length){g.innerHTML='<div class="placeholder">Тут пока пусто</div>';return}
-  g.innerHTML=list.map(c=>`
-    <div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':(c.priority==='none'?'work':(c.urgent?'urgent':'work')))))}" onclick="openCar(${c.id})">
-      <div class="num">${c.number}</div>
-      <div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div>
-      <div class="small">${c.work}</div>
-      <div class="small">Принято: ${c.inAt}</div>
-      ${c.ownerPhone?`<div class="small">Телефон: ${c.ownerPhone}</div>`:''}
-      ${c.counterparty?`<div class="small">Контрагент: ${escapeHtml(c.counterparty)}</div>`:''}
-      ${c.status==='work' && c.agreedPrice?`<div class="small">Согласовано: ${c.agreedPrice} ₽</div>`:''}
-      ${c.status==='work'?`<div class="small">Приоритет: ${
-        c.priority==='high'?'Высокий':
-        c.priority==='mid'?'Средний':
-        c.priority==='low'?'Низкий':
-        'Без приоритета'
-    }</div>`:''}
-      ${c.orderNaryad?`<div class="actions" style="justify-content:flex-start;margin-top:10px"><button onclick="event.stopPropagation();openSavedOrderNaryad(${c.id})">Заказ-наряд</button></div>`:''}
-      ${c.status==='done'?`<div class="small">Выдано: ${c.outAt}</div>${c.master?`<div class="small">Делал: ${c.master}</div>`:''}${c.moneyMaster?`<div class="small">Деньги: ${c.moneyMaster}</div>`:''}<div class="badge">${c.price} ₽</div>`:'<div class="badge">В работе</div>'}
-    </div>`).join('');
+  g.innerHTML=list.map(c=>{
+    const rows=[
+      {l:'Работа',v:c.work},
+      {l:'Принято',v:c.inAt},
+      c.ownerPhone?{l:'Телефон',v:c.ownerPhone}:null,
+      c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
+      (c.status==='work' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽'}:null,
+      (c.status==='work')?{l:'Приоритет',v:(c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета')}:null,
+      (c.status==='done')?{l:'Выдано',v:c.outAt}:null,
+      (c.status==='done' && c.master)?{l:'Делал',v:c.master}:null,
+      (c.status==='done' && c.moneyMaster)?{l:'Деньги',v:c.moneyMaster}:null
+    ].filter(Boolean);
+    const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
+    const orderBtn=c.orderNaryad?`<button onclick="event.stopPropagation();openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:'';
+    const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'<div class="badge">В работе</div>';
+    return `<div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':(c.priority==='none'?'work':(c.urgent?'urgent':'work')))))}" onclick="openCar(${c.id})">
+      <div class="car-head"><div class="num">${c.number}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
+      <div class="car-body">${rowsHtml}</div>
+      <div class="car-foot">${orderBtn}${badge}</div>
+    </div>`;
+  }).join('');
 }
 
 
@@ -2635,16 +2648,22 @@ function renderArchive(){
     return;
   }
 
-  grid.innerHTML=list.map(c=>`
-    <div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':'work')))}" onclick="openCar(${c.id})">
-      <div class="num">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</div>
-      <div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div>
-      ${c.counterparty?`<div class="small">Контрагент: ${escapeHtml(c.counterparty)}</div>`:''}
-      <div class="small">${escapeHtml(c.work||'Работа не указана')}</div>
-      <div class="small">Статус: ${c.status==='done'?'Выдано':'В работе'}</div>
-      <div class="small">Принято: ${escapeHtml(c.inAt||'')}</div>
-      ${c.status==='done'?`<div class="small">Выдано: ${escapeHtml(c.outAt||'')}</div><div class="badge">${escapeHtml(c.price||0)} ₽</div>`:`<div class="badge">В работе</div>`}
-    </div>`).join('');
+  grid.innerHTML=list.map(c=>{
+    const rows=[
+      c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
+      {l:'Работа',v:escapeHtml(c.work||'Работа не указана')},
+      {l:'Статус',v:(c.status==='done'?'Выдано':'В работе')},
+      {l:'Принято',v:escapeHtml(c.inAt||'')},
+      c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'')}:null
+    ].filter(Boolean);
+    const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
+    const badge=c.status==='done'?`<div class="badge">${escapeHtml(c.price||0)} ₽</div>`:'<div class="badge">В работе</div>';
+    return `<div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':'work')))}" onclick="openCar(${c.id})">
+      <div class="car-head"><div class="num">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
+      <div class="car-body">${rowsHtml}</div>
+      <div class="car-foot">${badge}</div>
+    </div>`;
+  }).join('');
 }
 
 function saveReportPdf(){
