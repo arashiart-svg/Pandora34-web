@@ -5,148 +5,153 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pandora34 CRM</title>
   <style>
-    :root{--bg:#05080d;--panel:#0a0f16;--card:#0d141d;--text:#eef6fc;--muted:#8ba0b4;--border:#1a2530;--border-strong:#00e5ff;--accent:#00e5ff;--accent-contrast:#04141c;--green:#00e5ff;--orange:#ffb020;--gray:#5b6b7a;--red:#ff3b5c;--yellow:#00e5ff;--radius:0;--glow:0 0 10px rgba(0,229,255,.35);--glow-strong:0 0 20px rgba(0,229,255,.6)}
+    :root{--bg:#eef1f6;--panel:#f2f4f8;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--border:#e4e7ee;--border-strong:#dadfe8;--accent:#3b6fd6;--accent-contrast:#ffffff;--green:#16a34a;--orange:#f0a020;--gray:#6b7280;--red:#ef4444;--yellow:#f0a020;--radius:16px;--glow:0 6px 18px rgba(15,23,42,.08);--glow-strong:0 10px 26px rgba(15,23,42,.14);--sidebar-bg:#0d1420;--sidebar-border:#1c2536;--sidebar-text:#8792a6}
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
     button{font-family:inherit}
-    button:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:0;cursor:pointer}
-    input:not([style]),select:not([style]),textarea:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:0;color-scheme:dark}
+    button:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:8px;cursor:pointer}
+    input:not([style]),select:not([style]),textarea:not([style]){background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;color-scheme:light}
     .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-    .side{padding:24px 18px;background:var(--panel);border-right:1px solid var(--border-strong);box-shadow:2px 0 16px rgba(0,229,255,.08)}
-    .logo{font-size:18px;font-weight:800;margin-bottom:26px;letter-spacing:.2px;color:var(--text);text-shadow:0 0 12px rgba(0,229,255,.55)}
-    .menu button{width:100%;padding:11px 14px;margin:2px 0;border:1px solid transparent;border-radius:0;background:transparent;color:var(--text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease,border-color .12s ease}
-    .menu button:hover{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.3)}
-    .menu button.active{background:rgba(0,229,255,.14);color:var(--text);font-weight:700;border-color:var(--border-strong);box-shadow:inset 0 0 12px rgba(0,229,255,.25)}
+    .side{padding:24px 18px;background:var(--sidebar-bg);border-right:1px solid var(--sidebar-border);box-shadow:2px 0 20px rgba(0,0,0,.15)}
+    .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;margin-bottom:26px;letter-spacing:.2px;color:#fff}
+    .logo svg{width:22px;height:22px;color:var(--accent)}
+    .menu button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;margin:2px 0;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--sidebar-text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease}
+    .menu button svg{width:18px;height:18px;flex-shrink:0;opacity:.8}
+    .menu button:hover{background:rgba(255,255,255,.06);color:#fff}
+    .menu button.active{background:var(--accent);color:#fff;font-weight:700;border-color:var(--accent);box-shadow:0 4px 14px rgba(59,111,214,.35)}
+    .menu button.active svg{opacity:1}
     main{padding:32px 40px;max-width:1400px;margin:0 auto;width:100%}
     .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:16px;flex-wrap:wrap}
     .title{font-size:22px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
     .date{font-size:13px;color:var(--muted);margin-top:2px}
-    .tabs{display:flex;gap:14px;margin-bottom:24px;width:100%}
-    .tabs button{flex:1;border:2px solid var(--border-strong);border-radius:0;padding:22px 20px;font-size:19px;font-weight:800;letter-spacing:.4px;cursor:pointer;transition:box-shadow .15s ease,background .15s ease;background:var(--card);color:var(--text)}
-    .tabs button:hover{box-shadow:var(--glow)}
-    .tabs button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow-strong)}
-    .primary{border:1px solid var(--border-strong);border-radius:0;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease;background:var(--accent);color:var(--accent-contrast);box-shadow:var(--glow)}
-    .primary:hover{box-shadow:var(--glow-strong)}
+    .tabs{display:flex;gap:4px;margin-bottom:24px;width:100%;background:var(--sidebar-bg);border-radius:16px;padding:6px}
+    .tabs button{flex:1;border:0;border-radius:11px;padding:16px 16px;font-size:15px;font-weight:800;letter-spacing:.2px;cursor:pointer;transition:background .15s ease,color .15s ease;background:transparent;color:var(--sidebar-text)}
+    .tabs button:hover{color:#fff}
+    .tabs button.active{background:#fff;color:#0d1420;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+    .tabs button .count{margin-left:6px;opacity:.65;font-weight:700}
+    .primary{border:0;border-radius:999px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease;background:var(--green);color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)}
+    .primary:hover{filter:brightness(1.06)}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .order-btn{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border-strong)!important;box-shadow:var(--glow)!important}
+    .order-btn{background:var(--red)!important;color:#fff!important;border:0!important;box-shadow:0 6px 16px rgba(239,68,68,.3)!important}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,360px));gap:20px}
-    .car{background:linear-gradient(180deg,#0d151f,#0a0f16);border-radius:0;padding:0;overflow:hidden;box-shadow:0 0 0 1px rgba(0,229,255,.14),0 8px 18px rgba(0,0,0,.5);cursor:pointer;border:1px solid var(--border-strong);border-left:5px solid var(--border-strong);transition:box-shadow .2s ease,transform .15s ease,border-color .2s ease}
-    .car:hover{box-shadow:0 0 24px rgba(0,229,255,.5),0 10px 24px rgba(0,0,0,.6);transform:translateY(-2px);border-left-color:#6df3ff}
-    .car-head{padding:18px 20px 14px;border-bottom:1px solid var(--border-strong)}
-    .car-head .num{font-size:23px}
-    .car-head .brand{margin-top:6px}
-    .car-body{padding:14px 20px;display:flex;flex-direction:column;gap:9px}
-    .car-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-bottom:9px;border-bottom:1px dashed var(--border)}
+    .car{background:var(--card);border-radius:var(--radius);padding:0;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.08);cursor:pointer;border:1px solid var(--border);transition:box-shadow .2s ease,transform .15s ease}
+    .car:hover{box-shadow:0 12px 26px rgba(15,23,42,.16);transform:translateY(-2px)}
+    .car-priority-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:#94a3b8}
+    .car-priority-head .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-right:7px;vertical-align:middle}
+    .car-status-pill{background:rgba(255,255,255,.28);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;text-transform:none;letter-spacing:0;white-space:nowrap}
+    .priority-high .car-priority-head{background:var(--red)}
+    .priority-mid .car-priority-head{background:var(--orange)}
+    .priority-low .car-priority-head{background:var(--green)}
+    .done .car-priority-head{background:#334155}
+    .car-head{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+    .car-head .num{font-size:19px}
+    .car-head .brand{margin-top:5px}
+    .car-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    .car-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
     .car-row:last-child{border-bottom:0;padding-bottom:0}
     .car-row .car-label{color:var(--muted);font-size:12px;white-space:nowrap}
     .car-row .car-value{color:var(--text);font-size:13px;font-weight:700;text-align:right}
-    .car-foot{padding:14px 20px 18px;border-top:1px solid var(--border-strong);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .car-foot button{border:1px solid var(--border-strong);border-radius:0;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
+    .car-row.overdue .car-value{color:var(--red)}
+    .car-foot{padding:12px 16px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .car-foot button{border:1px solid var(--border-strong);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
 
-    .priority-high{border-left-color:#ff3b5c;box-shadow:0 0 0 1px rgba(255,59,92,.28),0 8px 18px rgba(0,0,0,.5)}
-    .priority-mid{border-left-color:#ffb020;box-shadow:0 0 0 1px rgba(255,176,32,.22),0 8px 18px rgba(0,0,0,.5)}
-    .priority-low{border-left-color:#3d5566}
-    .work{border-left-color:var(--border-strong)}
-    .done{background:#0a0f16;border-left-color:#293846;opacity:.75}
-    .urgent{background:linear-gradient(135deg,#00202b,#000);border-left-color:var(--accent);box-shadow:0 0 26px rgba(0,229,255,.55)}
-    .urgent .num,.urgent .brand,.urgent .small,.urgent .car-label,.urgent .car-value{color:#eafcff}
-    .urgent .badge{background:var(--accent);color:var(--accent-contrast)}
+    .urgent{box-shadow:0 0 0 2px var(--red),0 12px 26px rgba(239,68,68,.22)}
     .num{font-size:18px;font-weight:800;letter-spacing:.2px;color:var(--text)}
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
-    .small{color:#bcccdb;font-size:12.5px;margin-top:4px;line-height:1.3}
-    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:0;background:var(--accent);color:var(--accent-contrast);font-weight:700;font-size:12px;box-shadow:var(--glow)}
-    .modal{position:fixed;inset:0;background:rgba(0,4,8,.75);display:none;align-items:center;justify-content:center;padding:20px}
-    .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:26px;box-shadow:0 0 50px rgba(0,229,255,.18),0 24px 60px rgba(0,0,0,.7)}
+    .small{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.3}
+    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;font-size:12px}
+    .modal{position:fixed;inset:0;background:rgba(15,20,30,.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 60px rgba(15,23,42,.25)}
     .box h2{margin:0 0 16px;font-size:20px;font-weight:800;color:var(--text)}
     .form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .form label{font-size:12.5px;color:var(--muted);font-weight:600}
-    .form input,.form textarea{width:100%;padding:11px 12px;border-radius:0;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:14px;color-scheme:dark}
-    .form input:focus,.form textarea:focus,.form select:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 10px rgba(0,229,255,.45)}
+    .form input,.form textarea{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:14px;color-scheme:light}
+    .form input:focus,.form textarea:focus,.form select:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,111,214,.18)}
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
     .wide{grid-column:1/-1}
     .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-    .actions button,.two-actions button{border:1px solid var(--accent);border-radius:0;padding:10px 18px;font-size:14px;font-weight:700;background:var(--accent);color:var(--accent-contrast);cursor:pointer;box-shadow:var(--glow)}
+    .actions button,.two-actions button{border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer;box-shadow:var(--glow)}
     .actions button:hover,.two-actions button:hover{box-shadow:var(--glow-strong)}
     .two-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
     .two-actions .left,.two-actions .right{display:flex;gap:10px;flex-wrap:wrap}
-    .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:0;color:var(--muted);font-size:15px;text-align:center;background:rgba(0,229,255,.03)}
+    .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:var(--radius);color:var(--muted);font-size:15px;text-align:center;background:var(--card)}
     .combo{position:relative}
-    .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:6px;box-shadow:0 0 24px rgba(0,229,255,.2),0 20px 50px rgba(0,0,0,.6)}
+    .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:6px;box-shadow:0 20px 50px rgba(15,23,42,.18)}
     .suggest.show{display:block}
-    .suggest button{display:block;width:100%;border:0;text-align:left;margin:2px 0;padding:10px 12px;border-radius:0;background:transparent;color:var(--text);font-size:14px;cursor:pointer}
-    .suggest button:hover,.suggest button:active{background:rgba(0,229,255,.14)}
+    .suggest button{display:block;width:100%;border:0;text-align:left;margin:2px 0;padding:10px 12px;border-radius:6px;background:transparent;color:var(--text);font-size:14px;cursor:pointer}
+    .suggest button:hover,.suggest button:active{background:rgba(59,111,214,.1)}
     .empty{padding:14px;color:var(--muted)}
     .step-title{font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)}
     .quick-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .quick-btn{border:1px solid var(--border-strong);border-radius:0;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .quick-btn.selected{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
+    .quick-btn{border:1px solid var(--border-strong);border-radius:8px;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
+    .quick-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
 
     .box.compact{padding:18px}
     .box.compact h2{font-size:18px;margin-bottom:10px}
     .box.compact .step-title{font-size:14px;margin-bottom:8px}
     .box.compact .form{gap:8px}
-    .box.compact .form input,.box.compact .form textarea{padding:9px;font-size:13.5px;border-radius:0}
+    .box.compact .form input,.box.compact .form textarea{padding:9px;font-size:13.5px;border-radius:8px}
     .box.compact .form label{font-size:11.5px}
     .box.compact .hint{font-size:11px;margin-top:3px}
     .box.compact .actions,.box.compact .two-actions{margin-top:10px}
     .box.compact .actions button,.box.compact .two-actions button{padding:9px 14px;font-size:13.5px}
-    .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:0;padding:10px 12px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
-    .photo-btn:hover,.photo-btn:active{background:rgba(0,229,255,.12)}
+    .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
+    .photo-btn:hover,.photo-btn:active{background:rgba(59,111,214,.1)}
     .photo-btn span{color:var(--text);margin-right:8px}
 
 
-    .report-card{background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:18px;box-shadow:0 0 16px rgba(0,229,255,.1)}
+    .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
     .report-num{font-size:24px;font-weight:800;margin-top:6px;color:var(--text)}
 
 
     .report-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
     .report-controls button,.report-controls select{
-      border:1px solid var(--border-strong);border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:700;
+      border:1px solid var(--border-strong);border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;
       background:var(--panel);color:var(--text);cursor:pointer
     }
-    .report-controls button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
+    .report-controls button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
     .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
     .report-line:first-child{border-top:0}
 
 
     .day-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-    .day-buttons button{border:1px solid var(--border-strong);border-radius:0;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .day-buttons button.active{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);box-shadow:var(--glow)}
+    .day-buttons button{border:1px solid var(--border-strong);border-radius:8px;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
+    .day-buttons button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
     .pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-    .pie{width:160px;height:160px;border-radius:50%;background:conic-gradient(var(--border) 0 100%);box-shadow:0 0 24px rgba(0,229,255,.18),inset 0 0 0 1px rgba(0,229,255,.35)}
+    .pie{width:160px;height:160px;border-radius:50%;background:conic-gradient(var(--border) 0 100%);box-shadow:0 2px 10px rgba(15,23,42,.1),inset 0 0 0 1px rgba(0,0,0,.05)}
     .legend{display:grid;gap:8px;min-width:220px}
     .legend-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--text)}
-    .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+    .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 
 
-    .product-card{background:var(--card);border:1px solid var(--border-strong);border-radius:0;padding:16px;box-shadow:0 0 16px rgba(0,229,255,.1)}
+    .product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
     .product-name{font-size:16px;font-weight:800;color:var(--text)}
     .product-meta{color:var(--muted);font-size:13px;margin-top:6px}
-    .client-card{padding:9px 11px;border-radius:0;box-shadow:none}
+    .client-card{padding:9px 11px;border-radius:8px;box-shadow:none}
     .client-card .product-name{font-size:14px;line-height:1.1}
     .client-card .product-meta{font-size:11.5px;margin-top:3px}
-    .client-chip{display:inline-flex;align-items:center;border-radius:0;padding:3px 8px;margin-top:6px;background:rgba(0,229,255,.14);font-size:11px;font-weight:700;color:var(--text)}
+    .client-chip{display:inline-flex;align-items:center;border-radius:6px;padding:3px 8px;margin-top:6px;background:rgba(59,111,214,.12);font-size:11px;font-weight:700;color:var(--text)}
     .client-card .actions{margin-top:7px;gap:6px}
-    .client-card .actions button{padding:6px 9px;border-radius:0;font-size:12px}
+    .client-card .actions button{padding:6px 9px;border-radius:6px;font-size:12px}
     .stock-journal-row{border-top:1px solid var(--border);padding:12px 0}
     .stock-journal-row:first-child{border-top:0}
 
 
-    .product-color-0{border-left:4px solid #00e5ff}
-    .product-color-1{border-left:4px solid #00bcd4}
-    .product-color-2{border-left:4px solid #0093ad}
-    .product-color-3{border-left:4px solid #036e85}
-    .product-color-4{border-left:4px solid #054a5c}
-    .product-color-5{border-left:4px solid #123642}
+    .product-color-0{border-left:4px solid #3b6fd6}
+    .product-color-1{border-left:4px solid #16a34a}
+    .product-color-2{border-left:4px solid #f0a020}
+    .product-color-3{border-left:4px solid #ef4444}
+    .product-color-4{border-left:4px solid #6b7280}
+    .product-color-5{border-left:4px solid #334155}
 
 
     .brand-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:55vh;overflow:auto;padding-right:4px}
-    .brand-picker-grid button{border:1px solid var(--border-strong);border-radius:0;padding:12px;background:var(--panel);color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
-    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:rgba(0,229,255,.14)}
+    .brand-picker-grid button{border:1px solid var(--border-strong);border-radius:8px;padding:12px;background:var(--panel);color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:rgba(59,111,214,.1)}
     .readonly-pick{cursor:pointer}
 
 
-    .appointment-card{background:var(--card);border:1px solid var(--border-strong);border-left:4px solid var(--accent);border-radius:0;padding:16px;box-shadow:0 0 16px rgba(0,229,255,.1)}
+    .appointment-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:16px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
 
     #printReportArea{display:none}
     .danger{background:var(--red)!important;border-color:var(--red)!important;color:white!important;box-shadow:none!important}
@@ -173,7 +178,7 @@
       .box.compact h2{font-size:21px;margin-bottom:14px}
       .box.compact .step-title{font-size:15px;margin-bottom:12px}
       .box.compact .form{gap:16px}
-      .box.compact .form input,.box.compact .form textarea{padding:12px 14px;font-size:15px;border-radius:0}
+      .box.compact .form input,.box.compact .form textarea{padding:12px 14px;font-size:15px;border-radius:8px}
       .box.compact .form label{font-size:13px}
       .box.compact .hint{font-size:12.5px;margin-top:5px}
       .box.compact .actions,.box.compact .two-actions{margin-top:18px}
@@ -189,17 +194,17 @@
       .app{grid-template-columns:210px 1fr}
       .side{display:block;padding:16px 12px}
       .logo{font-size:16px;margin-bottom:16px}
-      .menu button{font-size:13.5px;padding:10px 12px;border-radius:0}
+      .menu button{font-size:13.5px;padding:10px 12px;border-radius:8px}
       main{padding:20px 20px}
       .title{font-size:20px}
       .grid{grid-template-columns:1fr}
     }
     @media(max-width:620px){
       .app{display:block}
-      .side{position:sticky;top:0;z-index:10;padding:10px;background:var(--panel);border-right:0;border-bottom:1px solid var(--border-strong)}
+      .side{position:sticky;top:0;z-index:10;padding:10px;background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
       .logo{font-size:15px;margin-bottom:8px}
       .menu{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
-      .menu button{min-width:max-content;margin:0;font-size:13px;padding:10px 12px;border-radius:0}
+      .menu button{min-width:max-content;margin:0;font-size:13px;padding:10px 12px;border-radius:8px}
       main{padding:16px 14px}
       .top{align-items:flex-start;gap:12px}
       .primary{padding:11px 14px;font-size:13.5px}
@@ -208,7 +213,7 @@
       .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
-  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:0}.mini{padding:6px 10px;border-radius:0;background:var(--accent);color:var(--accent-contrast);border:0;cursor:pointer}
+  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:6px;background:var(--accent);color:#fff;border:0;cursor:pointer}
 
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
 .section-title{font-weight:900;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}
@@ -218,14 +223,13 @@
 </head>
 <body>
 <div class="app">
-  <aside class="side"><div class="logo">Pandora34</div><div class="menu">
-    <button id="menuWork" class="active" onclick="showSection('work')">Работа</button><button id="menuCalendar" onclick="showSection('calendar')">Запись</button><button id="menuStock" onclick="showSection('stock')">Склад</button><button id="menuReport" onclick="showSection('report')">Отчёт</button><button id="menuArchive" onclick="showSection('archive')">Архив авто</button><button id="menuClients" onclick="showSection('clients')">Контрагенты</button><button id="menuSettings" onclick="showSection('settings')">Настройки</button>
+  <aside class="side"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 4 0M5 17a2 2 0 1 1 4 0m6 0a2 2 0 1 0 4 0m-4 0a2 2 0 1 1 4 0M5 17l1.5-6.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 17M3 17V9.5A1.5 1.5 0 0 1 4.5 8h1"/></svg>Pandora34</div><div class="menu">
+    <button id="menuWork" class="active" onclick="showSection('work')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg><span>Отчёт</span></button><button id="menuArchive" onclick="showSection('archive')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 4 0M5 17a2 2 0 1 1 4 0m6 0a2 2 0 1 0 4 0m-4 0a2 2 0 1 1 4 0M5 17l1.5-6.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 17M3 17V9.5A1.5 1.5 0 0 1 4.5 8h1"/></svg><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Настройки</span></button>
   </div></aside>
   <main>
     <section id="workSection">
-      <div class="top-actions" style="justify-content:flex-start;margin-bottom:14px"><button class="primary" onclick="openAdd()">+ Добавить в работу</button><button class="primary order-btn" onclick="openOrderBlank()">+ Заказ-наряд</button></div>
-      <div class="top"><div><div class="title">Работа</div><div class="date" id="today"></div></div></div>
-      <div class="tabs"><button id="tabWork" class="active" onclick="setTab('work')">В работе</button><button id="tabDone" onclick="setTab('done')">Выдано</button></div>
+      <div class="top"><div><div class="title">Работа</div><div class="date" id="today"></div></div><div class="top-actions"><button class="primary order-btn" onclick="openOrderBlank()">+ Заказ-наряд</button><button class="primary" onclick="openAdd()">+ Добавить в работу</button></div></div>
+      <div class="tabs"><button id="tabWork" class="active" onclick="setTab('work')">В работе<span class="count" id="countWork"></span></button><button id="tabReady" onclick="setTab('ready')">Готово<span class="count" id="countReady"></span></button><button id="tabDone" onclick="setTab('done')">Выдано<span class="count" id="countDone"></span></button></div>
       <div class="grid" id="grid"></div>
     </section>
 
@@ -305,7 +309,7 @@
       </div>
 
       <div class="report-controls">
-        <input id="archiveSearch" placeholder="Поиск: госномер, марка или модель" oninput="renderArchive()" style="min-width:280px;max-width:520px;width:100%;border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
+        <input id="archiveSearch" placeholder="Поиск: госномер, марка или модель" oninput="renderArchive()" style="min-width:280px;max-width:520px;width:100%;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
         <button id="archDay" onclick="setArchiveMode('day')">День</button>
         <button id="archWeek" onclick="setArchiveMode('week')">Неделя</button>
         <button id="archMonth" class="active" onclick="setArchiveMode('month')">Месяц</button>
@@ -326,7 +330,7 @@
         <button class="primary" onclick="openAddClient()">+ Добавить контрагента</button>
       </div>
       <div class="report-controls">
-        <input id="clientSearch" placeholder="Поиск контрагента" oninput="renderClients()" style="min-width:240px;max-width:420px;width:100%;border-radius:0;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
+        <input id="clientSearch" placeholder="Поиск контрагента" oninput="renderClients()" style="min-width:240px;max-width:420px;width:100%;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
         <select id="clientGroupFilter" onchange="renderClients()"><option value="">Все группы</option></select>
         <button onclick="openClientGroups()">Группы</button>
       </div>
@@ -628,14 +632,38 @@ function doneSortTime(c){
   return Number(c.doneAt || c.updatedAt || c.id || 0) || 0;
 }
 
+function statusLabel(status){
+  if(status==='ready') return 'Готово';
+  if(status==='done') return 'Выдано';
+  return 'В работе';
+}
+
+function priorityClass(c){
+  if(c.priority==='high') return 'priority-high';
+  if(c.priority==='mid') return 'priority-mid';
+  if(c.priority==='low') return 'priority-low';
+  return 'priority-none';
+}
+
 function setTab(t){
   tab=t;
   document.getElementById('tabWork').classList.toggle('active',t==='work');
+  document.getElementById('tabReady').classList.toggle('active',t==='ready');
   document.getElementById('tabDone').classList.toggle('active',t==='done');
   render();
 }
 
+function updateTabCounts(){
+  const cWork=cars.filter(c=>c.status==='work').length;
+  const cReady=cars.filter(c=>c.status==='ready').length;
+  const cDone=cars.filter(c=>c.status==='done' && isDoneVisibleInWork(c)).length;
+  const elW=document.getElementById('countWork'); if(elW) elW.textContent=' ('+cWork+')';
+  const elR=document.getElementById('countReady'); if(elR) elR.textContent=' ('+cReady+')';
+  const elD=document.getElementById('countDone'); if(elD) elD.textContent=' ('+cDone+')';
+}
+
 function render(){
+  updateTabCounts();
   let list=cars.filter(c=>c.status===tab && (tab!=='done' || isDoneVisibleInWork(c)));
   if(tab==='done') list=list.slice().sort((a,b)=>doneSortTime(b)-doneSortTime(a));
   let g=document.getElementById('grid');
@@ -646,16 +674,19 @@ function render(){
       {l:'Принято',v:c.inAt},
       c.ownerPhone?{l:'Телефон',v:c.ownerPhone}:null,
       c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
-      (c.status==='work' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽'}:null,
-      (c.status==='work')?{l:'Приоритет',v:(c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета')}:null,
+      (c.status!=='done' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽'}:null,
+      (c.status!=='done')?{l:'Приоритет',v:(c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета')}:null,
       (c.status==='done')?{l:'Выдано',v:c.outAt}:null,
       (c.status==='done' && c.master)?{l:'Делал',v:c.master}:null,
       (c.status==='done' && c.moneyMaster)?{l:'Деньги',v:c.moneyMaster}:null
     ].filter(Boolean);
     const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
     const orderBtn=c.orderNaryad?`<button onclick="event.stopPropagation();openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:'';
-    const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'<div class="badge">В работе</div>';
-    return `<div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':(c.priority==='none'?'work':(c.urgent?'urgent':'work')))))}" onclick="openCar(${c.id})">
+    const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'';
+    const priCls=c.status==='done'?'done':priorityClass(c);
+    const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
+    return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCar(${c.id})">
+      <div class="car-priority-head"><span><span class="dot"></span>${escapeHtml(priLabel)}</span><span class="car-status-pill">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="num">${c.number}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${orderBtn}${badge}</div>
@@ -826,7 +857,7 @@ function renderPieCard(title, entries){
   if(!entries.length){
     return `<div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">${title}</h2><div class="small">Нет данных</div></div>`;
   }
-  const colors=['#00e5ff','#00c2e0','#00a0c2','#007fa3','#006080','#004a63','#083447','#123642'];
+  const colors=['#3b6fd6','#4a7fdb','#5b6b7a','#4a5568','#3f4a58','#37414f','#2c3542','#232a35'];
   const total=entries.reduce((s,[,v])=>s+v,0) || 1;
   let current=0;
   const segments=entries.map(([name,value],i)=>{
@@ -1302,8 +1333,8 @@ function openPriorityStep(){
     <h2>Приоритет карточки</h2>
     <div class="step-title">Выбери срочность работы</div>
     <div class="quick-row" style="flex-direction:column">
-      <button class="quick-btn" style="background:#ff3b5c;color:#fff;border-color:#ff3b5c;box-shadow:0 0 10px rgba(255,59,92,.5);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
-      <button class="quick-btn" style="background:#ffb020;color:#04141c;border-color:#ffb020;box-shadow:0 0 10px rgba(255,176,32,.4);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
+      <button class="quick-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;box-shadow:0 4px 12px rgba(239,68,68,.3);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
+      <button class="quick-btn" style="background:#f0a020;color:#fff;border-color:#f0a020;box-shadow:0 4px 12px rgba(240,160,32,.25);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
       <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid #3d5566;font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
       <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid var(--border-strong);font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
     </div>
@@ -1355,15 +1386,17 @@ function openCar(id){
       <div><label>Дата приёма</label><input id="editInAt" value="${escapeHtml(c.inAt)}"></div>
       <div><label>Дата выдачи</label><input id="editOutAt" value="${escapeHtml(c.outAt)}" placeholder="Заполнится при выдаче"></div>
       <div><label>Сумма при выдаче</label><input id="price" type="number" placeholder="3500" value="${escapeHtml(c.price||c.agreedPrice||'')}"></div>
-      <div><label>Статус</label><input value="${c.status==='done'?'Выдано':'В работе'}" disabled></div>
+      <div><label>Статус</label><input value="${statusLabel(c.status)}" disabled></div>
       <div class="wide"><label>Комментарий</label><textarea id="editComment" rows="3" placeholder="Необязательно" ${c.status==='done'?'readonly':''}>${escapeHtml(c.comment)}</textarea></div>
     </div>
     <div class="actions">
       <button onclick="closeModal()">Закрыть</button>
-      ${c.status==='work'?`<button onclick="deleteCar(${c.id})">Удалить карточку</button>`:`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`}
+      ${c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button onclick="deleteCar(${c.id})">Удалить карточку</button>`}
       ${c.status==='done'?'':`<button onclick="saveCard(${c.id})">Сохранить</button>`}
       ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
-      ${c.status==='work'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
+      ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
+      ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+      ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
     </div>`;
   document.getElementById('modal').style.display='flex';
   updateWorkButtons('editWork');
@@ -1504,6 +1537,29 @@ function finishDone(id){
   save();
   closeModal();
   setTab('done');
+}
+
+function markReady(id){
+  let c=cars.find(x=>x.id===id);
+  if(!c) return;
+  c.status='ready';
+  c.readyAt=new Date().toISOString();
+  c.statusChangedAt=c.readyAt;
+  c.updatedAt=c.readyAt;
+  save();
+  closeModal();
+  setTab('ready');
+}
+
+function revertToWork(id){
+  let c=cars.find(x=>x.id===id);
+  if(!c) return;
+  c.status='work';
+  c.statusChangedAt=new Date().toISOString();
+  c.updatedAt=c.statusChangedAt;
+  save();
+  closeModal();
+  setTab('work');
 }
 
 function doneCar(id){
@@ -1677,11 +1733,11 @@ function openStockIn(){
     <div class="form">
       <div class="wide">
         <label>Товар</label>
-        <select id="stockProduct" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
+        <select id="stockProduct" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
       </div>
       <div>
         <label>Количество</label>
-        <select id="stockQty" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
+        <select id="stockQty" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
       </div>
       <div>
         <label>Поставщик</label>
@@ -1709,11 +1765,11 @@ function openStockOut(){
     <div class="form">
       <div class="wide">
         <label>Товар</label>
-        <select id="stockProduct" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
+        <select id="stockProduct" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
       </div>
       <div>
         <label>Количество</label>
-        <select id="stockQty" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
+        <select id="stockQty" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
       </div>
       <div>
         <label>С кем расплатились</label>
@@ -1904,7 +1960,7 @@ function renderStockAnalysis(){
   const [y,m]=selected.split('-').map(Number);
   box.innerHTML=`
     <h2 style="font-size:22px;margin:0 0 10px">Анализ склада по месяцам</h2>
-    <select id="stockMonthSelect" onchange="renderStockAnalysis()" style="width:100%;max-width:360px;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px;margin-bottom:14px">
+    <select id="stockMonthSelect" onchange="renderStockAnalysis()" style="width:100%;max-width:360px;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px;margin-bottom:14px">
       ${months.map(mm=>{
         const [yy,mo]=mm.split('-').map(Number);
         return `<option value="${mm}" ${mm===selected?'selected':''}>${new Date(yy,mo-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`;
@@ -2097,7 +2153,7 @@ function linkedRowHtml(idx,name,percent,ownerName){
   const options=masterNames().filter(n=>n!==ownerName).map(n=>`<option value="${escapeHtml(n)}" ${n===name?'selected':''}>${escapeHtml(n)}</option>`).join('');
   return `<div class="stock-journal-row linked-row">
     <div class="form" style="grid-template-columns:1fr 120px auto">
-      <select class="linked-name" style="width:100%;padding:12px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${options}</select>
+      <select class="linked-name" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${options}</select>
       <input class="linked-percent" type="number" value="${Number(percent)||0}" placeholder="%">
       <button class="quick-btn" onclick="this.closest('.linked-row').remove()">Удалить</button>
     </div>
@@ -2652,13 +2708,16 @@ function renderArchive(){
     const rows=[
       c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
       {l:'Работа',v:escapeHtml(c.work||'Работа не указана')},
-      {l:'Статус',v:(c.status==='done'?'Выдано':'В работе')},
+      {l:'Статус',v:statusLabel(c.status)},
       {l:'Принято',v:escapeHtml(c.inAt||'')},
       c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'')}:null
     ].filter(Boolean);
     const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
-    const badge=c.status==='done'?`<div class="badge">${escapeHtml(c.price||0)} ₽</div>`:'<div class="badge">В работе</div>';
-    return `<div class="car ${c.status==='done'?'done':(c.priority==='high'?'priority-high':(c.priority==='mid'?'priority-mid':(c.priority==='low'?'priority-low':'work')))}" onclick="openCar(${c.id})">
+    const badge=c.status==='done'?`<div class="badge">${escapeHtml(c.price||0)} ₽</div>`:'';
+    const priCls=c.status==='done'?'done':priorityClass(c);
+    const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
+    return `<div class="car ${priCls}" onclick="openCar(${c.id})">
+      <div class="car-priority-head"><span><span class="dot"></span>${escapeHtml(priLabel)}</span><span class="car-status-pill">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="num">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${badge}</div>
@@ -3040,13 +3099,13 @@ backupPayload=function(){const data=oldBackupPayload();data.version='v27';data.c
 (function(){
   const st=document.createElement('style');
   st.textContent=`
-    .v28-card{background:linear-gradient(135deg,#0d1f2e,#08303a);border:1px solid var(--border-strong);border-radius:0;padding:18px;box-shadow:0 0 16px rgba(0,229,255,.15),0 14px 30px rgba(0,0,0,.4);cursor:pointer;margin-bottom:12px}
-    .v28-card:hover,.v28-card:active{filter:brightness(1.08)}
+    .v28-card{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 2px 10px rgba(15,23,42,.06);cursor:pointer;margin-bottom:12px}
+    .v28-card:hover,.v28-card:active{box-shadow:0 8px 20px rgba(15,23,42,.12)}
     .v28-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-    .v28-card-title{font-size:22px;font-weight:1000}.v28-card-meta{color:rgba(255,255,255,.82);font-size:15px;margin-top:7px;line-height:1.35}
-    .v28-pill{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.18);font-weight:900;font-size:13px;white-space:nowrap}
-    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:0;background:rgba(0,229,255,.14);border:1px solid rgba(0,229,255,.3);font-size:13px;color:#eafcff}
-    .v28-modal-list{display:grid;gap:10px;margin-top:10px}.v28-row{background:rgba(0,229,255,.06);border:1px solid var(--border);border-radius:0;padding:12px}
+    .v28-card-title{font-size:22px;font-weight:1000;color:var(--text)}.v28-card-meta{color:var(--muted);font-size:15px;margin-top:7px;line-height:1.35}
+    .v28-pill{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(59,111,214,.12);color:var(--accent);font-weight:900;font-size:13px;white-space:nowrap}
+    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:6px;background:rgba(59,111,214,.1);border:1px solid rgba(59,111,214,.3);font-size:13px;color:var(--text)}
+    .v28-modal-list{display:grid;gap:10px;margin-top:10px}.v28-row{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px}
   `;document.head.appendChild(st);
 })();
 const v28OldOpenSettingsSubsection=openSettingsSubsection;
@@ -3436,7 +3495,7 @@ function setCloudStatus(text){
     const t=String(text||'').toLowerCase();
     const offline=t.includes('нет связи')||t.includes('ошибка');
     el.title=offline?'Сервер: нет связи':'Сервер: онлайн';
-    el.style.background=offline?'#ff3b5c':'#00e5ff';
+    el.style.background=offline?'#ff3b5c':'#3b6fd6';
   }catch(e){}
 }
 function cloudDeviceId(){let id=storeGet('pandora_cloud_device_id',''); if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(16).slice(2); storeSet('pandora_cloud_device_id',id);} return id;}
@@ -3554,7 +3613,7 @@ function openCloudSyncPanel(){const localScore=cloudScore(cloudPayload());docume
 function cloudManualMerge(){cloudSyncNow(true);closeModal();}
 function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);closeModal();}
 function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
-function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#00e5ff;box-shadow:0 0 0 3px rgba(5,8,13,.9),0 0 10px rgba(0,229,255,.9);opacity:.95;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
+function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#3b6fd6;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 2px 8px rgba(15,23,42,.35);opacity:.95;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
 /* === /Pandora34 Cloud Sync MERGE v3 === */
 
 
@@ -3631,7 +3690,7 @@ renderReport=function(){aslanovaOldRenderReport();};
 function openAslanovaReport(){const range=getReportRange();const done=getDoneCarsInRange(range.from,range.to).filter(c=>c.isAslanova).sort((a,b)=>new Date(b.statusChangedAt||b.doneAt||b.updatedAt||0)-new Date(a.statusChangedAt||a.doneAt||a.updatedAt||0));const total=done.reduce((s,c)=>s+(Number(c.price||c.aslanovaAmount||c.agreedPrice)||0),0);const local=done.filter(c=>c.aslanovaType!=='remote'),remote=done.filter(c=>c.aslanovaType==='remote');const byMaster={};done.forEach(c=>{const m=c.master||'Не указан';if(!byMaster[m])byMaster[m]={count:0,sum:0};byMaster[m].count++;byMaster[m].sum+=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;});const masters=Object.entries(byMaster).map(([n,v])=>`<div class="report-line"><span>${escapeHtml(n)}</span><b>${v.count} авто / ${Math.round(v.sum).toLocaleString('ru-RU')} ₽</b></div>`).join('')||'<div class="small">Нет машин за выбранный период</div>';const rows=done.map(c=>{const sum=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;const car=[c.brand,c.model].filter(Boolean).join(' ');return `<div class="report-line" style="align-items:flex-start"><span><b>${escapeHtml(c.number||'БЕЗ НОМЕРА')}</b><br><span class="small">${escapeHtml(car||'Авто')} · ${escapeHtml(aslanovaTypeLabel(c.aslanovaType))} · мастер: ${escapeHtml(c.master||'Не указан')}</span></span><b>${sum.toLocaleString('ru-RU')} ₽</b></div>`;}).join('')||'<div class="small">Нет машин Аслановой за период</div>';document.getElementById('modalBox').className='box';document.getElementById('modalBox').innerHTML=`<h2>Отчёт Асланова</h2><div class="small" style="margin-bottom:12px">${escapeHtml(range.title||'Выбранный период')}</div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px"><div class="report-card"><div class="small">Всего машин</div><div class="report-num">${done.length}</div></div><div class="report-card"><div class="small">Оборот</div><div class="report-num">${total.toLocaleString('ru-RU')} ₽</div></div><div class="report-card"><div class="small">Лично / удалённо</div><div class="report-num" style="font-size:24px">${local.length} / ${remote.length}</div></div></div><div class="report-card" style="margin-bottom:14px"><h3 style="margin:0 0 8px">По мастерам</h3>${masters}</div><div class="report-card"><h3 style="margin:0 0 8px">Машины</h3>${rows}</div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;document.getElementById('modal').style.display='flex';};
 const aslanovaOldOpenSettingsSubsection=openSettingsSubsection;
 openSettingsSubsection=function(type){if(type==='aslanova')return renderAslanovaSettings();return aslanovaOldOpenSettingsSubsection(type);};
-function renderAslanovaSettings(){normalizeAslanovaSettings();const box=document.getElementById('settingsDetails');if(!box)return;box.innerHTML=`<h2 style="font-size:24px;margin:0 0 14px">Асланова</h2><div class="small" style="margin-bottom:12px">Суммы для горячей кнопки. Деньги всегда получает Андрей, процент Александра берётся из настроек мастера.</div><div class="form"><div class="wide"><label>Суммы через запятую</label><input id="aslanovaPricesEdit" value="${escapeHtml(aslanovaSettings.prices.join(', '))}"></div><div><label>Тип по умолчанию</label><select id="aslanovaTypeEdit" style="width:100%;padding:11px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="local" ${aslanovaSettings.defaultType==='local'?'selected':''}>Прошито лично</option><option value="remote" ${aslanovaSettings.defaultType==='remote'?'selected':''}>Удалённо</option></select></div><div><label>Мастер по умолчанию</label><select id="aslanovaMasterEdit" style="width:100%;padding:11px;border-radius:0;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="Андрей" ${aslanovaSettings.defaultMaster==='Андрей'?'selected':''}>Андрей</option><option value="Александр" ${aslanovaSettings.defaultMaster==='Александр'?'selected':''}>Александр</option></select></div></div><div class="actions" style="justify-content:flex-start"><button onclick="saveAslanovaSettingsForm()">Сохранить</button></div>`;}
+function renderAslanovaSettings(){normalizeAslanovaSettings();const box=document.getElementById('settingsDetails');if(!box)return;box.innerHTML=`<h2 style="font-size:24px;margin:0 0 14px">Асланова</h2><div class="small" style="margin-bottom:12px">Суммы для горячей кнопки. Деньги всегда получает Андрей, процент Александра берётся из настроек мастера.</div><div class="form"><div class="wide"><label>Суммы через запятую</label><input id="aslanovaPricesEdit" value="${escapeHtml(aslanovaSettings.prices.join(', '))}"></div><div><label>Тип по умолчанию</label><select id="aslanovaTypeEdit" style="width:100%;padding:11px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="local" ${aslanovaSettings.defaultType==='local'?'selected':''}>Прошито лично</option><option value="remote" ${aslanovaSettings.defaultType==='remote'?'selected':''}>Удалённо</option></select></div><div><label>Мастер по умолчанию</label><select id="aslanovaMasterEdit" style="width:100%;padding:11px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px"><option value="Андрей" ${aslanovaSettings.defaultMaster==='Андрей'?'selected':''}>Андрей</option><option value="Александр" ${aslanovaSettings.defaultMaster==='Александр'?'selected':''}>Александр</option></select></div></div><div class="actions" style="justify-content:flex-start"><button onclick="saveAslanovaSettingsForm()">Сохранить</button></div>`;}
 function saveAslanovaSettingsForm(){aslanovaSettings.prices=val('aslanovaPricesEdit').split(',').map(x=>x.replace(/\D/g,'')).filter(Boolean);aslanovaSettings.defaultType=val('aslanovaTypeEdit')||'local';aslanovaSettings.defaultMaster=val('aslanovaMasterEdit')||'Андрей';saveAslanovaSettings();saveAll();renderAslanovaSettings();}
 const aslanovaOldShowSection=showSection;
 showSection=function(section){aslanovaOldShowSection(section);if(section==='settings')setTimeout(()=>{const controls=document.querySelector('#settingsSection .report-controls');if(controls&&!document.getElementById('aslanovaSettingsBtn')){const b=document.createElement('button');b.id='aslanovaSettingsBtn';b.textContent='Асланова';b.onclick=()=>openSettingsSubsection('aslanova');controls.appendChild(b);}},0);};
@@ -3706,7 +3765,7 @@ document.addEventListener('focusin', (e)=>{
   function listCars(){const r=range(); return (window.cars||cars||[]).filter(c=>c.isAslanova).map(c=>({c,d:workDate(c)})).filter(x=>x.d&&x.d>=r.from&&x.d<r.to).sort((a,b)=>b.d-a.d).map(x=>x.c)}
   function countMap(list,fn){const m={}; list.forEach(c=>{const k=fn(c)||'Не указано'; m[k]=(m[k]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))}
   function payload(){const r=range(),list=listCars(); const total=list.reduce((s,c)=>s+(c.paidByClient?0:price(c)),0); return{reportType:'aslanova',title:'Отчёт Асланова',period:r.title,createdAt:new Date().toLocaleString('ru-RU'),count:list.length,total:Math.round(total),localCount:list.filter(c=>c.aslanovaType!=='remote').length,remoteCount:list.filter(c=>c.aslanovaType==='remote').length,byBrand:countMap(list,c=>[c.brand,c.model].filter(Boolean).join(' ')||c.brand||'Не указано'),byPrice:countMap(list,c=>money(price(c))),rows:list.map((c,i)=>({n:i+1,number:c.number||'БЕЗ НОМЕРА',brand:[c.brand,c.model].filter(Boolean).join(' '),work:'Прошивка · '+aslanovaTypeLabel(c.aslanovaType),master:c.master||'',price:price(c),paidByClient:!!c.paidByClient,outAt:workDate(c)?short(workDate(c)):'',aslanovaType:aslanovaTypeLabel(c.aslanovaType)}))}}
-  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#00e5ff','#00c2e0','#00a0c2','#007fa3','#006080','#004a63','#083447','#123642']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
+  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#3b6fd6','#4a7fdb','#5b6b7a','#4a5568','#3f4a58','#37414f','#2c3542','#232a35']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; openAslanovaReport()};
   window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} alert('PDF-мост недоступен')};
