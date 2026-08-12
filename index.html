@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pandora34 CRM</title>
   <style>
-    :root{--bg:#eef1f6;--panel:#f2f4f8;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--border:#e4e7ee;--border-strong:#dadfe8;--accent:#3b6fd6;--accent-contrast:#ffffff;--green:#16a34a;--orange:#f0a020;--gray:#6b7280;--red:#ef4444;--yellow:#f0a020;--radius:16px;--glow:0 6px 18px rgba(15,23,42,.08);--glow-strong:0 10px 26px rgba(15,23,42,.14);--sidebar-bg:#0d1420;--sidebar-border:#1c2536;--sidebar-text:#8792a6}
+    :root{--bg:#dfe1ec;--panel:#f2f4f8;--card:#ffffff;--text:#1a2233;--muted:#97a1b3;--border:#e6e8f0;--border-strong:#dadfe8;--accent:#3b6fd6;--accent-contrast:#ffffff;--green:#17b16b;--orange:#f4a427;--gray:#6b7280;--red:#f0443a;--yellow:#f4a427;--radius:16px;--glow:0 6px 18px rgba(15,23,42,.08);--glow-strong:0 10px 26px rgba(15,23,42,.14);--sidebar-bg:#101e38;--sidebar-active-bg:#1f3358;--sidebar-border:#1c2c4c;--sidebar-text:#7c89a6;--neon:#4fc7ea;--neon-glow:rgba(79,199,234,.55);--plate-gray:#8a93a3;--pill-blue-bg:#e7f0fe;--pill-blue-text:#3b7dea;--pill-gray-bg:#eef0f4;--pill-gray-text:#6b7280}
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
     button{font-family:inherit}
@@ -14,48 +14,53 @@
     .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
     .side{padding:24px 18px;background:var(--sidebar-bg);border-right:1px solid var(--sidebar-border);box-shadow:2px 0 20px rgba(0,0,0,.15)}
     .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;margin-bottom:26px;letter-spacing:.2px;color:#fff}
-    .logo svg{width:22px;height:22px;color:var(--accent)}
-    .menu button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;margin:2px 0;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--sidebar-text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease}
-    .menu button svg{width:18px;height:18px;flex-shrink:0;opacity:.8}
+    .logo .logo-icon{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#5fd4f0,#3b8fe0);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(79,199,234,.4)}
+    .logo .logo-icon svg{width:16px;height:16px;color:#fff}
+    .menu button{position:relative;display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;margin:3px 0;border:1.5px solid transparent;border-radius:10px;background:transparent;color:var(--sidebar-text);font-size:14px;text-align:left;font-weight:600;cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease}
     .menu button:hover{background:rgba(255,255,255,.06);color:#fff}
-    .menu button.active{background:var(--accent);color:#fff;font-weight:700;border-color:var(--accent);box-shadow:0 4px 14px rgba(59,111,214,.35)}
-    .menu button.active svg{opacity:1}
+    .menu button.active{background:var(--sidebar-active-bg);color:#fff;font-weight:700;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 14px var(--neon-glow)}
+    .menu button.active::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--neon);box-shadow:0 0 8px var(--neon-glow);flex-shrink:0}
     main{padding:32px 40px;max-width:1400px;margin:0 auto;width:100%}
     .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:16px;flex-wrap:wrap}
-    .title{font-size:22px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
-    .date{font-size:13px;color:var(--muted);margin-top:2px}
+    .title{font-size:24px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
+    .date{font-size:13px;color:var(--muted);margin-top:3px}
     .tabs{display:flex;gap:4px;margin-bottom:24px;width:100%;background:var(--sidebar-bg);border-radius:16px;padding:6px}
-    .tabs button{flex:1;border:0;border-radius:11px;padding:16px 16px;font-size:15px;font-weight:800;letter-spacing:.2px;cursor:pointer;transition:background .15s ease,color .15s ease;background:transparent;color:var(--sidebar-text)}
+    .tabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid transparent;border-radius:11px;padding:14px 16px;font-size:14.5px;font-weight:700;letter-spacing:.2px;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;background:transparent;color:var(--sidebar-text)}
     .tabs button:hover{color:#fff}
-    .tabs button.active{background:#fff;color:#0d1420;box-shadow:0 4px 14px rgba(0,0,0,.2)}
-    .tabs button .count{margin-left:6px;opacity:.65;font-weight:700}
-    .primary{border:0;border-radius:999px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease;background:var(--green);color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)}
-    .primary:hover{filter:brightness(1.06)}
+    .tabs button.active{background:var(--sidebar-active-bg);color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 16px var(--neon-glow)}
+    .tabs button .count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.12);color:inherit;font-size:12px;font-weight:800}
+    .tabs button.active .count{background:var(--neon);color:#0d1420;box-shadow:0 0 8px var(--neon-glow)}
+    .primary{border:0!important;border-radius:12px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease,transform .1s ease;background:var(--green)!important;color:#fff!important;box-shadow:0 8px 20px rgba(23,177,107,.4)}
+    .primary:hover{filter:brightness(1.07)}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .order-btn{background:var(--red)!important;color:#fff!important;border:0!important;box-shadow:0 6px 16px rgba(239,68,68,.3)!important}
+    .order-btn{background:var(--red)!important;color:#fff!important;border:0!important;box-shadow:0 8px 20px rgba(240,68,58,.42)!important}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,360px));gap:20px}
-    .car{background:var(--card);border-radius:var(--radius);padding:0;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.08);cursor:pointer;border:1px solid var(--border);transition:box-shadow .2s ease,transform .15s ease}
-    .car:hover{box-shadow:0 12px 26px rgba(15,23,42,.16);transform:translateY(-2px)}
-    .car-priority-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:#94a3b8}
-    .car-priority-head .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-right:7px;vertical-align:middle}
-    .car-status-pill{background:rgba(255,255,255,.28);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;text-transform:none;letter-spacing:0;white-space:nowrap}
+    .car{background:var(--card);border-radius:var(--radius);padding:0;overflow:hidden;box-shadow:0 10px 24px rgba(15,23,42,.1);cursor:pointer;border:1px solid var(--border);transition:box-shadow .2s ease,transform .15s ease}
+    .car:hover{box-shadow:0 16px 32px rgba(15,23,42,.18);transform:translateY(-2px)}
+    .car-priority-head{display:flex;align-items:center;gap:8px;padding:11px 16px;font-size:11.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#fff;background:#94a3b8}
+    .car-priority-head .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;flex-shrink:0}
     .priority-high .car-priority-head{background:var(--red)}
     .priority-mid .car-priority-head{background:var(--orange)}
     .priority-low .car-priority-head{background:var(--green)}
-    .done .car-priority-head{background:#334155}
-    .car-head{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
-    .car-head .num{font-size:19px}
-    .car-head .brand{margin-top:5px}
-    .car-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
-    .car-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
-    .car-row:last-child{border-bottom:0;padding-bottom:0}
-    .car-row .car-label{color:var(--muted);font-size:12px;white-space:nowrap}
-    .car-row .car-value{color:var(--text);font-size:13px;font-weight:700;text-align:right}
+    .done .car-priority-head{background:#3a4356}
+    .car-plate-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 16px 0}
+    .car-plate-row .plate{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:16px;font-weight:600;letter-spacing:.5px;color:var(--plate-gray)}
+    .car-status-pill{background:var(--pill-blue-bg);color:var(--pill-blue-text);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap}
+    .car-status-pill.gray{background:var(--pill-gray-bg);color:var(--pill-gray-text)}
+    .car-status-pill.done{background:#eef0f4;color:#5b6472}
+    .car-head{padding:8px 16px 12px}
+    .car-head .brand{font-size:16px;font-weight:800;color:var(--text);margin-top:0}
+    .car-body{padding:2px 16px 6px;display:flex;flex-direction:column;gap:2px;background:#f8f9fc}
+    .car-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid rgba(15,23,42,.05)}
+    .car-row:last-child{border-bottom:0}
+    .car-row .car-label{color:var(--muted);font-size:12.5px;white-space:nowrap}
+    .car-row .car-value{color:var(--text);font-size:13.5px;font-weight:700;text-align:right}
+    .car-row.money .car-value{color:var(--green)}
     .car-row.overdue .car-value{color:var(--red)}
-    .car-foot{padding:12px 16px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .car-foot{padding:12px 16px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .car-foot button{border:1px solid var(--border-strong);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
 
-    .urgent{box-shadow:0 0 0 2px var(--red),0 12px 26px rgba(239,68,68,.22)}
+    .urgent{box-shadow:0 0 0 2px var(--red),0 14px 30px rgba(240,68,58,.25)}
     .num{font-size:18px;font-weight:800;letter-spacing:.2px;color:var(--text)}
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
     .small{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.3}
@@ -213,7 +218,7 @@
       .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
-  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:6px;background:var(--accent);color:#fff;border:0;cursor:pointer}
+  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:6px;background:var(--accent)!important;color:#fff!important;border:0!important;cursor:pointer}
 
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
 .section-title{font-weight:900;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}
@@ -223,8 +228,8 @@
 </head>
 <body>
 <div class="app">
-  <aside class="side"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 4 0M5 17a2 2 0 1 1 4 0m6 0a2 2 0 1 0 4 0m-4 0a2 2 0 1 1 4 0M5 17l1.5-6.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 17M3 17V9.5A1.5 1.5 0 0 1 4.5 8h1"/></svg>Pandora34</div><div class="menu">
-    <button id="menuWork" class="active" onclick="showSection('work')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg><span>Отчёт</span></button><button id="menuArchive" onclick="showSection('archive')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 4 0M5 17a2 2 0 1 1 4 0m6 0a2 2 0 1 0 4 0m-4 0a2 2 0 1 1 4 0M5 17l1.5-6.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 17M3 17V9.5A1.5 1.5 0 0 1 4.5 8h1"/></svg><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Настройки</span></button>
+  <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div class="menu">
+    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёт</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button>
   </div></aside>
   <main>
     <section id="workSection">
@@ -657,9 +662,15 @@ function updateTabCounts(){
   const cWork=cars.filter(c=>c.status==='work').length;
   const cReady=cars.filter(c=>c.status==='ready').length;
   const cDone=cars.filter(c=>c.status==='done' && isDoneVisibleInWork(c)).length;
-  const elW=document.getElementById('countWork'); if(elW) elW.textContent=' ('+cWork+')';
-  const elR=document.getElementById('countReady'); if(elR) elR.textContent=' ('+cReady+')';
-  const elD=document.getElementById('countDone'); if(elD) elD.textContent=' ('+cDone+')';
+  const elW=document.getElementById('countWork'); if(elW) elW.textContent=cWork;
+  const elR=document.getElementById('countReady'); if(elR) elR.textContent=cReady;
+  const elD=document.getElementById('countDone'); if(elD) elD.textContent=cDone;
+}
+
+function statusPillClass(status){
+  if(status==='done') return 'done';
+  if(status==='ready') return 'gray';
+  return '';
 }
 
 function render(){
@@ -674,20 +685,20 @@ function render(){
       {l:'Принято',v:c.inAt},
       c.ownerPhone?{l:'Телефон',v:c.ownerPhone}:null,
       c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
-      (c.status!=='done' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽'}:null,
-      (c.status!=='done')?{l:'Приоритет',v:(c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета')}:null,
+      (c.status!=='done' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽',cls:'money'}:null,
       (c.status==='done')?{l:'Выдано',v:c.outAt}:null,
       (c.status==='done' && c.master)?{l:'Делал',v:c.master}:null,
       (c.status==='done' && c.moneyMaster)?{l:'Деньги',v:c.moneyMaster}:null
     ].filter(Boolean);
-    const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
+    const rowsHtml=rows.map(r=>`<div class="car-row${r.cls?' '+r.cls:''}"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
     const orderBtn=c.orderNaryad?`<button onclick="event.stopPropagation();openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:'';
     const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'';
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCar(${c.id})">
-      <div class="car-priority-head"><span><span class="dot"></span>${escapeHtml(priLabel)}</span><span class="car-status-pill">${statusLabel(c.status)}</span></div>
-      <div class="car-head"><div class="num">${c.number}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
+      <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
+      <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
+      <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${orderBtn}${badge}</div>
     </div>`;
@@ -2717,8 +2728,9 @@ function renderArchive(){
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}" onclick="openCar(${c.id})">
-      <div class="car-priority-head"><span><span class="dot"></span>${escapeHtml(priLabel)}</span><span class="car-status-pill">${statusLabel(c.status)}</span></div>
-      <div class="car-head"><div class="num">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</div><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
+      <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
+      <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
+      <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${badge}</div>
     </div>`;
