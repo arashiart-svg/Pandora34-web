@@ -91,6 +91,22 @@
     .quick-btn{border:1px solid var(--border-strong);border-radius:8px;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
     .quick-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
 
+    .form-group{margin-bottom:20px}
+    .form-group-title{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+    .form-group-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .pick-btn{width:100%;text-align:left;padding:11px 12px;border-radius:8px;border:1px solid var(--border-strong)!important;background:var(--panel)!important;color:var(--text)!important;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .pick-btn.empty{color:var(--muted);font-weight:500}
+    .pick-btn:hover{background:rgba(59,111,214,.08)}
+    .pick-btn .arrow{color:var(--muted);font-size:12px;flex-shrink:0}
+    .pick-btn b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .aslanova-btn{width:100%;border:0!important;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;background:var(--orange)!important;color:#fff!important;box-shadow:0 8px 20px rgba(244,164,39,.4)!important}
+    .aslanova-btn:hover{filter:brightness(1.05)}
+    .two-actions.neon-bar{padding-top:16px;border-top:1px solid var(--border);margin-top:22px}
+    .two-actions.neon-bar button{border:1.5px solid rgba(79,199,234,.4);border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;background:var(--sidebar-bg);color:#b7c3dd;box-shadow:none}
+    .two-actions.neon-bar button:hover{color:#fff;border-color:var(--neon);box-shadow:0 0 10px rgba(79,199,234,.35)}
+    .two-actions.neon-bar button.neon{color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.2),0 0 20px var(--neon-glow)}
+    .two-actions.neon-bar button.neon:hover{box-shadow:0 0 0 1px rgba(79,199,234,.3),0 0 26px var(--neon-glow)}
+
     .box.compact{padding:18px}
     .box.compact h2{font-size:18px;margin-bottom:10px}
     .box.compact .step-title{font-size:14px;margin-bottom:8px}
@@ -683,6 +699,7 @@ function render(){
     const rows=[
       {l:'Работа',v:c.work},
       {l:'Принято',v:c.inAt},
+      c.ownerName?{l:'Владелец',v:escapeHtml(c.ownerName)}:null,
       c.ownerPhone?{l:'Телефон',v:c.ownerPhone}:null,
       c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
       (c.status!=='done' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽',cls:'money'}:null,
@@ -1120,6 +1137,29 @@ function comboHtml(id,label,placeholder,hint){
   </div>`;
 }
 
+function brandModelPickerHtml(brand,model,editMode){
+  const brandId=editMode?'editBrand':'brand';
+  const modelId=editMode?'editModel':'model';
+  const dispId=editMode?'editBrandModelDisplay':'brandModelDisplay';
+  const label=[brand,model].filter(Boolean).join(' ');
+  return `<div class="wide">
+    <label>Марка и модель</label>
+    <input type="hidden" id="${brandId}" value="${escapeAttr(brand||'')}">
+    <input type="hidden" id="${modelId}" value="${escapeAttr(model||'')}">
+    <button type="button" id="${dispId}" class="pick-btn${label?'':' empty'}" onclick="openBrandPicker('${brandId}')"><span>${escapeHtml(label||'Нажми и выбери')}</span><span class="arrow">›</span></button>
+  </div>`;
+}
+
+function counterpartyPickerHtml(counterparty,editMode){
+  const id=editMode?'editCounterparty':'counterparty';
+  const dispId=editMode?'editCounterpartyDisplay':'counterpartyDisplay';
+  return `<div>
+    <label>Контрагент</label>
+    <input type="hidden" id="${id}" value="${escapeAttr(counterparty||'')}">
+    <button type="button" id="${dispId}" class="pick-btn${counterparty?'':' empty'}" onclick="openClientPicker('${id}')"><b>${escapeHtml(counterparty||'Выбрать')}</b><span class="arrow">›</span></button>
+  </div>`;
+}
+
 function editComboHtml(id,label,value,placeholder){
   if(id==='editBrand'){
     return `<div class="combo">
@@ -1204,6 +1244,19 @@ function openBrandPicker(targetId){
   document.getElementById('modal').style.display='flex';
 }
 
+function syncBrandModelDisplay(){
+  [['brand','model','brandModelDisplay'],['editBrand','editModel','editBrandModelDisplay']].forEach(([brandId,modelId,dispId])=>{
+    const dispBtn=document.getElementById(dispId);
+    if(!dispBtn) return;
+    const b=(document.getElementById(brandId)?.value||'').trim();
+    const m=(document.getElementById(modelId)?.value||'').trim();
+    const label=[b,m].filter(Boolean).join(' ');
+    const span=dispBtn.querySelector('span');
+    if(span) span.textContent=label||'Нажми и выбери';
+    dispBtn.classList.toggle('empty',!label);
+  });
+}
+
 function pickBrand(targetId,value){
   restorePreviousModal();
   const input=document.getElementById(targetId);
@@ -1212,6 +1265,7 @@ function pickBrand(targetId,value){
   if(targetId==='editBrand') modelId='editModel';
   else if(targetId==='ordBrand') modelId='ordModel';
   const modelInput=document.getElementById(modelId); if(modelInput) modelInput.value='';
+  syncBrandModelDisplay();
   if(targetId==='brand'||targetId==='ordBrand'||targetId==='editBrand') setTimeout(()=>openModelPicker(modelId,value),120);
 }
 
@@ -1225,6 +1279,7 @@ function manualBrand(targetId){
     if(input) input.value=value;
     const modelId = targetId==='editBrand' ? 'editModel' : (targetId==='ordBrand' ? 'ordModel' : 'model');
     const modelInput=document.getElementById(modelId); if(modelInput) modelInput.value='';
+    syncBrandModelDisplay();
   }
 }
 
@@ -1243,8 +1298,8 @@ function openModelPicker(targetId, brand){
     <div class="actions"><button onclick="restorePreviousModal()">Назад</button><button onclick="manualModel('${targetId}','${String(brand).replace(/'/g,"\'")}')">Ввести вручную</button></div>`;
   document.getElementById('modal').style.display='flex';
 }
-function pickModel(targetId,value){restorePreviousModal();const input=document.getElementById(targetId);if(input) input.value=value;}
-function manualModel(targetId,brand){const value=prompt('Введите модель авто');if(value){if(brand){carModels[brand]=carModels[brand]||[];if(!carModels[brand].includes(value))carModels[brand].push(value);saveAll();}restorePreviousModal();const input=document.getElementById(targetId);if(input) input.value=value;}}
+function pickModel(targetId,value){restorePreviousModal();const input=document.getElementById(targetId);if(input) input.value=value;syncBrandModelDisplay();}
+function manualModel(targetId,brand){const value=prompt('Введите модель авто');if(value){if(brand){carModels[brand]=carModels[brand]||[];if(!carModels[brand].includes(value))carModels[brand].push(value);saveAll();}restorePreviousModal();const input=document.getElementById(targetId);if(input) input.value=value;syncBrandModelDisplay();}}
 
 function restorePreviousModal(){
   document.getElementById('modalBox').className=previousModalClass||'box compact';
@@ -1287,6 +1342,7 @@ function saveAutoDraft(){
   draftCar.brand=val('brand');
   draftCar.model=val('model');
   draftCar.ownerPhone=val('ownerPhone');
+  draftCar.ownerName=val('ownerName');
   draftCar.counterparty=val('counterparty');
 }
 
@@ -1295,6 +1351,7 @@ function skipAutoStep(){
   draftCar.brand='';
   draftCar.model='';
   draftCar.ownerPhone='';
+  draftCar.ownerName='';
   draftCar.counterparty='';
   openWorkStep();
 }
@@ -1362,6 +1419,7 @@ function addCar(priority){
     brand:draftCar.brand||'Марка не указана',
     model:draftCar.model||'',
     ownerPhone:draftCar.ownerPhone||'',
+    ownerName:draftCar.ownerName||'',
     counterparty:draftCar.counterparty||'',
     work:draftCar.work||val('work')||'Работа не указана',
     agreedPrice:draftCar.agreedPrice||val('agreedPrice'),
@@ -1384,12 +1442,22 @@ function openCar(id){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Карточка работы</h2>
+    <div class="form-group">
+      <div class="form-group-title">Авто</div>
+      <div class="form">
+        <div><label>Госномер</label><input id="editNumber" value="${escapeHtml(c.number)}" placeholder="А123ВС77" ${c.status==='done'?'readonly':''}></div>
+        ${brandModelPickerHtml(c.brand,c.model,true)}
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-group-title">Владелец и контрагент</div>
+      <div class="form">
+        <div><label>Номер владельца</label><input id="editOwnerPhone" value="${escapeHtml(c.ownerPhone)}" placeholder="+7 999 123-45-67" ${c.status==='done'?'readonly':''}></div>
+        <div><label>ФИО</label><input id="editOwnerName" value="${escapeHtml(c.ownerName||'')}" placeholder="Имя Фамилия" ${c.status==='done'?'readonly':''}></div>
+        ${counterpartyPickerHtml(c.counterparty,true)}
+      </div>
+    </div>
     <div class="form">
-      <div><label>Госномер</label><input id="editNumber" value="${escapeHtml(c.number)}" placeholder="А123ВС77" ${c.status==='done'?'readonly':''}></div>
-      ${editComboHtml('editBrand','Марка авто',c.brand||'','Марка авто')}
-      ${editComboHtml('editModel','Модель авто',c.model||'','Модель авто')}
-      <div><label>Номер владельца</label><input id="editOwnerPhone" value="${escapeHtml(c.ownerPhone)}" placeholder="+7 999 123-45-67" ${c.status==='done'?'readonly':''}></div>
-      <div class="wide"><label>Контрагент</label><div style="display:flex;gap:10px;align-items:center"><input id="editCounterparty" value="${escapeHtml(c.counterparty||'')}" placeholder="Клиент / партнёр" ${c.status==='done'?'readonly':''}>${c.status==='done'?'':`<button class="quick-btn" type="button" onclick="openClientPicker('editCounterparty')">Контрагент</button>`}</div></div>
       ${editComboHtml('editWork','Работы',c.work||'','Работы')}
       <div class="wide"><div class="quick-row">${quickWorks.map(x=>`<button class="quick-btn work-pick" type="button" data-work="${x}" onclick="toggleWork('editWork','${x}')">${x}</button>`).join('')}</div></div>
       ${editComboHtml('editAgreedPrice','Согласованная стоимость',c.agreedPrice||'','Стоимость')}
@@ -1419,6 +1487,7 @@ function saveCard(id){
   c.brand=val('editBrand')||'Марка не указана';
   c.model=val('editModel');
   c.ownerPhone=val('editOwnerPhone');
+  c.ownerName=val('editOwnerName');
   c.counterparty=val('editCounterparty');
   c.work=val('editWork')||'Работа не указана';
   c.agreedPrice=val('editAgreedPrice');
@@ -1584,6 +1653,7 @@ function saveCardNoClose(id){
   c.brand=val('editBrand')||'Марка не указана';
   c.model=val('editModel');
   c.ownerPhone=val('editOwnerPhone');
+  c.ownerName=val('editOwnerName');
   c.counterparty=val('editCounterparty');
   c.work=val('editWork')||'Работа не указана';
   c.agreedPrice=val('editAgreedPrice');
@@ -2992,16 +3062,28 @@ function showAllClientsFlat(targetId){
 
 function applyClientToForm(targetId, client){
   const c=normalizeClient(client);
+  const isEdit = targetId==='editCounterparty';
   const input=document.getElementById(targetId);
-  if(input) input.value=c.name;
+  if(input){ input.value=c.name; input.setAttribute('value', c.name); }
 
-  const phoneTarget = targetId==='editCounterparty' ? 'editOwnerPhone' : 'ownerPhone';
-  const phoneInput=document.getElementById(phoneTarget);
+  const phoneInput=document.getElementById(isEdit?'editOwnerPhone':'ownerPhone');
   if(phoneInput && c.phone){
     phoneInput.value=c.phone;
     phoneInput.setAttribute('value', c.phone);
   }
-  if(input) input.setAttribute('value', c.name);
+
+  const nameInput=document.getElementById(isEdit?'editOwnerName':'ownerName');
+  if(nameInput && c.name){
+    nameInput.value=c.name;
+    nameInput.setAttribute('value', c.name);
+  }
+
+  const dispBtn=document.getElementById(isEdit?'editCounterpartyDisplay':'counterpartyDisplay');
+  if(dispBtn){
+    const b=dispBtn.querySelector('b');
+    if(b) b.textContent=c.name;
+    dispBtn.classList.remove('empty');
+  }
 }
 
 function pickClient(targetId,index){
@@ -3656,15 +3738,23 @@ openAutoStep=function(){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить в работу</h2><div class="step-title">1/2 — Данные авто</div>
-    <div class="form">
-      <div><button class="photo-btn" onclick="startNativeOcr('number','plate')"><span>📷</span>Сфоткать и считать госномер</button><label>Госномер</label><input id="number" placeholder="А123ВС77" value="${draftCar.number||''}"><div id="numberOcrStatus" class="ocr-status"></div></div>
-      ${comboHtml('brand','Марка авто','Начни вводить: M, B, T...','Выбери из списка или напиши вручную.')}
-      ${comboHtml('model','Модель авто','Выбери марку, потом модель','Выбери из списка моделей марки или напиши вручную.')}
-      <div><label>Номер владельца</label><input id="ownerPhone" placeholder="+7 999 123-45-67" value="${draftCar.ownerPhone||'+7'}"></div>
-      <div class="wide"><label>Контрагент</label><div style="display:flex;gap:10px;align-items:center"><input id="counterparty" placeholder="Клиент / партнёр" value="${draftCar.counterparty||''}"><button class="quick-btn" type="button" onclick="openClientPicker('counterparty')">Группа</button></div><div class="hint">Сначала выбирается группа, потом конкретный контрагент. Для горячей кнопки контрагент станет Асланова.</div></div>
-      <div class="wide"><button class="quick-btn" type="button" style="width:100%;background:#111;color:#fff;font-size:16px;padding:14px" onclick="startAslanovaFlow()">Асланова</button></div>
+    <div class="form-group">
+      <div class="form-group-title">Авто</div>
+      <div class="form">
+        <div><label>Госномер</label><input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}"></div>
+        ${brandModelPickerHtml(draftCar.brand,draftCar.model,false)}
+      </div>
     </div>
-    <div class="two-actions"><div class="left"><button onclick="closeModal()">Отмена</button></div><div class="right"><button onclick="skipAutoStep()">Пропустить</button><button onclick="nextWorkStep()">Далее</button></div></div>`;
+    <div class="form-group">
+      <div class="form-group-title">Владелец и контрагент</div>
+      <div class="form">
+        <div><label>Номер владельца</label><input id="ownerPhone" placeholder="+7 999 123-45-67" value="${escapeHtml(draftCar.ownerPhone||'+7')}"></div>
+        <div><label>ФИО</label><input id="ownerName" placeholder="Имя Фамилия" value="${escapeHtml(draftCar.ownerName||'')}"></div>
+        ${counterpartyPickerHtml(draftCar.counterparty,false)}
+        <div class="wide"><button class="aslanova-btn" type="button" onclick="startAslanovaFlow()">Асланова</button></div>
+      </div>
+    </div>
+    <div class="two-actions neon-bar"><div class="left"><button onclick="closeModal()">Отмена</button></div><div class="right"><button onclick="skipAutoStep()">Пропустить</button><button class="neon" onclick="nextWorkStep()">Далее</button></div></div>`;
   document.getElementById('modal').style.display='flex';
 };
 function startAslanovaFlow(){saveAutoDraft();draftCar.counterparty='Асланова';openAslanovaStep();}
@@ -3680,7 +3770,7 @@ function openAslanovaStep(){normalizeAslanovaSettings();document.getElementById(
   <div class="two-actions"><div class="left"><button onclick="openAutoStep()">Назад</button></div><div class="right"><button onclick="closeModal()">Отмена</button><button onclick="addAslanovaCar()">Добавить</button></div></div>`;document.getElementById('modal').style.display='flex';pickAslanovaType(aslanovaSettings.defaultType);pickMaster('aslanovaMaster','aslanova-master',aslanovaSettings.defaultMaster);}
 function toggleAslanovaPaid(btnId,inputId){const inp=document.getElementById(inputId); if(!inp)return; const on=inp.value!=='1'; inp.value=on?'1':'0'; const b=document.getElementById(btnId); if(b)b.classList.toggle('selected',on);}
 function pickAslanovaType(t){document.getElementById('aslanovaType').value=t;const l=document.getElementById('aslTypeLocal'),r=document.getElementById('aslTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
-function addAslanovaCar(){const price=val('aslanovaPrice')||'0';const master=val('aslanovaMaster')||'Андрей';const typ=val('aslanovaType')||'local';const now=new Date().toISOString();const stamp=new Date().toLocaleString('ru-RU');const c={id:Date.now(),number:draftCar.number||'БЕЗ НОМЕРА',brand:draftCar.brand||'Марка не указана',model:draftCar.model||'',ownerPhone:draftCar.ownerPhone||'',counterparty:'Асланова',work:'Прошивка',agreedPrice:price,comment:'Асланова · '+aslanovaTypeLabel(typ),priority:'none',inAt:stamp,outAt:stamp,price:price,status:'done',isAslanova:true,aslanovaType:typ,aslanovaAmount:price,paidByClient:(val('aslanovaPaidByClient')==='1'),master:master,moneyMaster:'Андрей',statusChangedAt:now,doneAt:now,updatedAt:now};cars.unshift(c);save();closeModal();setTab('done');}
+function addAslanovaCar(){const price=val('aslanovaPrice')||'0';const master=val('aslanovaMaster')||'Андрей';const typ=val('aslanovaType')||'local';const now=new Date().toISOString();const stamp=new Date().toLocaleString('ru-RU');const c={id:Date.now(),number:draftCar.number||'БЕЗ НОМЕРА',brand:draftCar.brand||'Марка не указана',model:draftCar.model||'',ownerPhone:draftCar.ownerPhone||'',ownerName:draftCar.ownerName||'',counterparty:'Асланова',work:'Прошивка',agreedPrice:price,comment:'Асланова · '+aslanovaTypeLabel(typ),priority:'none',inAt:stamp,outAt:stamp,price:price,status:'done',isAslanova:true,aslanovaType:typ,aslanovaAmount:price,paidByClient:(val('aslanovaPaidByClient')==='1'),master:master,moneyMaster:'Андрей',statusChangedAt:now,doneAt:now,updatedAt:now};cars.unshift(c);save();closeModal();setTab('done');}
 const aslanovaOldOpenCar=openCar;
 openCar=function(id){const c=cars.find(x=>x.id===id);if(c&&c.isAslanova&&c.status==='work')return openAslanovaDone(id);return aslanovaOldOpenCar(id);};
 function openAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;document.getElementById('modalBox').className='box compact';document.getElementById('modalBox').innerHTML=`
