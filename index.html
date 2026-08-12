@@ -58,25 +58,28 @@
     .car-row.money .car-value{color:var(--green)}
     .car-row.overdue .car-value{color:var(--red)}
     .car-foot{padding:12px 16px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .car-foot button{border:1px solid var(--border-strong);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
+    .car-foot button{border:1.5px solid var(--border-strong);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--text);cursor:pointer}
+    .car-foot button:hover{border-color:var(--neon);box-shadow:0 0 10px rgba(79,199,234,.28);color:var(--text)}
 
     .urgent{box-shadow:0 0 0 2px var(--red),0 14px 30px rgba(240,68,58,.25)}
     .num{font-size:18px;font-weight:800;letter-spacing:.2px;color:var(--text)}
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
     .small{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.3}
-    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;font-size:12px}
+    .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:6px;background:var(--sidebar-active-bg);color:#fff;font-weight:700;font-size:12px;border:1px solid var(--neon);box-shadow:0 0 10px var(--neon-glow)}
     .modal{position:fixed;inset:0;background:rgba(15,20,30,.6);display:none;align-items:center;justify-content:center;padding:20px}
     .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 60px rgba(15,23,42,.25)}
     .box h2{margin:0 0 16px;font-size:20px;font-weight:800;color:var(--text)}
     .form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .form label{font-size:12.5px;color:var(--muted);font-weight:600}
     .form input,.form textarea{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:14px;color-scheme:light}
-    .form input:focus,.form textarea:focus,.form select:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,111,214,.18)}
+    .form input:focus,.form textarea:focus,.form select:focus,select:focus,input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(79,199,234,.22)}
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
     .wide{grid-column:1/-1}
     .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-    .actions button,.two-actions button{border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer;box-shadow:var(--glow)}
-    .actions button:hover,.two-actions button:hover{box-shadow:var(--glow-strong)}
+    .actions button,.two-actions button{border:1.5px solid rgba(79,199,234,.4)!important;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;background:var(--sidebar-bg)!important;color:#b7c3dd!important;cursor:pointer;box-shadow:none}
+    .actions button:hover,.two-actions button:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 10px rgba(79,199,234,.35)}
+    .actions button.neon,.two-actions button.neon{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 0 1px rgba(79,199,234,.2),0 0 20px var(--neon-glow)}
+    .actions button.primary,.two-actions button.primary{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 8px 20px rgba(23,177,107,.4)!important}
     .two-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
     .two-actions .left,.two-actions .right{display:flex;gap:10px;flex-wrap:wrap}
     .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:var(--radius);color:var(--muted);font-size:15px;text-align:center;background:var(--card)}
@@ -84,19 +87,20 @@
     .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:6px;box-shadow:0 20px 50px rgba(15,23,42,.18)}
     .suggest.show{display:block}
     .suggest button{display:block;width:100%;border:0;text-align:left;margin:2px 0;padding:10px 12px;border-radius:6px;background:transparent;color:var(--text);font-size:14px;cursor:pointer}
-    .suggest button:hover,.suggest button:active{background:rgba(59,111,214,.1)}
+    .suggest button:hover,.suggest button:active{background:rgba(79,199,234,.12);color:var(--text)}
     .empty{padding:14px;color:var(--muted)}
     .step-title{font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)}
     .quick-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .quick-btn{border:1px solid var(--border-strong);border-radius:8px;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .quick-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
+    .quick-btn:hover{border-color:rgba(79,199,234,.55);box-shadow:0 0 10px rgba(79,199,234,.2)}
+    .quick-btn.selected{background:var(--sidebar-active-bg);color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 14px var(--neon-glow)}
 
     .form-group{margin-bottom:20px}
-    .form-group-title{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
-    .form-group-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .form-group-title{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#2a6f8a;margin-bottom:12px}
+    .form-group-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(79,199,234,.45),transparent)}
     .pick-btn{width:100%;text-align:left;padding:11px 12px;border-radius:8px;border:1px solid var(--border-strong)!important;background:var(--panel)!important;color:var(--text)!important;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
     .pick-btn.empty{color:var(--muted);font-weight:500}
-    .pick-btn:hover{background:rgba(59,111,214,.08)}
+    .pick-btn:hover{background:rgba(79,199,234,.08)!important;border-color:rgba(79,199,234,.5)!important}
     .pick-btn .arrow{color:var(--muted);font-size:12px;flex-shrink:0}
     .pick-btn b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .aslanova-btn{width:100%;border:0!important;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;background:var(--orange)!important;color:#fff!important;box-shadow:0 8px 20px rgba(244,164,39,.4)!important}
@@ -106,6 +110,10 @@
     .two-actions.neon-bar button:hover{color:#fff;border-color:var(--neon);box-shadow:0 0 10px rgba(79,199,234,.35)}
     .two-actions.neon-bar button.neon{color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.2),0 0 20px var(--neon-glow)}
     .two-actions.neon-bar button.neon:hover{box-shadow:0 0 0 1px rgba(79,199,234,.3),0 0 26px var(--neon-glow)}
+
+    .view-plate{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-weight:800;letter-spacing:.5px}
+    .view-body{padding:2px 16px;display:flex;flex-direction:column;gap:2px;background:var(--panel);border-radius:10px;border:1px solid var(--border);margin-top:4px}
+    .view-body .car-row:last-child{border-bottom:0}
 
     .box.compact{padding:18px}
     .box.compact h2{font-size:18px;margin-bottom:10px}
@@ -117,27 +125,31 @@
     .box.compact .actions,.box.compact .two-actions{margin-top:10px}
     .box.compact .actions button,.box.compact .two-actions button{padding:9px 14px;font-size:13.5px}
     .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
-    .photo-btn:hover,.photo-btn:active{background:rgba(59,111,214,.1)}
+    .photo-btn:hover,.photo-btn:active{background:rgba(79,199,234,.1);border-color:rgba(79,199,234,.5)}
     .photo-btn span{color:var(--text);margin-right:8px}
 
 
-    .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+    .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:box-shadow .15s ease,border-color .15s ease}
+    .report-card:hover{border-color:rgba(79,199,234,.35);box-shadow:0 10px 28px rgba(79,199,234,.12)}
     .report-num{font-size:24px;font-weight:800;margin-top:6px;color:var(--text)}
 
 
     .report-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
     .report-controls button,.report-controls select{
-      border:1px solid var(--border-strong);border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;
-      background:var(--panel);color:var(--text);cursor:pointer
+      border:1.5px solid rgba(79,199,234,.4)!important;border-radius:10px;padding:9px 14px;font-size:13.5px;font-weight:700;
+      background:var(--sidebar-bg)!important;color:#b7c3dd!important;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease,background .12s ease,color .12s ease
     }
-    .report-controls button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
+    .report-controls select{color:#fff!important}
+    .report-controls button:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 12px rgba(79,199,234,.35)}
+    .report-controls button.active{background:var(--sidebar-active-bg)!important;color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 16px var(--neon-glow)}
+    .report-print{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 4px 14px rgba(23,177,107,.35)!important}
+    .report-print:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(23,177,107,.45)!important;color:#fff!important}
     .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
     .report-line:first-child{border-top:0}
-
-
     .day-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-    .day-buttons button{border:1px solid var(--border-strong);border-radius:8px;padding:9px 13px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer}
-    .day-buttons button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:var(--glow)}
+    .day-buttons button{border:1.5px solid rgba(79,199,234,.4)!important;border-radius:10px;padding:9px 13px;background:var(--sidebar-bg)!important;color:#b7c3dd!important;font-size:13.5px;font-weight:700;cursor:pointer}
+    .day-buttons button:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 12px rgba(79,199,234,.35)}
+    .day-buttons button.active{background:var(--sidebar-active-bg)!important;color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 16px var(--neon-glow)}
     .pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
     .pie{width:160px;height:160px;border-radius:50%;background:conic-gradient(var(--border) 0 100%);box-shadow:0 2px 10px rgba(15,23,42,.1),inset 0 0 0 1px rgba(0,0,0,.05)}
     .legend{display:grid;gap:8px;min-width:220px}
@@ -145,37 +157,39 @@
     .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 
 
-    .product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+    .product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:box-shadow .15s ease,border-color .15s ease,transform .15s ease}
+    .product-card:hover{border-color:rgba(79,199,234,.4);box-shadow:0 12px 28px rgba(79,199,234,.14);transform:translateY(-1px)}
     .product-name{font-size:16px;font-weight:800;color:var(--text)}
     .product-meta{color:var(--muted);font-size:13px;margin-top:6px}
     .client-card{padding:9px 11px;border-radius:8px;box-shadow:none}
     .client-card .product-name{font-size:14px;line-height:1.1}
     .client-card .product-meta{font-size:11.5px;margin-top:3px}
-    .client-chip{display:inline-flex;align-items:center;border-radius:6px;padding:3px 8px;margin-top:6px;background:rgba(59,111,214,.12);font-size:11px;font-weight:700;color:var(--text)}
+    .client-chip{display:inline-flex;align-items:center;border-radius:6px;padding:3px 8px;margin-top:6px;background:rgba(79,199,234,.14);border:1px solid rgba(79,199,234,.28);font-size:11px;font-weight:700;color:#1f5f78}
     .client-card .actions{margin-top:7px;gap:6px}
     .client-card .actions button{padding:6px 9px;border-radius:6px;font-size:12px}
     .stock-journal-row{border-top:1px solid var(--border);padding:12px 0}
     .stock-journal-row:first-child{border-top:0}
 
 
-    .product-color-0{border-left:4px solid #3b6fd6}
+    .product-color-0{border-left:4px solid var(--neon)}
     .product-color-1{border-left:4px solid #16a34a}
     .product-color-2{border-left:4px solid #f0a020}
     .product-color-3{border-left:4px solid #ef4444}
     .product-color-4{border-left:4px solid #6b7280}
-    .product-color-5{border-left:4px solid #334155}
+    .product-color-5{border-left:4px solid #1f3358}
 
 
     .brand-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:55vh;overflow:auto;padding-right:4px}
-    .brand-picker-grid button{border:1px solid var(--border-strong);border-radius:8px;padding:12px;background:var(--panel);color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
-    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:rgba(59,111,214,.1)}
+    .brand-picker-grid button{border:1.5px solid var(--border-strong);border-radius:8px;padding:12px;background:var(--panel);color:var(--text);font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+    .brand-picker-grid button:hover,.brand-picker-grid button:active{background:rgba(79,199,234,.1);border-color:var(--neon);box-shadow:0 0 12px rgba(79,199,234,.25)}
     .readonly-pick{cursor:pointer}
 
 
-    .appointment-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:16px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+    .appointment-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--neon);border-radius:var(--radius);padding:16px;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:box-shadow .15s ease,border-color .15s ease,transform .15s ease}
+    .appointment-card:hover{border-color:rgba(79,199,234,.45);box-shadow:0 12px 28px rgba(79,199,234,.14);transform:translateY(-1px)}
 
     #printReportArea{display:none}
-    .danger{background:var(--red)!important;border-color:var(--red)!important;color:white!important;box-shadow:none!important}
+    .danger{background:var(--red)!important;border-color:var(--red)!important;color:white!important;box-shadow:0 6px 16px rgba(240,68,58,.35)!important}
     @media print{
       body{background:white!important;color:#111827!important}
       body.printing .app, body.printing .modal{display:none!important}
@@ -234,7 +248,7 @@
       .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
-  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:6px;background:var(--accent)!important;color:#fff!important;border:0!important;cursor:pointer}
+  .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:8px;background:var(--sidebar-bg)!important;color:#fff!important;border:1.5px solid var(--neon)!important;box-shadow:0 0 10px rgba(79,199,234,.3)!important;cursor:pointer}
 
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
 .section-title{font-weight:900;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}
@@ -245,7 +259,7 @@
 <body>
 <div class="app">
   <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div class="menu">
-    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёт</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button>
+    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button>
   </div></aside>
   <main>
     <section id="workSection">
@@ -255,7 +269,7 @@
     </section>
 
     <section id="reportSection" style="display:none">
-      <div class="top"><div><div class="title">Отчёт</div><div class="date">Выданные авто, суммы, мастера и касса</div></div></div>
+      <div class="top"><div><div class="title">Отчёты</div><div class="date">Выданные авто, суммы, мастера и касса</div></div></div>
 
       <div class="report-controls">
         <button id="repCurrent" class="active" onclick="setReportMode('current')">Текущая неделя</button>
@@ -308,16 +322,25 @@
       <div class="top">
         <div>
           <div class="title">Запись</div>
-          <div class="date">Импорт / экспорт Google Календаря и перевод в работу</div>
+          <div class="date" id="calendarSubtitle">Google Календарь → список на сегодня и в работу</div>
+        </div>
+        <div class="top-actions">
+          <button class="primary" onclick="syncGoogleCalendar()">Обновить из Google</button>
         </div>
       </div>
 
       <div class="report-controls">
-        <button onclick="openAddAppointment()">Добавить запись</button>
+        <button id="calToday" class="active" onclick="setAppointmentFilter('today')">Сегодня</button>
+        <button id="calTomorrow" onclick="setAppointmentFilter('tomorrow')">Завтра</button>
+        <button id="calWeek" onclick="setAppointmentFilter('week')">Неделя</button>
+        <button id="calAll" onclick="setAppointmentFilter('all')">Все</button>
+        <button onclick="openAddAppointment()">Добавить вручную</button>
+        <button onclick="openGoogleCalendarSettings()">Ссылка календаря</button>
         <button onclick="document.getElementById('icsFile').click()">Импорт .ics</button>
         <input id="icsFile" type="file" accept=".ics,text/calendar" style="display:none" onchange="importIcsFile(event)">
       </div>
 
+      <div id="calendarSyncStatus" class="small" style="margin:0 0 14px"></div>
       <div class="grid" id="appointmentsGrid"></div>
     </section>
 
@@ -387,6 +410,8 @@
         <button onclick="openSettingsSubsection('brands')">Марки и модели авто</button>
         <button onclick="openSettingsSubsection('organizations')">Организация</button>
         <button onclick="openSettingsSubsection('backup')">Резервная база</button>
+        <button onclick="openSettingsSubsection('sync')">Синхронизация с сервером</button>
+        <button onclick="openSettingsSubsection('googleCalendar')">Google Календарь</button>
       </div>
 
       <div id="settingsDetails" class="report-card">
@@ -617,7 +642,7 @@ function showSection(section){
   }
 
   if(section==='calendar'){
-    renderAppointments();
+    setAppointmentFilter(appointmentFilter||'today');
   }
 
   if(section==='backup') renderBackupStatus();
@@ -712,7 +737,7 @@ function render(){
     const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'';
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
-    return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCar(${c.id})">
+    return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCarView(${c.id})">
       <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
       <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
@@ -748,12 +773,21 @@ function weekLabelByStart(s){
   return `${d.toLocaleDateString('ru-RU')} — ${e.toLocaleDateString('ru-RU')}`;
 }
 
+function updateReportControlsActive(){
+  const exclusive=!analysisOpen && !salaryOpen;
+  document.getElementById('repCurrent').classList.toggle('active',exclusive && reportMode==='current');
+  document.getElementById('repDay').classList.toggle('active',exclusive && reportMode==='day');
+  document.getElementById('repWeek').classList.toggle('active',exclusive && reportMode==='week');
+  document.getElementById('repMonth').classList.toggle('active',exclusive && reportMode==='month');
+  document.getElementById('repAnalysis').classList.toggle('active',analysisOpen);
+  document.getElementById('repSalary').classList.toggle('active',salaryOpen);
+}
+
 function setReportMode(mode){
   reportMode=mode;
-  document.getElementById('repCurrent').classList.toggle('active',mode==='current');
-  document.getElementById('repDay').classList.toggle('active',mode==='day');
-  document.getElementById('repWeek').classList.toggle('active',mode==='week');
-  document.getElementById('repMonth').classList.toggle('active',mode==='month');
+  analysisOpen=false;
+  salaryOpen=false;
+  updateReportControlsActive();
 
   document.getElementById('weekSelect').style.display=mode==='week'?'block':'none';
   document.getElementById('monthSelect').style.display=mode==='month'?'block':'none';
@@ -824,12 +858,14 @@ function selectReportDay(key){
 
 function toggleAnalysis(){
   analysisOpen=!analysisOpen;
-  document.getElementById('repAnalysis').classList.toggle('active',analysisOpen);
+  if(analysisOpen) salaryOpen=false;
+  updateReportControlsActive();
   renderReport();
 }
 function toggleSalaryReport(){
   salaryOpen=!salaryOpen;
-  const btn=document.getElementById('repSalary'); if(btn) btn.classList.toggle('active',salaryOpen);
+  if(salaryOpen) analysisOpen=false;
+  updateReportControlsActive();
   renderReport();
 }
 
@@ -885,7 +921,7 @@ function renderPieCard(title, entries){
   if(!entries.length){
     return `<div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">${title}</h2><div class="small">Нет данных</div></div>`;
   }
-  const colors=['#3b6fd6','#4a7fdb','#5b6b7a','#4a5568','#3f4a58','#37414f','#2c3542','#232a35'];
+  const colors=['#4fc7ea','#17b16b','#f4a427','#f0443a','#1f3358','#6b7280','#2a6f8a','#101e38'];
   const total=entries.reduce((s,[,v])=>s+v,0) || 1;
   let current=0;
   const segments=entries.map(([name,value],i)=>{
@@ -1059,6 +1095,16 @@ function openSalaryDetail(encodedName){
 function renderReport(){
   fillReportSelects();
   renderDayButtons();
+
+  const showPeriod=!analysisOpen && !salaryOpen;
+  document.getElementById('reportStats').style.display=showPeriod?'':'none';
+  document.getElementById('reportDetails').style.display=showPeriod?'':'none';
+  const dayBtns=document.getElementById('dayButtons');
+  if(dayBtns) dayBtns.style.display=(showPeriod && reportMode==='day')?'flex':'none';
+  const weekSel=document.getElementById('weekSelect');
+  if(weekSel) weekSel.style.display=(showPeriod && reportMode==='week')?'block':'none';
+  const monthSel=document.getElementById('monthSelect');
+  if(monthSel) monthSel.style.display=(showPeriod && reportMode==='month')?'block':'none';
 
   const range=getReportRange();
 
@@ -1373,10 +1419,10 @@ function openWorkStep(){
       <div class="wide"><div class="quick-row">${quickPrices.map(x=>`<button class="quick-btn" type="button" onclick="setVal('agreedPrice','${x}')">${x} ₽</button>`).join('')}</div></div>
       <div class="wide"><label>Комментарий</label><textarea id="comment" rows="3" placeholder="Необязательно">${draftCar.comment||''}</textarea></div>
     </div>
-    <div class="two-actions">
+    <div class="two-actions neon-bar">
       <div class="left"><button onclick="openAutoStep()">Назад</button></div>
       <div class="right"><button onclick="closeModal()">Отмена</button>
-       <button onclick="openPriorityStep()">Сохранить</button>
+       <button class="neon" onclick="openPriorityStep()">Сохранить</button>
        <button onclick="quickDoneFromAdd()">Выдать</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
@@ -1401,10 +1447,10 @@ function openPriorityStep(){
     <h2>Приоритет карточки</h2>
     <div class="step-title">Выбери срочность работы</div>
     <div class="quick-row" style="flex-direction:column">
-      <button class="quick-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;box-shadow:0 4px 12px rgba(239,68,68,.3);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
-      <button class="quick-btn" style="background:#f0a020;color:#fff;border-color:#f0a020;box-shadow:0 4px 12px rgba(240,160,32,.25);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
-      <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid #3d5566;font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
-      <button class="quick-btn" style="background:var(--panel);color:var(--text);border:1px solid var(--border-strong);font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
+      <button class="quick-btn" style="background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 4px 12px rgba(240,68,58,.3);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
+      <button class="quick-btn" style="background:var(--orange);color:#fff;border-color:var(--orange);box-shadow:0 4px 12px rgba(244,164,39,.3);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
+      <button class="quick-btn" style="background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(23,177,107,.3);font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
+      <button class="quick-btn" style="background:#94a3b8;color:#fff;border-color:#94a3b8;box-shadow:0 4px 12px rgba(148,163,184,.3);font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
     </div>
     <div class="actions">
       <button onclick="openWorkStep()">Назад</button>
@@ -1435,6 +1481,42 @@ function addCar(priority){
   save();
   closeModal();
   setTab('work');
+}
+
+function openCarView(id){
+  let c=cars.find(x=>x.id===id);
+  if(!c) return;
+  const rows=[
+    {l:'Марка и модель',v:escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))},
+    c.ownerName?{l:'Владелец',v:escapeHtml(c.ownerName)}:null,
+    c.ownerPhone?{l:'Телефон',v:escapeHtml(c.ownerPhone)}:null,
+    c.counterparty?{l:'Контрагент',v:escapeHtml(c.counterparty)}:null,
+    {l:'Работа',v:escapeHtml(c.work||'Работа не указана')},
+    c.agreedPrice?{l:'Согласовано',v:escapeHtml(c.agreedPrice)+' ₽'}:null,
+    {l:'Принято',v:escapeHtml(c.inAt||'—')},
+    c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'—')}:null,
+    c.status==='done'?{l:'Сумма при выдаче',v:escapeHtml(c.price||c.agreedPrice||'0')+' ₽'}:null,
+    (c.status==='done' && c.master)?{l:'Делал',v:escapeHtml(c.master)}:null,
+    c.comment?{l:'Комментарий',v:escapeHtml(c.comment)}:null
+  ].filter(Boolean);
+  const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
+  document.getElementById('modalBox').className='box compact';
+  document.getElementById('modalBox').innerHTML=`
+    <h2 class="view-plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</h2>
+    <div class="car-plate-row" style="padding:0 0 12px"><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
+    <div class="view-body">${rowsHtml}</div>
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="closeModal()">Назад</button></div>
+      <div class="right">
+        ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
+        <button onclick="openCar(${c.id})">Изменить</button>
+        ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
+        ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+        ${c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
+        <button class="danger" onclick="deleteCar(${c.id})">Удалить</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
 }
 
 function openCar(id){
@@ -1468,14 +1550,16 @@ function openCar(id){
       <div><label>Статус</label><input value="${statusLabel(c.status)}" disabled></div>
       <div class="wide"><label>Комментарий</label><textarea id="editComment" rows="3" placeholder="Необязательно" ${c.status==='done'?'readonly':''}>${escapeHtml(c.comment)}</textarea></div>
     </div>
-    <div class="actions">
-      <button onclick="closeModal()">Закрыть</button>
-      ${c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button onclick="deleteCar(${c.id})">Удалить карточку</button>`}
-      ${c.status==='done'?'':`<button onclick="saveCard(${c.id})">Сохранить</button>`}
-      ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
-      ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
-      ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
-      ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="closeModal()">Закрыть</button></div>
+      <div class="right">
+        ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
+        ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
+        ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+        ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
+        ${c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`}
+        ${c.status==='done'?'':`<button class="neon" onclick="saveCard(${c.id})">Сохранить</button>`}
+      </div>
     </div>`;
   document.getElementById('modal').style.display='flex';
   updateWorkButtons('editWork');
@@ -1529,11 +1613,6 @@ function deleteCar(id){
 function deleteDoneCar(id){
   let c=cars.find(x=>x.id===id);
   if(!c) return;
-  const pass=prompt('Пароль для удаления выданной карточки');
-  if(pass!=='3288'){
-    alert('Неверный пароль');
-    return;
-  }
   if(!confirm('Удалить выданную карточку без восстановления?')) return;
   rememberDeletedCar(c);
   cars=cars.filter(x=>x.id!==id);
@@ -1577,9 +1656,9 @@ function openDoneWizard(id){
       </div>
     </div>
 
-    <div class="actions">
-      <button onclick="openCar(${id})">Назад</button>
-      <button onclick="finishDone(${id})">Подтвердить выдачу</button>
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="openCar(${id})">Назад</button></div>
+      <div class="right"><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2116,6 +2195,10 @@ function deleteOrganization(i){ensureOrganizations(); if(!confirm('Удалит�
 function openSettingsSubsection(type){
   const box=document.getElementById('settingsDetails');
   if(!box) return;
+  document.querySelectorAll('#settingsSection .report-controls button').forEach(btn=>{
+    const onclick=String(btn.getAttribute('onclick')||'');
+    btn.classList.toggle('active', onclick.includes("'"+type+"'") || onclick.includes('"'+type+'"'));
+  });
 
   if(type==='masters'){
     box.innerHTML=`
@@ -2172,6 +2255,29 @@ function openSettingsSubsection(type){
       </div>
       <div id="backupStatusSettings" class="small" style="margin-top:14px;color:var(--muted)"></div>`;
     renderBackupStatus();
+    return;
+  }
+
+  if(type==='sync'){
+    box.innerHTML=`
+      <h2 style="font-size:24px;margin:0 0 12px">Синхронизация с сервером</h2>
+      <div id="syncSettings"></div>`;
+    renderSyncSettings();
+    return;
+  }
+
+  if(type==='googleCalendar'){
+    box.innerHTML=`
+      <h2 style="font-size:24px;margin:0 0 12px">Google Календарь</h2>
+      <div class="small" style="margin-bottom:12px">В Google Календаре: Настройки нужного календаря → «Интеграция календаря» → скопируй «Секретный адрес в формате iCal». CRM будет подтягивать записи по этой ссылке.</div>
+      <div class="form" style="grid-template-columns:1fr">
+        <div class="wide"><label>Секретная ссылка .ics</label><input id="googleIcsUrl" placeholder="https://calendar.google.com/calendar/ical/..../basic.ics" value="${escapeHtml(getGoogleCalendarIcsUrl())}"></div>
+      </div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="neon" onclick="saveGoogleCalendarSettings()">Сохранить ссылку</button>
+        <button onclick="syncGoogleCalendar()">Обновить из Google</button>
+      </div>
+      <div id="googleCalSettingsStatus" class="small" style="margin-top:12px;color:var(--muted)"></div>`;
     return;
   }
 
@@ -2417,38 +2523,109 @@ function addSupplier(){
 
 
 
+let appointmentFilter='today';
+let googleCalendarLastSync=storeGet('google_calendar_last_sync','');
+
+function getGoogleCalendarIcsUrl(){return storeGet('google_calendar_ics_url','');}
+function setGoogleCalendarIcsUrl(url){storeSet('google_calendar_ics_url',String(url||'').trim());}
+function openGoogleCalendarSettings(){showSection('settings');openSettingsSubsection('googleCalendar');}
+function saveGoogleCalendarSettings(){
+  const url=val('googleIcsUrl');
+  setGoogleCalendarIcsUrl(url);
+  const st=document.getElementById('googleCalSettingsStatus');
+  if(st) st.textContent=url?'Ссылка сохранена. Можно нажать «Обновить из Google».':'Ссылка очищена.';
+  updateCalendarSyncStatus();
+  scheduleCloudSync();
+}
+
+function setAppointmentFilter(mode){
+  appointmentFilter=mode||'today';
+  const map={today:'calToday',tomorrow:'calTomorrow',week:'calWeek',all:'calAll'};
+  Object.keys(map).forEach(k=>{
+    const el=document.getElementById(map[k]);
+    if(el) el.classList.toggle('active', appointmentFilter===k);
+  });
+  renderAppointments();
+}
+
+function appointmentDateObj(a){
+  const m=String(a&&a.dateTime||'').match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
+  if(!m) return null;
+  return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4]||0), Number(m[5]||0), 0, 0);
+}
+function startOfDay(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0)}
+function formatAppTime(a){
+  const m=String(a&&a.dateTime||'').match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
+  if(!m) return a&&a.dateTime||'Без даты';
+  return `${m[3]}.${m[2]}.${m[1]}${m[4]?` · ${m[4]}:${m[5]}`:''}`;
+}
+function filteredAppointments(){
+  const now=new Date();
+  const today0=startOfDay(now);
+  const tomorrow0=new Date(today0); tomorrow0.setDate(tomorrow0.getDate()+1);
+  const dayAfter=new Date(today0); dayAfter.setDate(dayAfter.getDate()+2);
+  const weekEnd=new Date(today0); weekEnd.setDate(weekEnd.getDate()+7);
+  return appointments.filter(a=>{
+    const d=appointmentDateObj(a);
+    if(!d) return appointmentFilter==='all';
+    if(appointmentFilter==='today') return d>=today0 && d<tomorrow0;
+    if(appointmentFilter==='tomorrow') return d>=tomorrow0 && d<dayAfter;
+    if(appointmentFilter==='week') return d>=today0 && d<weekEnd;
+    return true;
+  }).sort((a,b)=>String(a.dateTime||'').localeCompare(String(b.dateTime||'')));
+}
+
+function updateCalendarSyncStatus(){
+  const el=document.getElementById('calendarSyncStatus');
+  if(!el) return;
+  const url=getGoogleCalendarIcsUrl();
+  const last=googleCalendarLastSync?('Последнее обновление: '+googleCalendarLastSync):'Ещё не обновляли';
+  el.textContent=url?(last+' · Google подключён'):('Ссылка календаря не задана · '+last+'. Нажми «Ссылка календаря».');
+  el.style.color=url?'var(--green)':'var(--muted)';
+}
+
 function renderAppointments(){
   const grid=document.getElementById('appointmentsGrid');
   if(!grid) return;
+  updateCalendarSyncStatus();
+  const list=filteredAppointments();
 
-  if(!appointments.length){
-    grid.innerHTML='<div class="placeholder">Записей пока нет. Можно добавить вручную или импортировать .ics</div>';
+  if(!list.length){
+    const hint=getGoogleCalendarIcsUrl()
+      ? 'На этот период записей нет. Нажми «Обновить из Google», если только что добавил событие.'
+      : 'Записей пока нет. Укажи секретную .ics-ссылку Google или импортируй файл .ics.';
+    grid.innerHTML=`<div class="placeholder">${hint}</div>`;
     return;
   }
 
-  appointments.sort((a,b)=>String(a.dateTime||'').localeCompare(String(b.dateTime||'')));
-
-  grid.innerHTML=appointments.map(a=>`
+  grid.innerHTML=list.map(a=>{
+    const converted=!!a.convertedToWorkAt;
+    const src=a.source==='google'?'Google':(a.source==='ics'?'ICS':'Вручную');
+    return `
     <div class="appointment-card">
-      <div class="num">${escapeHtml(a.dateTime||'Без даты')}</div>
+      <div class="num">${escapeHtml(formatAppTime(a))}</div>
       <div class="brand">${escapeHtml(a.car||'Авто не указано')}</div>
       <div class="small">Работы: ${escapeHtml(a.work||'Не указано')}</div>
-      <div class="small">Цена: ${escapeHtml(a.price||'')} ${a.price?'₽':''}</div>
-      <div class="small">Телефон: ${escapeHtml(a.phone||'')}</div>
-      <div class="small">Комментарий: ${escapeHtml(a.comment||'')}</div>
+      ${a.price?`<div class="small">Цена: ${escapeHtml(a.price)} ₽</div>`:''}
+      ${a.phone?`<div class="small">Телефон: ${escapeHtml(a.phone)}</div>`:''}
+      ${a.comment?`<div class="small">${escapeHtml(a.comment)}</div>`:''}
+      <div class="client-chip">${src}${converted?' · уже в работе':''}</div>
       <div class="actions" style="justify-content:flex-start">
-        <button onclick="exportAppointmentToGoogle(${a.id})">Google Календарь</button>
-        <button onclick="appointmentToWork(${a.id})">В работу</button>
-        <button onclick="deleteAppointment(${a.id})">Удалить</button>
+        ${converted
+          ? `<button onclick="showSection('work')">Открыть работу</button>`
+          : `<button class="neon" onclick="appointmentToWork(${a.id})">В работу</button>`}
+        <button onclick="exportAppointmentToGoogle(${a.id})">Открыть в Google</button>
+        <button class="danger" onclick="deleteAppointment(${a.id})">Удалить</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function openAddAppointment(){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить запись</h2>
+    <div class="hint" style="margin-bottom:12px">Основной источник — Google Календарь. Ручная запись нужна, если событие ещё не завели в Google.</div>
     <div class="form">
       <div>
         <label>Дата</label>
@@ -2479,10 +2656,12 @@ function openAddAppointment(){
         <textarea id="appComment" rows="3"></textarea>
       </div>
     </div>
-    <div class="actions">
-      <button onclick="closeModal()">Отмена</button>
-      <button onclick="saveAppointment()">Сохранить</button>
-      <button onclick="saveAndExportAppointment()">Сохранить и Google</button>
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="closeModal()">Отмена</button></div>
+      <div class="right">
+        <button onclick="saveAppointment()">Сохранить</button>
+        <button class="neon" onclick="saveAndExportAppointment()">Сохранить и Google</button>
+      </div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2497,12 +2676,14 @@ function readAppointmentForm(){
     work:val('appWork'),
     price:val('appPrice'),
     phone:val('appPhone'),
-    comment:val('appComment')
+    comment:val('appComment'),
+    source:'manual'
   };
 }
 
 function saveAppointment(){
   const a=readAppointmentForm();
+  if(!a.dateTime.trim()){alert('Укажи дату записи');return;}
   appointments.unshift(a);
   saveAll();
   closeModal();
@@ -2511,6 +2692,7 @@ function saveAppointment(){
 
 function saveAndExportAppointment(){
   const a=readAppointmentForm();
+  if(!a.dateTime.trim()){alert('Укажи дату записи');return;}
   appointments.unshift(a);
   saveAll();
   closeModal();
@@ -2519,13 +2701,15 @@ function saveAndExportAppointment(){
 }
 
 function googleDateValue(dateTime, addHour){
-  // dateTime format: YYYY-MM-DD HH:MM
   const m=String(dateTime||'').match(/(\d{4})-(\d{2})-(\d{2})\s*(\d{2})?:?(\d{2})?/);
   if(!m) return '';
   const y=m[1], mo=m[2], d=m[3], h=Number(m[4]||9), mi=Number(m[5]||0);
-  const hh=String(h+addHour).padStart(2,'0');
+  const endH=h+addHour;
+  const hh=String(endH).padStart(2,'0');
   const mm=String(mi).padStart(2,'0');
-  return `${y}${mo}${d}T${hh}${mm}00`;
+  const startH=String(h).padStart(2,'0');
+  if(addHour) return `${y}${mo}${d}T${hh}${mm}00`;
+  return `${y}${mo}${d}T${startH}${mm}00`;
 }
 
 function exportAppointmentToGoogle(id){
@@ -2552,19 +2736,30 @@ function exportAppointmentToGoogle(id){
   window.open(url,'_blank');
 }
 
+function splitCarName(car){
+  const s=String(car||'').trim();
+  if(!s) return {brand:'Марка не указана',model:''};
+  const parts=s.split(/\s+/);
+  if(parts.length===1) return {brand:parts[0],model:''};
+  return {brand:parts[0],model:parts.slice(1).join(' ')};
+}
+
 function appointmentToWork(id){
   const a=appointments.find(x=>x.id===id);
   if(!a) return;
+  if(a.convertedToWorkAt){showSection('work');return;}
 
+  const {brand,model}=splitCarName(a.car);
   cars.unshift({
     id:Date.now(),
-    number:'БЕЗ НОМЕРА',
-    brand:a.car||'Марка не указана',
-    model:'',
+    number:'',
+    brand:brand||'Марка не указана',
+    model:model||'',
     ownerPhone:a.phone||'',
+    ownerName:'',
     work:a.work||'Работа не указана',
     agreedPrice:a.price||'',
-    comment:'Из записи: '+(a.comment||''),
+    comment:('Из записи '+(formatAppTime(a))+': '+(a.comment||'')).trim(),
     priority:'none',
     inAt:new Date().toLocaleString('ru-RU'),
     outAt:'',
@@ -2572,7 +2767,9 @@ function appointmentToWork(id){
     status:'work'
   });
 
+  a.convertedToWorkAt=new Date().toISOString();
   saveAll();
+  renderAppointments();
   alert('Запись перенесена в работу');
   showSection('work');
 }
@@ -2584,11 +2781,126 @@ function deleteAppointment(id){
   renderAppointments();
 }
 
+function unfoldIcs(text){
+  return String(text||'').replace(/\r\n/g,'\n').replace(/\n[ \t]/g,'');
+}
+function icsField(block, name){
+  const re=new RegExp('^'+name+'[^:\\n]*:(.*)$','im');
+  const m=String(block||'').match(re);
+  return m?String(m[1]||'').replace(/\\n/g,'\n').replace(/\\,/g,',').replace(/\\\\/g,'\\').trim():'';
+}
 function parseIcsDate(v){
-  // supports DTSTART:20260426T120000 or DTSTART;TZID=...:20260426T120000
   const m=String(v||'').match(/(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?/);
   if(!m) return '';
   return `${m[1]}-${m[2]}-${m[3]} ${m[4]||'09'}:${m[5]||'00'}`;
+}
+function parseIcsEvents(data){
+  const text=unfoldIcs(data);
+  const events=text.split('BEGIN:VEVENT').slice(1);
+  const imported=[];
+  events.forEach(raw=>{
+    const block=raw.split('END:VEVENT')[0]||'';
+    const summary=icsField(block,'SUMMARY');
+    const desc=icsField(block,'DESCRIPTION');
+    const uid=icsField(block,'UID');
+    const dt=icsField(block,'DTSTART')||((block.match(/DTSTART[^:]*:(.*)/i)||[])[1]||'');
+    const full=(summary+' '+desc).replace(/\n/g,' ');
+    const phone=(full.match(/(\+7[\d\s\-()]{8,}\d|8[\d\s\-()]{9,}\d)/)||[])[1]||'';
+    const price=((full.match(/(?:цена|price|сумма)\s*[:\-]?\s*(\d{3,7})/i)||[])[1]
+      ||(full.match(/(\d{3,7})\s*(?:₽|руб\.?|rub)/i)||[])[1]
+      ||'') ;
+    const workFromDesc=desc.split('\n').map(x=>x.trim()).filter(Boolean).filter(x=>!/телефон|цена|price|phone|сумма/i.test(x)).join('; ');
+    imported.push({
+      id:Date.now()+Math.random(),
+      googleUid:uid||('ics:'+parseIcsDate(dt)+'|'+summary),
+      dateTime:parseIcsDate(dt),
+      car:summary || 'Запись из календаря',
+      work:workFromDesc || desc || '',
+      price,
+      phone:phone.replace(/\s+/g,' ').trim(),
+      comment:'',
+      source:'google'
+    });
+  });
+  return imported.filter(x=>x.dateTime);
+}
+
+function mergeImportedAppointments(imported, sourceLabel){
+  let added=0, updated=0;
+  imported.forEach(item=>{
+    item.source=item.source||sourceLabel||'ics';
+    const key=item.googleUid||('fallback:'+item.dateTime+'|'+item.car);
+    const existing=appointments.find(a=>(a.googleUid&&a.googleUid===item.googleUid)||(!a.googleUid&&a.dateTime===item.dateTime&&a.car===item.car&&a.source!=='manual'));
+    if(existing){
+      existing.dateTime=item.dateTime;
+      existing.car=item.car;
+      existing.work=item.work||existing.work;
+      existing.price=item.price||existing.price;
+      existing.phone=item.phone||existing.phone;
+      existing.googleUid=item.googleUid||existing.googleUid;
+      existing.source=item.source;
+      updated++;
+    }else{
+      appointments.push(item);
+      added++;
+    }
+  });
+  saveAll();
+  renderAppointments();
+  return {added,updated,total:imported.length};
+}
+
+async function syncGoogleCalendar(){
+  const url=getGoogleCalendarIcsUrl();
+  const status=document.getElementById('calendarSyncStatus');
+  if(!url){
+    alert('Сначала укажи секретную .ics-ссылку Google Календаря');
+    openGoogleCalendarSettings();
+    return;
+  }
+  if(status){status.textContent='Обновляю из Google...';status.style.color='var(--muted)';}
+
+  try{
+    let text='';
+    // 1) через наш API (обходит CORS)
+    try{
+      const r=await fetch(`${API_BASE_URL}/sync/calendar-ics`,{
+        method:'POST',
+        headers:cloudHeaders(),
+        body:JSON.stringify({url})
+      });
+      if(r.ok){
+        const obj=await r.json();
+        text=String(obj&&obj.text||'');
+      }else if(r.status!==404){
+        throw new Error('Сервер не смог скачать календарь ('+r.status+')');
+      }
+    }catch(e){
+      if(String(e.message||'').includes('Сервер не смог')) throw e;
+    }
+
+    // 2) прямой fetch — на случай если CORS вдруг пускает / локальные тесты
+    if(!text){
+      try{
+        const r2=await fetch(url,{headers:{'Accept':'text/calendar'}});
+        if(r2.ok) text=await r2.text();
+      }catch(_e){}
+    }
+
+    if(!text){
+      throw new Error('Не удалось скачать календарь. Обнови API на сервере (нужен /sync/calendar-ics) или используй «Импорт .ics».');
+    }
+
+    const imported=parseIcsEvents(text).map(x=>({...x,source:'google'}));
+    const res=mergeImportedAppointments(imported,'google');
+    googleCalendarLastSync=new Date().toLocaleString('ru-RU');
+    storeSet('google_calendar_last_sync',googleCalendarLastSync);
+    updateCalendarSyncStatus();
+    alert(`Готово: новых ${res.added}, обновлено ${res.updated}, всего в файле ${res.total}`);
+  }catch(e){
+    if(status){status.textContent='Ошибка обновления: '+(e.message||e);status.style.color='var(--red)';}
+    alert(e.message||String(e));
+  }
 }
 
 function importIcsFile(event){
@@ -2597,35 +2909,12 @@ function importIcsFile(event){
 
   const reader=new FileReader();
   reader.onload=()=>{
-    const data=String(reader.result||'');
-    const events=data.split('BEGIN:VEVENT').slice(1);
-    const imported=[];
-
-    events.forEach(raw=>{
-      const block=raw.split('END:VEVENT')[0]||'';
-      const summary=(block.match(/SUMMARY:(.*)/)||[])[1]||'';
-      const desc=(block.match(/DESCRIPTION:(.*)/)||[])[1]||'';
-      const dtLine=(block.match(/DTSTART[^:]*:(.*)/)||[])[1]||'';
-
-      const full=(summary+' '+desc).replace(/\\n/g,' ');
-      const phone=(full.match(/(\+7[\d\s\-()]{6,})/)||[])[1]||'';
-      const price=(full.match(/(\d{3,6})\s*₽?/)||[])[1]||'';
-
-      imported.push({
-        id:Date.now()+Math.random(),
-        dateTime:parseIcsDate(dtLine),
-        car:summary || 'Запись из календаря',
-        work:desc || '',
-        price,
-        phone,
-        comment:'Импорт из .ics'
-      });
-    });
-
-    appointments=[...imported,...appointments];
-    saveAll();
-    renderAppointments();
-    alert('Импортировано записей: '+imported.length);
+    const imported=parseIcsEvents(String(reader.result||'')).map(x=>({...x,source:'ics',comment:x.comment||'Импорт из .ics'}));
+    const res=mergeImportedAppointments(imported,'ics');
+    googleCalendarLastSync=new Date().toLocaleString('ru-RU')+' (файл)';
+    storeSet('google_calendar_last_sync',googleCalendarLastSync);
+    updateCalendarSyncStatus();
+    alert(`Импортировано: новых ${res.added}, обновлено ${res.updated}`);
   };
   reader.readAsText(file);
   event.target.value='';
@@ -2797,7 +3086,7 @@ function renderArchive(){
     const badge=c.status==='done'?`<div class="badge">${escapeHtml(c.price||0)} ₽</div>`:'';
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
-    return `<div class="car ${priCls}" onclick="openCar(${c.id})">
+    return `<div class="car ${priCls}" onclick="openCarView(${c.id})">
       <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
       <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
@@ -2853,12 +3142,64 @@ function saveReportPdf(){
     if(window.AndroidPdf && AndroidPdf.saveReport){
       AndroidPdf.saveReport(JSON.stringify(payload));
     }else{
-      alert('Сохранение PDF доступно в APK после обновления Android-кода.');
+      printReportAsPdf(buildMainReportPrintHtml(payload), payload.title);
     }
   }catch(e){
     alert('Не удалось сформировать PDF: '+e.message);
     console.error(e);
   }
+}
+
+function openPrintWindow(bodyHtml,title){
+  const styles=Array.from(document.querySelectorAll('style')).map(s=>s.outerHTML).join('');
+  const old=document.getElementById('printFrame');
+  if(old) old.remove();
+  const iframe=document.createElement('iframe');
+  iframe.id='printFrame';
+  iframe.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(iframe);
+  const doc=iframe.contentWindow.document;
+  doc.open();
+  doc.write('<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>'+escapeHtml(title||'Отчёт Pandora34')+'</title>'+styles+'<style>body{background:#fff!important;margin:0;padding:26px}.print-sheet{max-width:900px;margin:0 auto}@media print{body{padding:0}}</style></head><body><div class="print-sheet asl-report-page">'+bodyHtml+'</div></body></html>');
+  doc.close();
+  setTimeout(function(){
+    try{
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }catch(e){
+      alert('Не удалось открыть печать: '+e.message);
+    }
+  },200);
+  const cleanup=function(){ setTimeout(function(){ if(iframe&&iframe.parentNode) iframe.remove(); },1000); };
+  if(iframe.contentWindow) iframe.contentWindow.onafterprint=cleanup;
+}
+
+function printReportAsPdf(bodyHtml,title){
+  openPrintWindow(bodyHtml,title);
+}
+
+function buildMainReportPrintHtml(p){
+  const esc=escapeHtml;
+  const money=n=>(Number(n)||0).toLocaleString('ru-RU')+' ₽';
+  const masterRows=(p.byMaster||[]).map(m=>`<tr><td>${esc(m.name)}</td><td>${m.count}</td><td>${money(m.sum)}</td></tr>`).join('')||'<tr><td colspan="3">Нет данных</td></tr>';
+  const moneyRows=(p.byMoney||[]).map(m=>`<tr><td>${esc(m.name)}</td><td>${m.count}</td><td>${money(m.sum)}</td></tr>`).join('')||'<tr><td colspan="3">Нет данных</td></tr>';
+  const carRows=(p.rows||[]).map(r=>`<tr><td>${r.n}</td><td>${esc(r.number)}</td><td>${esc(r.brand)}</td><td>${esc(r.work)}</td><td>${esc(r.master)}</td><td>${esc(r.moneyMaster)}</td><td>${money(r.price)}</td><td>${esc(r.outAt)}</td></tr>`).join('')||'<tr><td colspan="8">За выбранный период машин нет</td></tr>';
+  return `
+    <div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div>
+    <h1 class="asl-report-title">${esc(p.title)}</h1>
+    <div class="asl-report-created">Создано: ${esc(p.createdAt)}</div>
+    <div class="asl-summary">
+      <div class="asl-summary-card"><div class="asl-summary-label">Машин выдано</div><div class="asl-summary-num">${p.count}</div></div>
+      <div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div>
+      <div class="asl-summary-card"><div class="asl-summary-label">Средний чек</div><div class="asl-summary-num">${money(p.avg)}</div></div>
+    </div>
+    <div class="asl-section-title">По мастерам</div>
+    <table class="print-table"><thead><tr><th>Мастер</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>${masterRows}</tbody></table>
+    <div class="asl-section-title" style="margin-top:20px">По кассе</div>
+    <table class="print-table"><thead><tr><th>Касса</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>${moneyRows}</tbody></table>
+    <div class="asl-section-title" style="margin-top:20px">Список машин</div>
+    <table class="print-table"><thead><tr><th>#</th><th>Номер</th><th>Авто</th><th>Работа</th><th>Мастер</th><th>Касса</th><th>Сумма</th><th>Выдано</th></tr></thead><tbody>${carRows}</tbody></table>
+  `;
 }
 
 
@@ -3114,12 +3455,12 @@ function manualClient(targetId){
   applyClientToForm(targetId,client);
 }
 
-function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys};}
+function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
 function renderBackupStatus(){const text='Версия: v27 · владелец Андрей · ЗП · смежные · выдача fix · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();}else{alert('Резервная копия работает только в APK');}}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{alert('Автокопия работает только в APK');}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();}else{alert('Загрузка резервной копии работает только в APK');}}
-function restoreBackupFromJson(jsonText){try{const data=typeof jsonText==='string'?JSON.parse(jsonText):jsonText;if(!data||(!data.app&&!data.cars)){throw new Error('Это не файл базы Pandora34');}cars=Array.isArray(data.cars)?data.cars:[];products=Array.isArray(data.products)?data.products:[];stockLog=Array.isArray(data.stockLog)?data.stockLog:[];masters=Array.isArray(data.masters)?data.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(data.suppliers)?data.suppliers:suppliers;carBrands=Array.isArray(data.carBrands)?data.carBrands:carBrands;carModels=(data.carModels&&typeof data.carModels==='object')?data.carModels:carModels;normalizeBrandModels();appointments=Array.isArray(data.appointments)?data.appointments:[];clients=Array.isArray(data.clients)?data.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(data.clientGroups)?data.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(data.organizations)?data.organizations:organizations;deletedCarKeys=Array.isArray(data.deletedCarKeys)?data.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(data.deletedProductKeys)?data.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));saveAll();forceAutoBackup();alert('База восстановлена');renderBackupStatus();showSection('work');}catch(e){alert('Не удалось загрузить базу: '+e.message);}}
+function restoreBackupFromJson(jsonText){try{const data=typeof jsonText==='string'?JSON.parse(jsonText):jsonText;if(!data||(!data.app&&!data.cars)){throw new Error('Это не файл базы Pandora34');}cars=Array.isArray(data.cars)?data.cars:[];products=Array.isArray(data.products)?data.products:[];stockLog=Array.isArray(data.stockLog)?data.stockLog:[];masters=Array.isArray(data.masters)?data.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(data.suppliers)?data.suppliers:suppliers;carBrands=Array.isArray(data.carBrands)?data.carBrands:carBrands;carModels=(data.carModels&&typeof data.carModels==='object')?data.carModels:carModels;normalizeBrandModels();appointments=Array.isArray(data.appointments)?data.appointments:[];clients=Array.isArray(data.clients)?data.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(data.clientGroups)?data.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(data.organizations)?data.organizations:organizations;deletedCarKeys=Array.isArray(data.deletedCarKeys)?data.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(data.deletedProductKeys)?data.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));if(data.googleCalendarIcsUrl!=null)setGoogleCalendarIcsUrl(data.googleCalendarIcsUrl);if(data.googleCalendarLastSync!=null){googleCalendarLastSync=String(data.googleCalendarLastSync||'');storeSet('google_calendar_last_sync',googleCalendarLastSync);}saveAll();forceAutoBackup();alert('База восстановлена');renderBackupStatus();showSection('work');}catch(e){alert('Не удалось загрузить базу: '+e.message);}}
 
 /* ===== v27 финальные настройки: модели, работы, горячие кнопки, суммы ===== */
 const v27DefaultModels={
@@ -3197,8 +3538,8 @@ backupPayload=function(){const data=oldBackupPayload();data.version='v27';data.c
     .v28-card:hover,.v28-card:active{box-shadow:0 8px 20px rgba(15,23,42,.12)}
     .v28-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
     .v28-card-title{font-size:22px;font-weight:1000;color:var(--text)}.v28-card-meta{color:var(--muted);font-size:15px;margin-top:7px;line-height:1.35}
-    .v28-pill{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(59,111,214,.12);color:var(--accent);font-weight:900;font-size:13px;white-space:nowrap}
-    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:6px;background:rgba(59,111,214,.1);border:1px solid rgba(59,111,214,.3);font-size:13px;color:var(--text)}
+    .v28-pill{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(79,199,234,.12);color:#1f5f78;border:1px solid rgba(79,199,234,.35);font-weight:900;font-size:13px;white-space:nowrap}
+    .v28-mini-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.v28-mini{padding:7px 10px;border-radius:6px;background:rgba(79,199,234,.1);border:1px solid rgba(79,199,234,.35);font-size:13px;color:var(--text)}
     .v28-modal-list{display:grid;gap:10px;margin-top:10px}.v28-row{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px}
   `;document.head.appendChild(st);
 })();
@@ -3584,12 +3925,12 @@ function cloudHeaders(){return {'Authorization':'Bearer '+SYNC_TOKEN,'Content-Ty
 function setCloudStatus(text){
   cloudStatusText=text;
   try{
-    const el=document.getElementById('cloudSyncStatus');
+    const el=document.getElementById('settingsSyncStatus');
     if(!el) return;
     const t=String(text||'').toLowerCase();
     const offline=t.includes('нет связи')||t.includes('ошибка');
-    el.title=offline?'Сервер: нет связи':'Сервер: онлайн';
-    el.style.background=offline?'#ff3b5c':'#3b6fd6';
+    el.textContent=(offline?'Нет связи с сервером':'Сервер на связи')+' · '+text;
+    el.style.color=offline?'var(--red)':'var(--green)';
   }catch(e){}
 }
 function cloudDeviceId(){let id=storeGet('pandora_cloud_device_id',''); if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(16).slice(2); storeSet('pandora_cloud_device_id',id);} return id;}
@@ -3676,7 +4017,7 @@ function mergeStrings(localArr,remoteArr){return [...new Set([...(Array.isArray(
 function mergeModels(localModels,remoteModels){const out={};const keys=new Set([...Object.keys(remoteModels||{}),...Object.keys(localModels||{})]);keys.forEach(k=>{out[k]=mergeStrings(localModels&&localModels[k],remoteModels&&remoteModels[k]);});return out;}
 function mergePayloads(local,remote){local=local||{}; remote=remote||{};const out={...remote,...local};out.app='Pandora34';out.version='v31-merge-done-safe';const tomb=[...new Set([...(Array.isArray(remote.deletedCarKeys)?remote.deletedCarKeys:[]),...(Array.isArray(local.deletedCarKeys)?local.deletedCarKeys:[])])];out.deletedCarKeys=tomb;out.cars=mergeObjectArrays(local.cars,remote.cars,'cars').filter(c=>!tomb.includes(itemKey('cars',c))&&!tomb.includes(carSyncKey(c)));const ptomb=[...new Set([...(Array.isArray(remote.deletedProductKeys)?remote.deletedProductKeys:[]),...(Array.isArray(local.deletedProductKeys)?local.deletedProductKeys:[])])];out.deletedProductKeys=ptomb;out.products=mergeObjectArrays(local.products,remote.products,'products').filter(p=>!ptomb.includes(itemKey('products',p)));out.stockLog=mergeObjectArrays(local.stockLog,remote.stockLog,'stockLog');out.appointments=mergeObjectArrays(local.appointments,remote.appointments,'appointments');out.clients=mergeObjectArrays(local.clients,remote.clients,'clients');out.clientGroups=mergeStrings(local.clientGroups,remote.clientGroups);out.organizations=mergeObjectArrays(local.organizations,remote.organizations,'organizations');out.masters=mergeObjectArrays(local.masters,remote.masters,'masters');out.suppliers=mergeStrings(local.suppliers,remote.suppliers);out.carBrands=mergeStrings(local.carBrands,remote.carBrands);out.carModels=mergeModels(local.carModels,remote.carModels);out.v27Works=mergeObjectArrays(local.v27Works,remote.v27Works,'works');out.v27Prices=mergeStrings(local.v27Prices,remote.v27Prices);out.orderWorks=mergeObjectArrays(local.orderWorks,remote.orderWorks,'works');out.orderPrices=mergeStrings(local.orderPrices,remote.orderPrices);out.cloudMeta={savedAt:new Date().toISOString(),deviceId:cloudDeviceId(),syncVersion:5,mode:'two_way_merge_done_safe',score:cloudScore(out)};return out;}
 function fingerprintPayload(d){const light={cars:d.cars||[],deletedCarKeys:d.deletedCarKeys||[],deletedProductKeys:d.deletedProductKeys||[],products:d.products||[],stockLog:d.stockLog||[],appointments:d.appointments||[],clients:d.clients||[],clientGroups:d.clientGroups||[],organizations:d.organizations||[],masters:d.masters||[],suppliers:d.suppliers||[],carBrands:d.carBrands||[],carModels:d.carModels||{},v27Works:d.v27Works||[],v27Prices:d.v27Prices||[],orderWorks:d.orderWorks||[],orderPrices:d.orderPrices||[]};return JSON.stringify(light);}
-function applyPayloadToLocal(d){if(!d||typeof d!=='object')return;cloudApplying=true;try{cars=Array.isArray(d.cars)?d.cars:cars;deletedCarKeys=Array.isArray(d.deletedCarKeys)?d.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(d.deletedProductKeys)?d.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));products=Array.isArray(d.products)?d.products.filter(p=>!deletedProductKeys.includes(itemKey('products',p))):products;stockLog=Array.isArray(d.stockLog)?d.stockLog:stockLog;appointments=Array.isArray(d.appointments)?d.appointments:appointments;clients=Array.isArray(d.clients)?d.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(d.clientGroups)?d.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(d.organizations)?d.organizations:organizations;masters=Array.isArray(d.masters)?d.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(d.suppliers)?d.suppliers:suppliers;carBrands=Array.isArray(d.carBrands)?d.carBrands:carBrands;carModels=(d.carModels&&typeof d.carModels==='object')?d.carModels:carModels;if(typeof v27Works!=='undefined'&&Array.isArray(d.v27Works))v27Works=d.v27Works;if(typeof v27Prices!=='undefined'&&Array.isArray(d.v27Prices))v27Prices=d.v27Prices;if(typeof orderWorks!=='undefined'&&Array.isArray(d.orderWorks))orderWorks=d.orderWorks;if(typeof orderPrices!=='undefined'&&Array.isArray(d.orderPrices))orderPrices=d.orderPrices;normalizeBrandModels();ensureOwnerMaster();saveAll();if(typeof v27Save==='function')v27Save();if(typeof orderSave==='function')orderSave();render();renderBackupStatus();}finally{cloudApplying=false;}}
+function applyPayloadToLocal(d){if(!d||typeof d!=='object')return;cloudApplying=true;try{cars=Array.isArray(d.cars)?d.cars:cars;deletedCarKeys=Array.isArray(d.deletedCarKeys)?d.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(d.deletedProductKeys)?d.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));products=Array.isArray(d.products)?d.products.filter(p=>!deletedProductKeys.includes(itemKey('products',p))):products;stockLog=Array.isArray(d.stockLog)?d.stockLog:stockLog;appointments=Array.isArray(d.appointments)?d.appointments:appointments;clients=Array.isArray(d.clients)?d.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(d.clientGroups)?d.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(d.organizations)?d.organizations:organizations;masters=Array.isArray(d.masters)?d.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(d.suppliers)?d.suppliers:suppliers;carBrands=Array.isArray(d.carBrands)?d.carBrands:carBrands;carModels=(d.carModels&&typeof d.carModels==='object')?d.carModels:carModels;if(typeof v27Works!=='undefined'&&Array.isArray(d.v27Works))v27Works=d.v27Works;if(typeof v27Prices!=='undefined'&&Array.isArray(d.v27Prices))v27Prices=d.v27Prices;if(typeof orderWorks!=='undefined'&&Array.isArray(d.orderWorks))orderWorks=d.orderWorks;if(typeof orderPrices!=='undefined'&&Array.isArray(d.orderPrices))orderPrices=d.orderPrices;normalizeBrandModels();ensureOwnerMaster();if(d.googleCalendarIcsUrl!=null&&typeof setGoogleCalendarIcsUrl==='function')setGoogleCalendarIcsUrl(d.googleCalendarIcsUrl);if(d.googleCalendarLastSync!=null){googleCalendarLastSync=String(d.googleCalendarLastSync||'');storeSet('google_calendar_last_sync',googleCalendarLastSync);}saveAll();if(typeof v27Save==='function')v27Save();if(typeof orderSave==='function')orderSave();render();renderBackupStatus();}finally{cloudApplying=false;}}
 async function cloudFetchRemote(){const r=await fetch(`${API_BASE_URL}/sync/state`,{headers:cloudHeaders()});if(!r.ok) throw new Error('fetch '+r.status);const obj=await r.json();return obj&&obj.id?obj:null;}
 async function cloudWriteRemote(payload){const body={id:CLOUD_ROW_ID,data:payload};const r=await fetch(`${API_BASE_URL}/sync/state`,{method:'POST',headers:cloudHeaders(),body:JSON.stringify(body)});if(!r.ok) throw new Error('push '+r.status);const arr=await r.json().catch(()=>[]);return Array.isArray(arr)?arr:[arr];}
 async function cloudSyncNow(manual=false){
@@ -3703,11 +4044,28 @@ async function cloudSyncNow(manual=false){
   finally{cloudBusy=false;}
 }
 function scheduleCloudSync(){if(cloudApplying)return;if(cloudSyncTimer)clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudSyncNow(false),60000);}
-function openCloudSyncPanel(){const localScore=cloudScore(cloudPayload());document.getElementById('modalBox').className='box';document.getElementById('modalBox').innerHTML=`<h2>Двусторонняя синхронизация</h2><div class="hint">Логика теперь такая: приложение сверяет телефон и сервер, добавляет недостающие записи на телефон и недостающие записи на сервер. Автоудаления нет вообще. Если авто выдано на одном устройстве, сервер не вернёт его обратно в работу.</div><div class="hint">Локальная база: условный размер ${localScore}.</div><div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap"><button onclick="cloudManualMerge()">Сверить телефон ↔ сервер</button><button onclick="cloudEnableAuto()">Включить автосинхронизацию</button><button onclick="cloudDisableAuto()">Выключить автосинхронизацию</button><button onclick="closeModal()">Закрыть</button></div>`;document.getElementById('modal').style.display='flex';}
+function renderSyncSettings(){
+  const box=document.getElementById('syncSettings');
+  if(!box) return;
+  const localScore=cloudScore(cloudPayload());
+  box.innerHTML=`
+    <div class="hint">Приложение сверяет базу на этом устройстве и на сервере, добавляет недостающие записи в обе стороны. Автоудаления нет: если авто выдано на одном устройстве, сервер не вернёт его обратно в работу.</div>
+    <div class="hint">Локальная база: условный размер ${localScore}. Автосинхронизация: ${cloudEnabled?'включена':'выключена'}.</div>
+    <div id="settingsSyncStatus" class="small" style="margin:10px 0 14px;font-weight:700"></div>
+    <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+      <button onclick="settingsSyncMerge()">Сверить это устройство ↔ сервер</button>
+      <button onclick="settingsSyncEnable()">Включить автосинхронизацию</button>
+      <button onclick="settingsSyncDisable()">Выключить автосинхронизацию</button>
+    </div>`;
+  setCloudStatus(cloudStatusText);
+}
+function settingsSyncMerge(){cloudSyncNow(true); setTimeout(()=>openSettingsSubsection('sync'),500);}
+function settingsSyncEnable(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);setTimeout(()=>openSettingsSubsection('sync'),500);}
+function settingsSyncDisable(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');openSettingsSubsection('sync');}
 function cloudManualMerge(){cloudSyncNow(true);closeModal();}
 function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);closeModal();}
 function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
-function startCloudSync(){const bar=document.createElement('div');bar.id='cloudSyncStatus';bar.onclick=openCloudSyncPanel;bar.title=cloudStatusText;bar.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;width:10px;height:10px;border-radius:50%;background:#3b6fd6;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 2px 8px rgba(15,23,42,.35);opacity:.95;cursor:pointer';document.body.appendChild(bar);setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
+function startCloudSync(){setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
 /* === /Pandora34 Cloud Sync MERGE v3 === */
 
 
@@ -3829,6 +4187,10 @@ document.addEventListener('focusin', (e)=>{
   .asl-section-title{font-size:15px;font-weight:1000;margin:8px 0 8px}.asl-rows{border-top:1px solid #d1d5db}.asl-row{display:grid;grid-template-columns:1fr 96px;gap:12px;padding:9px 0;border-bottom:1px solid #d1d5db;color:#111827}.asl-row-main{font-size:14px}.asl-row-sub{padding-left:12px;margin-top:2px;color:#111827;font-size:13px}.asl-row-paid{padding-left:12px;color:#dc2626;font-weight:1000;margin-top:2px}.asl-row-side{text-align:right;font-size:13px;color:#6b7280}.asl-row-price{display:block;color:#111827;font-weight:1000;font-size:16px;margin-top:4px}
   .asl-analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}.asl-analysis-card{background:#f8fafc;border-radius:18px;padding:18px}.asl-analysis-title{font-weight:1000;margin-bottom:18px;color:#111827}.asl-analysis-body{display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:center}.asl-pie{width:150px;height:150px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}.asl-legend-row{display:grid;grid-template-columns:14px 1fr auto;gap:9px;align-items:center;margin:9px 0;font-size:14px;color:#111827}.asl-dot{width:13px;height:13px;border-radius:50%}
   @media(max-width:720px){.asl-report-page{padding:16px;width:100%}.asl-summary{grid-template-columns:1fr}.asl-analysis-grid{grid-template-columns:1fr}.asl-analysis-body{grid-template-columns:1fr}.asl-pie{margin:auto}.asl-row{grid-template-columns:1fr 82px}.asl-report-title{font-size:24px}}
+  .print-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:6px}
+  .print-table th,.print-table td{text-align:left;padding:7px 9px;border-bottom:1px solid #d1d5db;color:#111827}
+  .print-table th{color:#6b7280;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  .print-table tbody tr:last-child td{border-bottom:1px solid #d1d5db}
 </style>
 <script>
 /* === Pandora34 fixed app back stack === */
@@ -3867,10 +4229,10 @@ document.addEventListener('focusin', (e)=>{
   function listCars(){const r=range(); return (window.cars||cars||[]).filter(c=>c.isAslanova).map(c=>({c,d:workDate(c)})).filter(x=>x.d&&x.d>=r.from&&x.d<r.to).sort((a,b)=>b.d-a.d).map(x=>x.c)}
   function countMap(list,fn){const m={}; list.forEach(c=>{const k=fn(c)||'Не указано'; m[k]=(m[k]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))}
   function payload(){const r=range(),list=listCars(); const total=list.reduce((s,c)=>s+(c.paidByClient?0:price(c)),0); return{reportType:'aslanova',title:'Отчёт Асланова',period:r.title,createdAt:new Date().toLocaleString('ru-RU'),count:list.length,total:Math.round(total),localCount:list.filter(c=>c.aslanovaType!=='remote').length,remoteCount:list.filter(c=>c.aslanovaType==='remote').length,byBrand:countMap(list,c=>[c.brand,c.model].filter(Boolean).join(' ')||c.brand||'Не указано'),byPrice:countMap(list,c=>money(price(c))),rows:list.map((c,i)=>({n:i+1,number:c.number||'БЕЗ НОМЕРА',brand:[c.brand,c.model].filter(Boolean).join(' '),work:'Прошивка · '+aslanovaTypeLabel(c.aslanovaType),master:c.master||'',price:price(c),paidByClient:!!c.paidByClient,outAt:workDate(c)?short(workDate(c)):'',aslanovaType:aslanovaTypeLabel(c.aslanovaType)}))}}
-  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#3b6fd6','#4a7fdb','#5b6b7a','#4a5568','#3f4a58','#37414f','#2c3542','#232a35']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
+  function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#4fc7ea','#17b16b','#f4a427','#f0443a','#1f3358','#6b7280','#2a6f8a','#101e38']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; openAslanovaReport()};
-  window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} alert('PDF-мост недоступен')};
+  window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} const page=document.querySelector('.asl-report-page'); if(page){printReportAsPdf(page.innerHTML,p.title);}else{alert('Не удалось сформировать PDF')}};
   window.openAslanovaReport=function(){const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div><div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
 })();
 </script>
