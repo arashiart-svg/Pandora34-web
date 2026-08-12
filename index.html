@@ -253,13 +253,43 @@
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
 .section-title{font-weight:900;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}
 
+    .master-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;cursor:pointer;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+    .master-card:hover{border-color:rgba(79,199,234,.45);box-shadow:0 12px 28px rgba(79,199,234,.16);transform:translateY(-1px)}
+    .master-card .product-name{color:var(--text)}
+    .access-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:8px}
+    .access-chip{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;user-select:none}
+    .access-chip input{accent-color:var(--neon);width:16px;height:16px}
+    .access-chip:has(input:checked){background:var(--sidebar-active-bg);color:#fff;border-color:var(--neon);box-shadow:0 0 12px rgba(79,199,234,.28)}
+    .login-screen{position:fixed;inset:0;z-index:10000;background:var(--sidebar-bg);display:none;align-items:center;justify-content:center;padding:24px}
+    .login-box{width:min(420px,100%);background:#152544;border:1.5px solid var(--neon);border-radius:18px;padding:28px 24px;box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 40px var(--neon-glow)}
+    .login-box h1{margin:0 0 8px;color:#fff;font-size:22px}
+    .login-box .hint{color:var(--sidebar-text);margin-bottom:18px}
+    .login-box label{display:block;color:#9eb0cc;font-size:12px;font-weight:700;margin:0 0 6px}
+    .login-box input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #2a3f66;background:#101e38;color:#fff;font-size:15px;margin-bottom:14px}
+    .login-box input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(79,199,234,.22)}
+    .login-box button{width:100%;border:1.5px solid var(--neon)!important;background:var(--sidebar-active-bg)!important;color:#fff!important;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 0 18px var(--neon-glow)}
+    .login-error{color:#ff8a8a;font-size:13px;font-weight:700;min-height:18px;margin:0 0 10px}
+    .crm-who{color:var(--sidebar-text);font-size:12px;margin:-14px 0 16px;padding:0 2px;min-height:16px}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>Pandora34</h1>
+    <div class="hint">Админ — логин <b>admin</b>. Мастера — свой логин из настроек.</div>
+    <div class="login-error" id="loginError"></div>
+    <label>Логин</label>
+    <input id="loginUser" autocomplete="username">
+    <label>Пароль</label>
+    <input id="loginPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')crmLogin()">
+    <button type="button" onclick="crmLogin()">Войти</button>
+  </div>
+</div>
 <div class="app">
-  <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div class="menu">
-    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button>
+  <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div id="crmWho" class="crm-who"></div><div class="menu">
+    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
   </div></aside>
   <main>
     <section id="workSection">
@@ -474,22 +504,37 @@ const quickWorks=['Пробег','Ремонт','Диагностика','Про
 const quickPrices=['1000','1500','2000','2500','3000','3500','4000','4500','5000','5500','6000','6500','8000','10000','21000'];
 let masters=JSON.parse(storeGet('masters_demo','["Андрей","Александр","Роман","Николай"]'));
 const DEFAULT_MASTER_NAMES=['Андрей','Александр','Роман','Николай'];
+const OWNER_MASTER='Андрей';
+const OWNER_LOGIN='admin';
+function isOwnerMaster(name){return String(name||'').trim()===OWNER_MASTER;}
+function isAdminLogin(login){return String(login||'').trim().toLowerCase()===OWNER_LOGIN;}
 function normalizeLinkedMaster(x){
   if(typeof x==='string') return {name:x,percent:0};
   return {name:String(x?.name||'').trim(), percent:Math.max(0, Number(x?.percent)||0)};
 }
 function normalizeMaster(m){
-  const base = typeof m==='string'
+  const src = typeof m==='object' && m ? m : null;
+  const base = !src
     ? {name:m,percent:50,linked:[]}
-    : {name:String(m?.name||''),percent:Number(m?.percent??50)||0,linked:Array.isArray(m?.linked)?m.linked:[]};
+    : {name:String(src.name||''),percent:Number(src.percent??50)||0,linked:Array.isArray(src.linked)?src.linked:[]};
   base.name=String(base.name||'').trim();
   base.percent=Math.max(0, Number(base.percent)||0);
   base.linked=base.linked.map(normalizeLinkedMaster).filter(x=>x.name && x.percent>0 && x.name!==base.name);
+  base.login=String(src&&src.login||'').trim();
+  base.passwordHash=String(src&&src.passwordHash||'');
+  base.accessEnabled=!!(src&&src.accessEnabled);
+  const keys=['work','calendar','stock','report','archive','clients','settings'];
+  const acc=(src&&src.access&&typeof src.access==='object')?src.access:{};
+  base.access={};
+  keys.forEach(k=>base.access[k]=isOwnerMaster(base.name)?true:!!acc[k]);
+  if(isOwnerMaster(base.name)){
+    base.login=OWNER_LOGIN;
+    base.accessEnabled=true;
+    keys.forEach(k=>base.access[k]=true);
+  }
   return base;
 }
 function masterName(m){return normalizeMaster(m).name;}
-const OWNER_MASTER='Андрей';
-function isOwnerMaster(name){return String(name||'').trim()===OWNER_MASTER;}
 function getMasterObj(name){return masters.map(normalizeMaster).find(x=>x.name===String(name||'').trim())||null;}
 function masterPercent(name){const m=getMasterObj(name);return m?Number(m.percent)||0:0;}
 function masterLinked(name){const m=getMasterObj(name);return m?m.linked||[]:[];}
@@ -588,8 +633,116 @@ function saveAll(){
 function save(){storeSet('cars_demo',JSON.stringify(cars)); storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys)); storeSaveAll(); scheduleAutoBackup(); scheduleCloudSync();}
 document.getElementById('today').textContent=new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 
+const ACCESS_SECTIONS=[
+  ['work','Работа'],
+  ['calendar','Запись'],
+  ['stock','Склад'],
+  ['report','Отчёты'],
+  ['archive','Архив авто'],
+  ['clients','Контрагенты'],
+  ['settings','Настройки']
+];
+const MENU_BY_SECTION={work:'menuWork',calendar:'menuCalendar',stock:'menuStock',report:'menuReport',archive:'menuArchive',clients:'menuClients',settings:'menuSettings'};
+let crmSession=null;
+try{crmSession=JSON.parse(storeGet('pandora_crm_session','null'));}catch(e){crmSession=null;}
+
+async function hashCrmPass(s){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pandora34:'+String(s||'')));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function mastersWithLogin(){
+  return masters.map(normalizeMaster).filter(m=>!isOwnerMaster(m.name) && m.accessEnabled && m.login && m.passwordHash);
+}
+function canAccessSection(section){
+  if(mastersWithLogin().length && !crmSession) return false;
+  if(section==='backup') return !!(crmSession&&crmSession.access&&crmSession.access.settings);
+  if(!crmSession || !crmSession.access) return true;
+  if(crmSession.access[section]===undefined) return true;
+  return !!crmSession.access[section];
+}
+function firstAllowedSection(){
+  const order=['work','calendar','stock','report','archive','clients','settings'];
+  return order.find(s=>canAccessSection(s))||'work';
+}
+function applyCrmAccess(){
+  ACCESS_SECTIONS.forEach(([key])=>{
+    const el=document.getElementById(MENU_BY_SECTION[key]);
+    if(el) el.style.display=canAccessSection(key)?'':'none';
+  });
+  const out=document.getElementById('menuLogout');
+  if(out) out.style.display=(crmSession && mastersWithLogin().length)?'':'none';
+  const who=document.getElementById('crmWho');
+  if(who) who.textContent=(crmSession && crmSession.name)?crmSession.name:'';
+}
+function showLoginScreen(on){
+  const screen=document.getElementById('loginScreen');
+  const app=document.querySelector('.app');
+  if(screen) screen.style.display=on?'flex':'none';
+  if(app) app.style.display=on?'none':'';
+}
+async function crmLogin(){
+  const login=val('loginUser').trim();
+  const pass=val('loginPass');
+  const err=document.getElementById('loginError');
+  if(err) err.textContent='';
+  if(!login){ if(err) err.textContent='Введи логин'; return; }
+  let m=null;
+  if(isAdminLogin(login)){
+    m=masters.map(normalizeMaster).find(x=>isOwnerMaster(x.name))||normalizeMaster({name:OWNER_MASTER});
+    if(m.passwordHash){
+      if(!pass){ if(err) err.textContent='Введи пароль'; return; }
+      const hash=await hashCrmPass(pass);
+      if(hash!==m.passwordHash){ if(err) err.textContent='Неверный логин или пароль'; return; }
+    }
+  }else{
+    if(!pass){ if(err) err.textContent='Введи логин и пароль'; return; }
+    const hash=await hashCrmPass(pass);
+    m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===login && x.passwordHash===hash);
+  }
+  if(!m){ if(err) err.textContent='Неверный логин или пароль'; return; }
+  crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
+  storeSet('pandora_crm_session', JSON.stringify(crmSession));
+  showLoginScreen(false);
+  applyCrmAccess();
+  showSection(firstAllowedSection());
+}
+function crmLogout(){
+  crmSession=null;
+  storeSet('pandora_crm_session','');
+  const u=document.getElementById('loginUser'); const p=document.getElementById('loginPass');
+  if(u) u.value=''; if(p) p.value='';
+  bootCrmAuth();
+}
+function bootCrmAuth(){
+  const need=mastersWithLogin().length>0;
+  if(!need){
+    crmSession={name:OWNER_MASTER,login:OWNER_LOGIN,access:normalizeMaster({name:OWNER_MASTER}).access,owner:true};
+    showLoginScreen(false);
+    applyCrmAccess();
+    return;
+  }
+  if(crmSession && crmSession.login){
+    const m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===crmSession.login);
+    if(m){
+      crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
+      storeSet('pandora_crm_session', JSON.stringify(crmSession));
+      showLoginScreen(false);
+      applyCrmAccess();
+      showSection(firstAllowedSection());
+      return;
+    }
+  }
+  crmSession=null;
+  showLoginScreen(true);
+  const u=document.getElementById('loginUser');
+  if(u) setTimeout(()=>u.focus(),50);
+}
 
 function showSection(section){
+  if(!canAccessSection(section)){
+    const first=firstAllowedSection();
+    if(first && first!==section){ showSection(first); return; }
+  }
   const work=document.getElementById('workSection');
   const report=document.getElementById('reportSection');
   const stock=document.getElementById('stockSection');
@@ -2205,7 +2358,7 @@ function openSettingsSubsection(type){
       <h2 style="font-size:24px;margin:0 0 14px">Мастера</h2>
       <div id="mastersSettings"></div>
       <div class="actions" style="justify-content:flex-start">
-        <button onclick="openAddMaster()">Добавить мастера</button>
+        <button class="neon" onclick="openAddMaster()">Добавить мастера</button>
       </div>`;
     renderMastersSettings(false);
     return;
@@ -2294,22 +2447,32 @@ function renderMastersSettings(salaryOnly){
   const box=document.getElementById(salaryOnly?'salarySettings':'mastersSettings');
   if(!box) return;
   ensureOwnerMaster();
-  box.innerHTML=`<div class="small" style="margin-bottom:12px">Нажми на мастера, чтобы открыть отдельное меню с процентами и настройками.</div>`+
+  box.innerHTML=`<div class="small" style="margin-bottom:12px">Нажми на мастера: ЗП, вход в CRM и разделы, к которым есть доступ.</div>`+
     masters.map((m,i)=>{
       const mm=normalizeMaster(m);
       const owner=isOwnerMaster(mm.name);
       const linked=(mm.linked||[]).map(x=>`${escapeHtml(x.name)} ${Number(x.percent)||0}%`).join(', ');
-      return `<div class="product-card" onclick="openMasterSettings(${i})" style="cursor:pointer;margin-bottom:12px;background:linear-gradient(135deg,#1e293b,#0f766e)">
+      const accessOn=owner || (mm.accessEnabled && mm.login);
+      const accessLabel=owner?'Админ · логин admin':(accessOn?'Вход: '+mm.login:'Без входа в CRM');
+      return `<div class="master-card" onclick="openMasterSettings(${i})">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div>
-            <div class="product-name">👨‍🔧 ${escapeHtml(mm.name)}</div>
+            <div class="product-name">${escapeHtml(mm.name)}</div>
             <div class="product-meta">${owner?'Владелец · получает остаток':'Ставка ЗП: '+(Number(mm.percent)||0)+'%'}</div>
-            ${linked?`<div class="product-meta">Смежные: ${linked}</div>`:'<div class="product-meta">Смежные проценты не назначены</div>'}
+            ${linked?`<div class="product-meta">Смежные: ${linked}</div>`:''}
+            <div class="client-chip" style="margin-top:8px">${escapeHtml(accessLabel)}</div>
           </div>
           <div class="badge">Настроить</div>
         </div>
       </div>`;
     }).join('') || '<div class="small">Мастеров пока нет</div>';
+}
+
+function accessChipsHtml(mm, owner){
+  return ACCESS_SECTIONS.map(([key,label])=>{
+    const on=owner || !!(mm.access&&mm.access[key]);
+    return `<label class="access-chip"><input type="checkbox" class="access-flag" data-key="${key}" ${on?'checked':''} ${owner?'disabled':''}>${label}</label>`;
+  }).join('');
 }
 
 function openMasterSettings(i){
@@ -2320,18 +2483,35 @@ function openMasterSettings(i){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Мастер: ${escapeHtml(mm.name)}</h2>
-    <div class="form">
-      <div class="wide"><label>Имя мастера</label><input id="masterDetailName" value="${escapeHtml(mm.name)}" ${owner?'readonly':''}></div>
-      <div class="wide"><label>Ставка ЗП</label>${owner?'<input value="Андрей получает остаток" disabled>':`<input id="masterDetailPercent" type="number" value="${Number(mm.percent)||0}" placeholder="50">`}</div>
+    <div class="form-group">
+      <div class="form-group-title">Мастер</div>
+      <div class="form">
+        <div class="wide"><label>Имя мастера</label><input id="masterDetailName" value="${escapeHtml(mm.name)}" ${owner?'readonly':''}></div>
+        <div class="wide"><label>Ставка ЗП</label>${owner?'<input value="Андрей получает остаток" disabled>':`<input id="masterDetailPercent" type="number" value="${Number(mm.percent)||0}" placeholder="50">`}</div>
+      </div>
     </div>
-    <div class="step-title" style="margin-top:16px">Смежные проценты</div>
-    <div class="small" style="margin-bottom:10px">Например: Роман 50%, Александр 25% от Романа. Тогда Александр получит 25% от начисления Романа, а у Романа эта сумма вычтется.</div>
-    <div id="linkedRows">${linkedRows||'<div class="small">Смежные проценты не назначены</div>'}</div>
-    ${owner?'':`<div class="actions" style="justify-content:flex-start"><button onclick="addLinkedRow('${String(mm.name).replace(/'/g,"\'")}')">Добавить смежный процент</button></div>`}
-    <div class="actions">
-      <button onclick="closeModal()">Закрыть</button>
-      ${owner?'':`<button onclick="deleteMasterFromModal(${i})">Удалить мастера</button>`}
-      <button onclick="saveMasterDetails(${i})">Сохранить</button>
+    <div class="form-group">
+      <div class="form-group-title">Доступ в CRM</div>
+      ${owner?`<div class="small" style="margin-bottom:12px">Ты уже админ. Логин <b>admin</b>, пароль тот же что на входе на сервер. Тут ничего заводить не надо.</div>`:`<label class="access-chip" style="margin-bottom:12px;max-width:280px"><input type="checkbox" id="masterAccessOn" ${mm.accessEnabled?'checked':''}>Может входить в CRM</label>`}
+      ${owner?'':`<div class="form">
+        <div><label>Логин</label><input id="masterLogin" value="${escapeHtml(mm.login)}" placeholder="например roman"></div>
+        <div><label>Пароль</label><input id="masterPassword" type="password" placeholder="${mm.passwordHash?'не менять':'новый пароль'}"></div>
+      </div>
+      <div class="small" style="margin:10px 0 8px">Разделы, которые видит после входа</div>
+      <div class="access-grid">${accessChipsHtml(mm, owner)}</div>`}
+    </div>
+    <div class="form-group">
+      <div class="form-group-title">Смежные проценты</div>
+      <div class="small" style="margin-bottom:10px">Например: Роман 50%, Александр 25% от Романа.</div>
+      <div id="linkedRows">${linkedRows||'<div class="small">Смежные проценты не назначены</div>'}</div>
+      ${owner?'':`<div class="actions" style="justify-content:flex-start;margin-top:10px"><button onclick="addLinkedRow('${String(mm.name).replace(/'/g,"\\'")}')">Добавить смежный процент</button></div>`}
+    </div>
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="closeModal()">Закрыть</button></div>
+      <div class="right">
+        ${owner?'':`<button class="danger" onclick="deleteMasterFromModal(${i})">Удалить</button>`}
+        <button class="neon" onclick="saveMasterDetails(${i})">Сохранить</button>
+      </div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2354,7 +2534,7 @@ function addLinkedRow(ownerName){
   box.insertAdjacentHTML('beforeend', linkedRowHtml(Date.now(),'',0,ownerName));
 }
 
-function saveMasterDetails(i){
+async function saveMasterDetails(i){
   ensureOwnerMaster();
   const old=normalizeMaster(masters[i]);
   const owner=isOwnerMaster(old.name);
@@ -2366,9 +2546,35 @@ function saveMasterDetails(i){
     const lp=Number(row.querySelector('.linked-percent')?.value)||0;
     if(ln && ln!==name && lp>0) linked.push({name:ln,percent:lp});
   });
-  masters[i]={name,percent,linked,updatedAt:new Date().toISOString()};
+  const login=owner?OWNER_LOGIN:val('masterLogin').trim();
+  const pass=owner?'':val('masterPassword');
+  const accessEnabled=owner?true:!!document.getElementById('masterAccessOn')?.checked;
+  const access={};
+  ACCESS_SECTIONS.forEach(([key])=>{
+    const box=document.querySelector('.access-flag[data-key="'+key+'"]');
+    access[key]=owner?true:!!(box&&box.checked);
+  });
+  if(owner) ACCESS_SECTIONS.forEach(([key])=>access[key]=true);
+  if(accessEnabled && !owner){
+    if(!ACCESS_SECTIONS.some(([key])=>access[key])){alert('Отметь хотя бы один раздел');return;}
+    if(!login){alert('Укажи логин для входа');return;}
+    if(isAdminLogin(login)){alert('Логин admin занят — это ты');return;}
+    const taken=masters.map(normalizeMaster).some((m,idx)=>idx!==i && m.login && m.login.toLowerCase()===login.toLowerCase());
+    if(taken){alert('Такой логин уже занят');return;}
+    if(!old.passwordHash && !pass){alert('Задай пароль для входа');return;}
+  }
+  let passwordHash=old.passwordHash||'';
+  if(!owner && pass) passwordHash=await hashCrmPass(pass);
+  masters[i]={name,percent,linked,login,passwordHash,accessEnabled,access,updatedAt:new Date().toISOString()};
   ensureOwnerMaster();
   saveAll();
+  if(crmSession && (crmSession.login===old.login || crmSession.login===login || (owner && crmSession.owner))){
+    if(login && passwordHash){
+      crmSession={name,login,access,owner};
+      storeSet('pandora_crm_session', JSON.stringify(crmSession));
+    }
+    applyCrmAccess();
+  }
   closeModal();
   if(document.getElementById('salarySettings')) openSettingsSubsection('salary'); else openSettingsSubsection('masters');
 }
@@ -2492,7 +2698,10 @@ function openAddMaster(){
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить мастера</h2>
     <div class="form"><div class="wide"><label>Имя</label><input id="newMaster" placeholder="Имя мастера"></div></div>
-    <div class="actions"><button onclick="closeModal()">Отмена</button><button onclick="addMaster()">Добавить</button></div>`;
+    <div class="two-actions neon-bar">
+      <div class="left"><button onclick="closeModal()">Отмена</button></div>
+      <div class="right"><button class="neon" onclick="addMaster()">Добавить</button></div>
+    </div>`;
   document.getElementById('modal').style.display='flex';
 }
 
@@ -2861,35 +3070,15 @@ async function syncGoogleCalendar(){
   if(status){status.textContent='Обновляю из Google...';status.style.color='var(--muted)';}
 
   try{
-    let text='';
-    // 1) через наш API (обходит CORS)
-    try{
-      const r=await fetch(`${API_BASE_URL}/sync/calendar-ics`,{
-        method:'POST',
-        headers:cloudHeaders(),
-        body:JSON.stringify({url})
-      });
-      if(r.ok){
-        const obj=await r.json();
-        text=String(obj&&obj.text||'');
-      }else if(r.status!==404){
-        throw new Error('Сервер не смог скачать календарь ('+r.status+')');
-      }
-    }catch(e){
-      if(String(e.message||'').includes('Сервер не смог')) throw e;
-    }
-
-    // 2) прямой fetch — на случай если CORS вдруг пускает / локальные тесты
-    if(!text){
-      try{
-        const r2=await fetch(url,{headers:{'Accept':'text/calendar'}});
-        if(r2.ok) text=await r2.text();
-      }catch(_e){}
-    }
-
-    if(!text){
-      throw new Error('Не удалось скачать календарь. Обнови API на сервере (нужен /sync/calendar-ics) или используй «Импорт .ics».');
-    }
+    const r=await fetch(`${API_BASE_URL}/sync/calendar-ics`,{
+      method:'POST',
+      headers:cloudHeaders(),
+      body:JSON.stringify({url})
+    });
+    if(!r.ok) throw new Error('Сервер не отдал календарь ('+r.status+')');
+    const obj=await r.json();
+    const text=String(obj&&obj.text||'');
+    if(!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Сервер вернул не календарь');
 
     const imported=parseIcsEvents(text).map(x=>({...x,source:'google'}));
     const res=mergeImportedAppointments(imported,'google');
@@ -4163,6 +4352,7 @@ autoBackupReady=true;
 forceAutoBackup();
 render();
 startCloudSync();
+bootCrmAuth();
 
 render();
 
