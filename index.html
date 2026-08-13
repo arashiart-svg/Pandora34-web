@@ -4217,9 +4217,9 @@ function orderHtml(d){
 const API_BASE_URL=''; // веб-версия: относительный путь, тот же домен/порт, что и страница
 const SYNC_TOKEN='e355b348d499ae97238cbfdb6507c000b398c59af247b56b';
 const CLOUD_ROW_ID='main';
-let cloudSyncTimer=null, cloudPollTimer=null, cloudApplying=false, cloudBusy=false;
-let cloudEnabled=storeGet('pandora_cloud_enabled','0')==='1';
-let cloudStatusText='Облако: merge-синхронизация';
+let cloudSyncTimer=null, cloudPollTimer=null, cloudApplying=false, cloudBusy=false, cloudLive=null;
+let cloudEnabled=storeGet('pandora_cloud_enabled','1')!=='0';
+let cloudStatusText='Облако: живая база';
 function cloudHeaders(){return {'Authorization':'Bearer '+SYNC_TOKEN,'Content-Type':'application/json'};}
 function setCloudStatus(text){
   cloudStatusText=text;
@@ -4318,53 +4318,73 @@ function mergePayloads(local,remote){local=local||{}; remote=remote||{};const ou
 function fingerprintPayload(d){const light={cars:d.cars||[],deletedCarKeys:d.deletedCarKeys||[],deletedProductKeys:d.deletedProductKeys||[],products:d.products||[],stockLog:d.stockLog||[],appointments:d.appointments||[],clients:d.clients||[],clientGroups:d.clientGroups||[],organizations:d.organizations||[],masters:d.masters||[],suppliers:d.suppliers||[],carBrands:d.carBrands||[],carModels:d.carModels||{},v27Works:d.v27Works||[],v27Prices:d.v27Prices||[],orderWorks:d.orderWorks||[],orderPrices:d.orderPrices||[]};return JSON.stringify(light);}
 function applyPayloadToLocal(d){if(!d||typeof d!=='object')return;cloudApplying=true;try{cars=Array.isArray(d.cars)?d.cars:cars;deletedCarKeys=Array.isArray(d.deletedCarKeys)?d.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(d.deletedProductKeys)?d.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));products=Array.isArray(d.products)?d.products.filter(p=>!deletedProductKeys.includes(itemKey('products',p))):products;stockLog=Array.isArray(d.stockLog)?d.stockLog:stockLog;appointments=Array.isArray(d.appointments)?d.appointments:appointments;clients=Array.isArray(d.clients)?d.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(d.clientGroups)?d.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(d.organizations)?d.organizations:organizations;masters=Array.isArray(d.masters)?d.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(d.suppliers)?d.suppliers:suppliers;carBrands=Array.isArray(d.carBrands)?d.carBrands:carBrands;carModels=(d.carModels&&typeof d.carModels==='object')?d.carModels:carModels;if(typeof v27Works!=='undefined'&&Array.isArray(d.v27Works))v27Works=d.v27Works;if(typeof v27Prices!=='undefined'&&Array.isArray(d.v27Prices))v27Prices=d.v27Prices;if(typeof orderWorks!=='undefined'&&Array.isArray(d.orderWorks))orderWorks=d.orderWorks;if(typeof orderPrices!=='undefined'&&Array.isArray(d.orderPrices))orderPrices=d.orderPrices;normalizeBrandModels();ensureOwnerMaster();if(d.googleCalendarIcsUrl!=null&&typeof setGoogleCalendarIcsUrl==='function')setGoogleCalendarIcsUrl(d.googleCalendarIcsUrl);if(d.googleCalendarLastSync!=null){googleCalendarLastSync=String(d.googleCalendarLastSync||'');storeSet('google_calendar_last_sync',googleCalendarLastSync);}saveAll();if(typeof v27Save==='function')v27Save();if(typeof orderSave==='function')orderSave();render();renderBackupStatus();}finally{cloudApplying=false;}}
 async function cloudFetchRemote(){const r=await fetch(`${API_BASE_URL}/sync/state`,{headers:cloudHeaders()});if(!r.ok) throw new Error('fetch '+r.status);const obj=await r.json();return obj&&obj.id?obj:null;}
-async function cloudWriteRemote(payload){const body={id:CLOUD_ROW_ID,data:payload};const r=await fetch(`${API_BASE_URL}/sync/state`,{method:'POST',headers:cloudHeaders(),body:JSON.stringify(body)});if(!r.ok) throw new Error('push '+r.status);const arr=await r.json().catch(()=>[]);return Array.isArray(arr)?arr:[arr];}
+async function cloudWriteRemote(payload){const body={id:CLOUD_ROW_ID,data:payload};const r=await fetch(`${API_BASE_URL}/sync/state`,{method:'POST',headers:cloudHeaders(),body:JSON.stringify(body)});if(r.status===409) return null;if(!r.ok) throw new Error('push '+r.status);const arr=await r.json().catch(()=>[]);return Array.isArray(arr)?arr:[arr];}
 async function cloudSyncNow(manual=false){
   if(cloudApplying||cloudBusy)return;
   if(!manual&&!cloudEnabled){
-    try{await cloudFetchRemote();setCloudStatus('Облако доступно. Нажми статус → включить merge');}
+    try{await cloudFetchRemote();setCloudStatus('Облако доступно, автосинк выключен');}
     catch(e){setCloudStatus('Облако: нет связи');}
     return;
   }
-  cloudBusy=true;setCloudStatus('Облако: проверка синхронизации...');
+  cloudBusy=true;setCloudStatus('Облако: сверка...');
   try{
     const local=cloudPayload();
     const row=await cloudFetchRemote();
     const remote=row&&row.data?row.data:{};
     if(isCloudPayloadEmpty(local)&&isCloudPayloadEmpty(remote)){setCloudStatus('Облако: обе базы пустые');return;}
-    cloudLocalSnapshot('before_two_way_merge');
     const merged=mergePayloads(local,remote);
     const fpLocal=fingerprintPayload(local), fpRemote=fingerprintPayload(remote), fpMerged=fingerprintPayload(merged);
     if(fpMerged!==fpLocal) applyPayloadToLocal(merged);
     if(fpMerged!==fpRemote || !row) await cloudWriteRemote(merged);
-    cloudEnabled=true;storeSet('pandora_cloud_enabled','1');storeSet('pandora_cloud_fingerprint',fpMerged);
-    setCloudStatus('Облако: сверено '+new Date().toLocaleTimeString('ru-RU'));
+    storeSet('pandora_cloud_fingerprint',fpMerged);
+    setCloudStatus('Облако: на связи '+new Date().toLocaleTimeString('ru-RU'));
   }catch(e){setCloudStatus('Облако: нет связи / ошибка синхронизации');}
   finally{cloudBusy=false;}
 }
-function scheduleCloudSync(){if(cloudApplying)return;if(cloudSyncTimer)clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudSyncNow(false),60000);}
+function scheduleCloudSync(){if(cloudApplying||!cloudEnabled)return;if(cloudSyncTimer)clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudSyncNow(true),800);}
+function stopCloudLive(){
+  try{if(cloudLive){cloudLive.close();cloudLive=null;}}catch(e){}
+  if(cloudPollTimer){clearInterval(cloudPollTimer);cloudPollTimer=null;}
+}
+function startCloudLive(){
+  stopCloudLive();
+  if(!cloudEnabled) return;
+  try{
+    const es=new EventSource(`${API_BASE_URL}/sync/live?token=${encodeURIComponent(SYNC_TOKEN)}`);
+    cloudLive=es;
+    es.onmessage=(ev)=>{
+      try{
+        const p=JSON.parse(ev.data||'{}');
+        if(p.hello) return;
+        if(p.deviceId && p.deviceId===cloudDeviceId()) return;
+        cloudSyncNow(true);
+      }catch(e){}
+    };
+  }catch(e){}
+  cloudPollTimer=setInterval(()=>{if(cloudEnabled) cloudSyncNow(false);},20000);
+}
 function renderSyncSettings(){
   const box=document.getElementById('syncSettings');
   if(!box) return;
   const localScore=cloudScore(cloudPayload());
   box.innerHTML=`
-    <div class="hint">Приложение сверяет базу на этом устройстве и на сервере, добавляет недостающие записи в обе стороны. Автоудаления нет: если авто выдано на одном устройстве, сервер не вернёт его обратно в работу.</div>
-    <div class="hint">Локальная база: условный размер ${localScore}. Автосинхронизация: ${cloudEnabled?'включена':'выключена'}.</div>
+    <div class="hint">База общая: сохранение на телефоне или ноуте сразу уходит на сервер, другие устройства подхватывают сами. Кнопка ниже — если надо сверить вручную.</div>
+    <div class="hint">Локальная копия: ${localScore}. Живое обновление: ${cloudEnabled?'включено':'выключено'}.</div>
     <div id="settingsSyncStatus" class="small" style="margin:10px 0 14px;font-weight:700"></div>
     <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
-      <button onclick="settingsSyncMerge()">Сверить это устройство ↔ сервер</button>
-      <button onclick="settingsSyncEnable()">Включить автосинхронизацию</button>
-      <button onclick="settingsSyncDisable()">Выключить автосинхронизацию</button>
+      <button onclick="settingsSyncMerge()">Сверить сейчас</button>
+      <button onclick="settingsSyncEnable()">Включить живую базу</button>
+      <button onclick="settingsSyncDisable()">Выключить</button>
     </div>`;
   setCloudStatus(cloudStatusText);
 }
 function settingsSyncMerge(){cloudSyncNow(true); setTimeout(()=>openSettingsSubsection('sync'),500);}
-function settingsSyncEnable(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);setTimeout(()=>openSettingsSubsection('sync'),500);}
-function settingsSyncDisable(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');openSettingsSubsection('sync');}
+function settingsSyncEnable(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');startCloudLive();cloudSyncNow(true);setTimeout(()=>openSettingsSubsection('sync'),500);}
+function settingsSyncDisable(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');stopCloudLive();setCloudStatus('Облако: автосинхронизация выключена');openSettingsSubsection('sync');}
 function cloudManualMerge(){cloudSyncNow(true);closeModal();}
-function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');cloudSyncNow(true);closeModal();}
-function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
-function startCloudSync(){setCloudStatus(cloudStatusText);cloudSyncNow(false);cloudPollTimer=setInterval(()=>cloudSyncNow(false),60000);}
+function cloudEnableAuto(){cloudEnabled=true;storeSet('pandora_cloud_enabled','1');startCloudLive();cloudSyncNow(true);closeModal();}
+function cloudDisableAuto(){cloudEnabled=false;storeSet('pandora_cloud_enabled','0');stopCloudLive();setCloudStatus('Облако: автосинхронизация выключена');closeModal();}
+function startCloudSync(){if(cloudEnabled) storeSet('pandora_cloud_enabled','1');setCloudStatus(cloudStatusText);cloudSyncNow(true);startCloudLive();}
 /* === /Pandora34 Cloud Sync MERGE v3 === */
 
 
