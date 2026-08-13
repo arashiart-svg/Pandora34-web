@@ -523,7 +523,7 @@ function normalizeMaster(m){
   base.login=String(src&&src.login||'').trim();
   base.passwordHash=String(src&&src.passwordHash||'');
   base.accessEnabled=!!(src&&src.accessEnabled);
-  const keys=['work','calendar','stock','report','archive','clients','settings'];
+  const keys=['work','calendar','stock','report','archive','clients','settings','deleteCar'];
   const acc=(src&&src.access&&typeof src.access==='object')?src.access:{};
   base.access={};
   keys.forEach(k=>base.access[k]=isOwnerMaster(base.name)?true:!!acc[k]);
@@ -642,6 +642,7 @@ const ACCESS_SECTIONS=[
   ['clients','Контрагенты'],
   ['settings','Настройки']
 ];
+const ACCESS_CHIPS=ACCESS_SECTIONS.concat([['deleteCar','Удаление карточки']]);
 const MENU_BY_SECTION={work:'menuWork',calendar:'menuCalendar',stock:'menuStock',report:'menuReport',archive:'menuArchive',clients:'menuClients',settings:'menuSettings'};
 let crmSession=null;
 try{crmSession=JSON.parse(storeGet('pandora_crm_session','null'));}catch(e){crmSession=null;}
@@ -653,9 +654,27 @@ async function hashCrmPass(s){
 function mastersWithLogin(){
   return masters.map(normalizeMaster).filter(m=>!isOwnerMaster(m.name) && m.accessEnabled && m.login && m.passwordHash);
 }
+function isLimitedCrmUser(){return !!(crmSession && !crmSession.owner);}
+function sessionMasterName(){return String(crmSession&&crmSession.name||'').trim();}
+function carHasMaster(c,name){
+  const n=String(name||'').trim();
+  if(!n) return false;
+  return String(c&&c.master||'').split(',').map(x=>x.trim()).filter(Boolean).includes(n);
+}
+function filterCarsForSession(list){
+  if(!isLimitedCrmUser()) return list||[];
+  const name=sessionMasterName();
+  return (list||[]).filter(c=>carHasMaster(c,name));
+}
+function canDeleteCars(){
+  if(!crmSession || !crmSession.access) return true;
+  if(crmSession.owner) return true;
+  return !!crmSession.access.deleteCar;
+}
 function canAccessSection(section){
   if(mastersWithLogin().length && !crmSession) return false;
   if(section==='backup') return !!(crmSession&&crmSession.access&&crmSession.access.settings);
+  if(section==='deleteCar') return canDeleteCars();
   if(!crmSession || !crmSession.access) return true;
   if(crmSession.access[section]===undefined) return true;
   return !!crmSession.access[section];
@@ -673,6 +692,23 @@ function applyCrmAccess(){
   if(out) out.style.display=(crmSession && mastersWithLogin().length)?'':'none';
   const who=document.getElementById('crmWho');
   if(who) who.textContent=(crmSession && crmSession.name)?crmSession.name:'';
+  applyMasterReportUi();
+}
+function applyMasterReportUi(){
+  const limited=isLimitedCrmUser();
+  ['repAnalysis','repAslanova'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=limited?'none':'';
+  });
+  const cur=document.getElementById('repCurrent');
+  if(cur) cur.textContent=limited?'Отчёт по сервису':'Текущая неделя';
+  const sub=document.querySelector('#reportSection .date');
+  if(sub) sub.textContent=limited?'Только твои работы и зарплата':'Выданные авто, суммы, мастера и касса';
+  if(limited){
+    analysisOpen=false;
+    const asl=document.getElementById('analysisBlock');
+    if(asl) asl.style.display='none';
+  }
 }
 function showLoginScreen(on){
   const screen=document.getElementById('loginScreen');
@@ -780,6 +816,7 @@ function showSection(section){
   if(menuClients) menuClients.classList.toggle('active',section==='clients');
 
   if(section==='report'){
+    applyMasterReportUi();
     const ws=document.getElementById('weekSelect'); const ms=document.getElementById('monthSelect');
     if(ws) ws.dataset.filled='';
     if(ms) ms.dataset.filled='';
@@ -966,7 +1003,7 @@ function setReportMode(mode){
 }
 
 function fillReportSelects(){
-  const done=cars.filter(c=>c.status==='done').map(c=>({c,date:parseRuDate(c.outAt)})).filter(x=>x.date);
+  const done=filterCarsForSession(cars.filter(c=>c.status==='done')).map(c=>({c,date:parseRuDate(c.outAt)})).filter(x=>x.date);
   const weekSelect=document.getElementById('weekSelect');
   const monthSelect=document.getElementById('monthSelect');
 
@@ -1010,6 +1047,7 @@ function selectReportDay(key){
 }
 
 function toggleAnalysis(){
+  if(isLimitedCrmUser()) return;
   analysisOpen=!analysisOpen;
   if(analysisOpen) salaryOpen=false;
   updateReportControlsActive();
@@ -1023,11 +1061,11 @@ function toggleSalaryReport(){
 }
 
 function getDoneCarsInRange(from,to){
-  return cars
+  return filterCarsForSession(cars
     .filter(c=>c.status==='done')
     .map(c=>({c,date:parseRuDate(c.outAt)}))
     .filter(x=>x.date && x.date>=from && x.date<to)
-    .map(x=>x.c);
+    .map(x=>x.c));
 }
 
 function getReportRange(){
@@ -1180,13 +1218,18 @@ function calcSalaryRows(done){
 
 function getSalaryEntries(done){
   const rows=calcSalaryRows(done);
-  return Object.entries(rows).sort((a,b)=>{
+  let entries=Object.entries(rows).sort((a,b)=>{
     if(a[0]===OWNER_MASTER) return -1;
     if(b[0]===OWNER_MASTER) return 1;
     const ap=a[1].base+a[1].linkedIn-a[1].linkedOut-a[1].collected;
     const bp=b[1].base+b[1].linkedIn-b[1].linkedOut-b[1].collected;
     return bp-ap;
   });
+  if(isLimitedCrmUser()){
+    const name=sessionMasterName();
+    entries=entries.filter(([n])=>n===name);
+  }
+  return entries;
 }
 
 function renderSalaryReport(done){
@@ -1215,6 +1258,7 @@ function renderSalaryReport(done){
 
 function openSalaryDetail(encodedName){
   const name=decodeURIComponent(encodedName);
+  if(isLimitedCrmUser() && name!==sessionMasterName()) return;
   const range=getReportRange();
   const done=getDoneCarsInRange(range.from, range.to);
   const rows=calcSalaryRows(done);
@@ -1297,7 +1341,9 @@ function renderReport(){
     <div class="report-line"><span>${name}</span><b>${v.count} оплат / ${Math.round(v.sum).toLocaleString('ru-RU')} ₽</b></div>
   `).join('') || '<div class="small">Нет данных</div>';
 
-  document.getElementById('reportDetails').innerHTML=`
+  document.getElementById('reportDetails').innerHTML=isLimitedCrmUser()?`
+    <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Твои работы</h2>${mastersHtml}</div>
+  `:`
     <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Кто делал</h2>${mastersHtml}</div>
     <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Кто взял деньги</h2>${moneyHtml}</div>
   `;
@@ -1666,7 +1712,7 @@ function openCarView(id){
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
         ${c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
-        <button class="danger" onclick="deleteCar(${c.id})">Удалить</button>
+        ${canDeleteCars()?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
       </div>
     </div>`;
   document.getElementById('modal').style.display='flex';
@@ -1710,7 +1756,7 @@ function openCar(id){
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
         ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
-        ${c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`}
+        ${canDeleteCars()?(c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`):''}
         ${c.status==='done'?'':`<button class="neon" onclick="saveCard(${c.id})">Сохранить</button>`}
       </div>
     </div>`;
@@ -1749,6 +1795,7 @@ function saveCard(id){
 }
 
 function deleteCar(id){
+  if(!canDeleteCars()){alert('Нет права удалять карточки');return;}
   let c=cars.find(x=>x.id===id);
   if(!c) return;
   if(c.status==='done'){
@@ -1764,6 +1811,7 @@ function deleteCar(id){
 }
 
 function deleteDoneCar(id){
+  if(!canDeleteCars()){alert('Нет права удалять карточки');return;}
   let c=cars.find(x=>x.id===id);
   if(!c) return;
   if(!confirm('Удалить выданную карточку без восстановления?')) return;
@@ -2469,7 +2517,7 @@ function renderMastersSettings(salaryOnly){
 }
 
 function accessChipsHtml(mm, owner){
-  return ACCESS_SECTIONS.map(([key,label])=>{
+  return ACCESS_CHIPS.map(([key,label])=>{
     const on=owner || !!(mm.access&&mm.access[key]);
     return `<label class="access-chip"><input type="checkbox" class="access-flag" data-key="${key}" ${on?'checked':''} ${owner?'disabled':''}>${label}</label>`;
   }).join('');
@@ -2497,7 +2545,7 @@ function openMasterSettings(i){
         <div><label>Логин</label><input id="masterLogin" value="${escapeHtml(mm.login)}" placeholder="например roman"></div>
         <div><label>Пароль</label><input id="masterPassword" type="password" placeholder="${mm.passwordHash?'не менять':'новый пароль'}"></div>
       </div>
-      <div class="small" style="margin:10px 0 8px">Разделы, которые видит после входа</div>
+      <div class="small" style="margin:10px 0 8px">Разделы и права после входа</div>
       <div class="access-grid">${accessChipsHtml(mm, owner)}</div>`}
     </div>
     <div class="form-group">
@@ -2550,11 +2598,11 @@ async function saveMasterDetails(i){
   const pass=owner?'':val('masterPassword');
   const accessEnabled=owner?true:!!document.getElementById('masterAccessOn')?.checked;
   const access={};
-  ACCESS_SECTIONS.forEach(([key])=>{
+  ACCESS_CHIPS.forEach(([key])=>{
     const box=document.querySelector('.access-flag[data-key="'+key+'"]');
     access[key]=owner?true:!!(box&&box.checked);
   });
-  if(owner) ACCESS_SECTIONS.forEach(([key])=>access[key]=true);
+  if(owner) ACCESS_CHIPS.forEach(([key])=>access[key]=true);
   if(accessEnabled && !owner){
     if(!ACCESS_SECTIONS.some(([key])=>access[key])){alert('Отметь хотя бы один раздел');return;}
     if(!login){alert('Укажи логин для входа');return;}
@@ -3315,7 +3363,7 @@ function saveReportPdf(){
       total:total,
       avg:done.length?Math.round(total/done.length):0,
       byMaster:Object.entries(byMaster).map(([name,v])=>({name,count:v.count,sum:Math.round(v.sum)})),
-      byMoney:Object.entries(byMoney).map(([name,v])=>({name,count:v.count,sum:Math.round(v.sum)})),
+      byMoney:isLimitedCrmUser()?[]:Object.entries(byMoney).map(([name,v])=>({name,count:v.count,sum:Math.round(v.sum)})),
       rows:done.map((c,i)=>({
         n:i+1,
         number:c.number||'',
@@ -4423,7 +4471,7 @@ document.addEventListener('focusin', (e)=>{
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; openAslanovaReport()};
   window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} const page=document.querySelector('.asl-report-page'); if(page){printReportAsPdf(page.innerHTML,p.title);}else{alert('Не удалось сформировать PDF')}};
-  window.openAslanovaReport=function(){const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div><div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
+  window.openAslanovaReport=function(){if(typeof isLimitedCrmUser==='function'&&isLimitedCrmUser())return;const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div><div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
 })();
 </script>
 
