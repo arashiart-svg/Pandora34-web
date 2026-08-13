@@ -268,6 +268,7 @@
     .login-box input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #2a3f66;background:#101e38;color:#fff;font-size:15px;margin-bottom:14px}
     .login-box input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(79,199,234,.22)}
     .login-box button{width:100%;border:1.5px solid var(--neon)!important;background:var(--sidebar-active-bg)!important;color:#fff!important;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 0 18px var(--neon-glow)}
+    .login-box form{margin:0}
     .login-error{color:#ff8a8a;font-size:13px;font-weight:700;min-height:18px;margin:0 0 10px}
     .crm-who{color:var(--sidebar-text);font-size:12px;margin:-14px 0 16px;padding:0 2px;min-height:16px}
 
@@ -280,11 +281,14 @@
     <h1>Pandora34</h1>
     <div class="hint">Админ — логин <b>admin</b>. Мастера — свой логин из настроек.</div>
     <div class="login-error" id="loginError"></div>
-    <label>Логин</label>
-    <input id="loginUser" autocomplete="username">
-    <label>Пароль</label>
-    <input id="loginPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')crmLogin()">
-    <button type="button" onclick="crmLogin()">Войти</button>
+    <form id="loginForm" action="/" method="post" autocomplete="on" onsubmit="event.preventDefault();crmLogin();return false;">
+      <label for="loginUser">Логин</label>
+      <input id="loginUser" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <label for="loginPass">Пароль</label>
+      <input id="loginPass" name="password" type="password" autocomplete="current-password">
+      <button type="submit">Войти</button>
+    </form>
+    <div class="hint" style="margin:14px 0 0">На этом устройстве вход запоминается сам. Выйти — кнопка в меню.</div>
   </div>
 </div>
 <div class="app">
@@ -738,6 +742,7 @@ async function crmLogin(){
   if(!m){ if(err) err.textContent='Неверный логин или пароль'; return; }
   crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
   storeSet('pandora_crm_session', JSON.stringify(crmSession));
+  storeSet('pandora_crm_last_login', m.login);
   showLoginScreen(false);
   applyCrmAccess();
   showSection(firstAllowedSection());
@@ -771,7 +776,14 @@ function bootCrmAuth(){
   crmSession=null;
   showLoginScreen(true);
   const u=document.getElementById('loginUser');
-  if(u) setTimeout(()=>u.focus(),50);
+  const last=storeGet('pandora_crm_last_login','');
+  if(u){
+    if(last) u.value=last;
+    setTimeout(()=>{
+      if(last){const p=document.getElementById('loginPass'); if(p) p.focus(); else u.focus();}
+      else u.focus();
+    },50);
+  }
 }
 
 function showSection(section){
