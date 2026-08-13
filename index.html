@@ -2857,6 +2857,7 @@ function updateCalendarSyncStatus(){
 function renderAppointments(){
   const grid=document.getElementById('appointmentsGrid');
   if(!grid) return;
+  if(compactAppointmentDupes()) saveAll();
   updateCalendarSyncStatus();
   const list=filteredAppointments();
 
@@ -2882,7 +2883,7 @@ function renderAppointments(){
       <div class="client-chip">${src}${converted?' · уже в работе':''}</div>
       <div class="actions" style="justify-content:flex-start">
         ${converted
-          ? `<button onclick="showSection('work')">Открыть работу</button>`
+          ? `<button onclick="appointmentToWork(${a.id})">Открыть работу</button>`
           : `<button class="neon" onclick="appointmentToWork(${a.id})">В работу</button>`}
         <button onclick="exportAppointmentToGoogle(${a.id})">Открыть в Google</button>
         <button class="danger" onclick="deleteAppointment(${a.id})">Удалить</button>
@@ -3017,17 +3018,24 @@ function splitCarName(car){
 function appointmentToWork(id){
   const a=appointments.find(x=>x.id===id);
   if(!a) return;
-  if(a.convertedToWorkAt){showSection('work');return;}
+  if(a.convertedToWorkAt){
+    const existing=cars.find(c=>c.fromAppointmentId===a.id);
+    showSection('work');
+    if(existing) openCar(existing.id);
+    return;
+  }
 
   const {brand,model}=splitCarName(a.car);
+  const carId=Date.now();
   cars.unshift({
-    id:Date.now(),
+    id:carId,
+    fromAppointmentId:a.id,
     number:'',
     brand:brand||'Марка не указана',
     model:model||'',
     ownerPhone:a.phone||'',
     ownerName:'',
-    work:a.work||'Работа не указана',
+    work:a.work||'',
     agreedPrice:a.price||'',
     comment:('Из записи '+(formatAppTime(a))+': '+(a.comment||'')).trim(),
     priority:'none',
@@ -3040,8 +3048,8 @@ function appointmentToWork(id){
   a.convertedToWorkAt=new Date().toISOString();
   saveAll();
   renderAppointments();
-  alert('Запись перенесена в работу');
   showSection('work');
+  openCar(carId);
 }
 
 function deleteAppointment(id){
@@ -3095,26 +3103,66 @@ function parseIcsEvents(data){
   return imported.filter(x=>x.dateTime);
 }
 
+function appointmentDedupeKey(a){
+  return String(a.dateTime||'').trim()+'|'+String(a.car||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+function mergeAppointmentFields(dst, src){
+  dst.dateTime=src.dateTime||dst.dateTime;
+  dst.car=src.car||dst.car;
+  dst.work=src.work||dst.work;
+  dst.price=src.price||dst.price;
+  dst.phone=src.phone||dst.phone;
+  dst.googleUid=src.googleUid||dst.googleUid;
+  dst.source=src.source||dst.source;
+  if(src.convertedToWorkAt && !dst.convertedToWorkAt) dst.convertedToWorkAt=src.convertedToWorkAt;
+}
+function findExistingAppointment(item){
+  if(item.googleUid){
+    const byUid=appointments.find(a=>String(a.googleUid||'')===String(item.googleUid));
+    if(byUid) return byUid;
+  }
+  const key=appointmentDedupeKey(item);
+  if(!key || key==='|') return null;
+  return appointments.find(a=>a.source!=='manual' && appointmentDedupeKey(a)===key);
+}
+function compactAppointmentDupes(){
+  const out=[];
+  const byUid=new Map();
+  const byKey=new Map();
+  appointments.forEach(a=>{
+    const uid=String(a.googleUid||'');
+    const key=appointmentDedupeKey(a);
+    let hit=uid?byUid.get(uid):null;
+    if(!hit && a.source!=='manual' && key && key!=='|') hit=byKey.get(key);
+    if(hit){
+      mergeAppointmentFields(hit,a);
+      if(uid) byUid.set(uid,hit);
+      if(a.source!=='manual' && key && key!=='|') byKey.set(key,hit);
+      return;
+    }
+    out.push(a);
+    if(uid) byUid.set(uid,a);
+    if(a.source!=='manual' && key && key!=='|') byKey.set(key,a);
+  });
+  const changed=out.length!==appointments.length;
+  appointments=out;
+  return changed;
+}
 function mergeImportedAppointments(imported, sourceLabel){
+  compactAppointmentDupes();
   let added=0, updated=0;
   imported.forEach(item=>{
     item.source=item.source||sourceLabel||'ics';
-    const key=item.googleUid||('fallback:'+item.dateTime+'|'+item.car);
-    const existing=appointments.find(a=>(a.googleUid&&a.googleUid===item.googleUid)||(!a.googleUid&&a.dateTime===item.dateTime&&a.car===item.car&&a.source!=='manual'));
+    const existing=findExistingAppointment(item);
     if(existing){
-      existing.dateTime=item.dateTime;
-      existing.car=item.car;
-      existing.work=item.work||existing.work;
-      existing.price=item.price||existing.price;
-      existing.phone=item.phone||existing.phone;
-      existing.googleUid=item.googleUid||existing.googleUid;
-      existing.source=item.source;
+      mergeAppointmentFields(existing,item);
       updated++;
     }else{
       appointments.push(item);
       added++;
     }
   });
+  compactAppointmentDupes();
   saveAll();
   renderAppointments();
   return {added,updated,total:imported.length};
