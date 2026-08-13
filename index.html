@@ -741,38 +741,50 @@ async function crmLogin(){
     m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===login && x.passwordHash===hash);
   }
   if(!m){ if(err) err.textContent='Неверный логин или пароль'; return; }
-  crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
+  const owner=isOwnerMaster(m.name);
+  crmSession={name:owner?OWNER_MASTER:m.name,login:owner?OWNER_LOGIN:(m.login||login),access:m.access,owner:owner};
   storeSet('pandora_crm_session', JSON.stringify(crmSession));
-  storeSet('pandora_crm_last_login', m.login);
-  showLoginScreen(false);
-  applyCrmAccess();
-  showSection(firstAllowedSection());
+  storeSet('pandora_crm_last_login', crmSession.login);
+  setTimeout(()=>{
+    showLoginScreen(false);
+    applyCrmAccess();
+    showSection(firstAllowedSection());
+  },80);
 }
 function crmLogout(){
   crmSession=null;
   storeSet('pandora_crm_session','');
-  const u=document.getElementById('loginUser'); const p=document.getElementById('loginPass');
-  if(u) u.value=''; if(p) p.value='';
-  bootCrmAuth();
+  location.href='/auth/web-logout';
+}
+function restoreCrmSession(){
+  if(!crmSession) return false;
+  if(crmSession.owner || isOwnerMaster(crmSession.name) || isAdminLogin(crmSession.login)){
+    const m=masters.map(normalizeMaster).find(x=>isOwnerMaster(x.name))||normalizeMaster({name:OWNER_MASTER});
+    crmSession={name:OWNER_MASTER,login:OWNER_LOGIN,access:m.access,owner:true};
+    storeSet('pandora_crm_session', JSON.stringify(crmSession));
+    return true;
+  }
+  if(!crmSession.login) return false;
+  const m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===crmSession.login);
+  if(!m) return false;
+  crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
+  storeSet('pandora_crm_session', JSON.stringify(crmSession));
+  return true;
 }
 function bootCrmAuth(){
   const need=mastersWithLogin().length>0;
   if(!need){
     crmSession={name:OWNER_MASTER,login:OWNER_LOGIN,access:normalizeMaster({name:OWNER_MASTER}).access,owner:true};
+    storeSet('pandora_crm_session', JSON.stringify(crmSession));
     showLoginScreen(false);
     applyCrmAccess();
     return;
   }
-  if(crmSession && crmSession.login){
-    const m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===crmSession.login);
-    if(m){
-      crmSession={name:m.name,login:m.login,access:m.access,owner:isOwnerMaster(m.name)};
-      storeSet('pandora_crm_session', JSON.stringify(crmSession));
-      showLoginScreen(false);
-      applyCrmAccess();
-      showSection(firstAllowedSection());
-      return;
-    }
+  if(restoreCrmSession()){
+    showLoginScreen(false);
+    applyCrmAccess();
+    showSection(firstAllowedSection());
+    return;
   }
   crmSession=null;
   showLoginScreen(true);
