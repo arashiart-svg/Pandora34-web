@@ -90,6 +90,9 @@
     .actions button.primary,.two-actions button.primary{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 8px 20px rgba(23,177,107,.4)!important}
     .two-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
     .two-actions .left,.two-actions .right{display:flex;gap:10px;flex-wrap:wrap}
+    .modal-foot{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+    .modal-foot .modal-foot-row{display:flex;gap:10px;width:100%}
+    .modal-foot .modal-foot-row button,.modal-foot>button{flex:1;min-height:44px}
     .placeholder{padding:40px;border:1px dashed var(--border-strong);border-radius:var(--radius);color:var(--muted);font-size:15px;text-align:center;background:var(--card)}
     .combo{position:relative}
     .suggest{display:none;position:absolute;z-index:20;left:0;right:0;top:74px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:6px;box-shadow:0 20px 50px rgba(15,23,42,.18)}
@@ -269,15 +272,25 @@
       .box,.box.compact{
         width:100%;max-width:none;height:100%;max-height:none;
         border-radius:0;border:0;box-shadow:none;
-        padding:16px 14px;
+        padding:16px 14px 0;
         padding-top:calc(env(safe-area-inset-top, 0px) + 12px);
-        padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+        display:flex;flex-direction:column;
+        overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
       }
-      .box .actions,.box .two-actions{
-        position:sticky;bottom:0;z-index:2;
-        background:var(--card);margin-top:12px;padding-top:12px;
-        padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 4px);
+      .box:has(> .modal-body){overflow:hidden}
+      .box > h2,.box > .step-title{flex-shrink:0}
+      .modal-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+      .box .actions,.box .two-actions,.box .modal-foot{
+        position:sticky;bottom:0;z-index:3;flex-shrink:0;margin-top:auto;
+        background:var(--card);padding:12px 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
+        border-top:1px solid var(--border);
       }
+      .box:has(> .modal-body) .actions,
+      .box:has(> .modal-body) .two-actions,
+      .box:has(> .modal-body) .modal-foot{position:relative;bottom:auto}
+      .box .two-actions.modal-foot{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:10px}
+      .box .two-actions.modal-foot .modal-foot-row button,
+      .box .two-actions.modal-foot>button{flex:1;min-height:48px;padding:14px 10px;font-size:15px}
       .brand-picker-grid{max-height:none}
     }
     @media(max-width:620px){
@@ -326,7 +339,7 @@
     #liveScanFound{color:var(--neon);font-size:26px;font-weight:800;text-align:center;margin:8px 0 4px}
     #liveScanRaw{color:#cbd5e1;font-size:13px;text-align:center}
     .live-scan-hint{color:#facc15;font-size:12px;text-align:center;margin-top:6px}
-    .live-scan-frame{position:absolute;left:12%;right:12%;top:50%;height:88px;margin-top:-44px;border:2px solid var(--neon);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);z-index:1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 1px 4px #000;pointer-events:none}
+    .live-scan-frame{position:absolute;left:4%;right:4%;top:50%;height:150px;margin-top:-75px;border:2px solid var(--neon);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);z-index:1;pointer-events:none}
 
 </style>
 </head>
@@ -349,11 +362,12 @@
 <div id="pwaInstall"><span>Установить Pandora34 на телефон</span><span><button type="button" class="neon" onclick="installPwa()">Установить</button> <button type="button" onclick="dismissPwa()">Позже</button></span></div>
 <div id="liveScan">
   <video id="liveScanVideo" autoplay playsinline muted></video>
-  <div class="live-scan-frame">Держи номер в этой полосе</div>
+  <div class="live-scan-frame"></div>
   <div class="live-scan-top">
     <div style="color:#fff;font-size:20px;font-weight:800;text-align:center">Сканер госномера</div>
     <div id="liveScanFound">Ищу стабильный результат...</div>
     <div id="liveScanRaw">Наведи ближе, держи ровно, без бликов</div>
+    <img id="liveScanPreview" alt="" style="display:block;width:100%;height:56px;object-fit:contain;background:#000;margin-top:8px">
     <div class="live-scan-hint">Формат А123ВС77 или А123ВС777</div>
   </div>
   <div class="live-scan-bottom">
@@ -1679,6 +1693,7 @@ function openAutoStep(){
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить в работу</h2>
     <div class="step-title">1/2 — Данные авто</div>
+    <div class="modal-body">
     <div class="form">
       <div>
         <button class="photo-btn" onclick="startNativeOcr('number','plate')"><span>📷</span>Сфоткать и считать госномер</button>
@@ -1691,9 +1706,10 @@ function openAutoStep(){
       <div><label>Номер владельца</label><input id="ownerPhone" placeholder="+7 999 123-45-67" value="${draftCar.ownerPhone||'+7'}"></div>
       <div class="wide"><label>Контрагент</label><div style="display:flex;gap:10px;align-items:center"><input id="counterparty" placeholder="Клиент / партнёр" value="${draftCar.counterparty||''}"><button class="quick-btn" type="button" onclick="openClientPicker('counterparty')">Группа</button></div><div class="hint">Сначала выбирается группа, потом конкретный контрагент.</div></div>
     </div>
-    <div class="two-actions">
-      <div class="left"><button onclick="closeModal()">Отмена</button></div>
-      <div class="right"><button onclick="skipAutoStep()">Пропустить</button><button onclick="nextWorkStep()">Далее</button></div>
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row"><button onclick="closeModal()">Отмена</button><button onclick="skipAutoStep()">Пропустить</button></div>
+      <button class="neon" onclick="nextWorkStep()">Далее</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -1727,6 +1743,7 @@ function openWorkStep(){
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить в работу</h2>
     <div class="step-title">2/2 — Работы и стоимость</div>
+    <div class="modal-body">
     <div class="form">
       ${comboHtml('work','Работы','Начни вводить или выбери быстрые кнопки ниже','Можно выбрать несколько работ.')}
       <div class="wide"><div class="quick-row">${quickWorks.map(x=>`<button class="quick-btn work-pick" type="button" data-work="${x}" onclick="toggleWork('work','${x}')">${x}</button>`).join('')}</div></div>
@@ -1734,11 +1751,10 @@ function openWorkStep(){
       <div class="wide"><div class="quick-row">${quickPrices.map(x=>`<button class="quick-btn" type="button" onclick="setVal('agreedPrice','${x}')">${x} ₽</button>`).join('')}</div></div>
       <div class="wide"><label>Комментарий</label><textarea id="comment" rows="3" placeholder="Необязательно">${draftCar.comment||''}</textarea></div>
     </div>
-    <div class="two-actions neon-bar">
-      <div class="left"><button onclick="openAutoStep()">Назад</button></div>
-      <div class="right"><button onclick="closeModal()">Отмена</button>
-       <button class="neon" onclick="openPriorityStep()">Сохранить</button>
-       <button onclick="quickDoneFromAdd()">Выдать</button></div>
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row"><button onclick="openAutoStep()">Назад</button><button onclick="closeModal()">Отмена</button></div>
+      <div class="modal-foot-row"><button class="neon" onclick="openPriorityStep()">Сохранить</button><button onclick="quickDoneFromAdd()">Выдать</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -1761,13 +1777,15 @@ function openPriorityStep(){
   document.getElementById('modalBox').innerHTML=`
     <h2>Приоритет карточки</h2>
     <div class="step-title">Выбери срочность работы</div>
+    <div class="modal-body">
     <div class="quick-row" style="flex-direction:column">
       <button class="quick-btn" style="background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 4px 12px rgba(240,68,58,.3);font-size:16px;padding:14px" onclick="addCar('high')">Высокий</button>
       <button class="quick-btn" style="background:var(--orange);color:#fff;border-color:var(--orange);box-shadow:0 4px 12px rgba(244,164,39,.3);font-size:16px;padding:14px" onclick="addCar('mid')">Средний</button>
       <button class="quick-btn" style="background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(23,177,107,.3);font-size:16px;padding:14px" onclick="addCar('low')">Низкий</button>
       <button class="quick-btn" style="background:#94a3b8;color:#fff;border-color:#94a3b8;box-shadow:0 4px 12px rgba(148,163,184,.3);font-size:16px;padding:14px" onclick="addCar('none')">Без приоритета</button>
     </div>
-    <div class="actions">
+    </div>
+    <div class="two-actions neon-bar modal-foot">
       <button onclick="openWorkStep()">Назад</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
@@ -3342,6 +3360,13 @@ async function openLivePlateScan(fieldId){
   document.getElementById('liveScanRaw').textContent='Наведи ближе, держи ровно, без бликов';
   if(use) use.disabled=true;
   box.classList.add('show');
+  fetch((location.origin||'')+'/sync/ocr-health').then(r=>r.json()).then(j=>{
+    const hint=document.getElementById('liveScanRaw');
+    if(hint && j && j.ok) hint.textContent='Связь с распознаванием есть. Наведи номер в полоску';
+  }).catch(e=>{
+    const hint=document.getElementById('liveScanRaw');
+    if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e);
+  });
   try{
     liveScan.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
     const v=document.getElementById('liveScanVideo');
@@ -3375,10 +3400,10 @@ function liveScanLoop(){
   liveScan.timer=setTimeout(async()=>{
     try{await liveScanTick();}catch(e){
       const hint=document.getElementById('liveScanRaw');
-      if(hint && !liveScan.best) hint.textContent='Сбой камеры: '+String(e.message||e);
+      if(hint && !liveScan.best) hint.textContent='Нет связи с OCR: '+String(e.message||e);
     }
     if(document.getElementById('liveScan')?.classList.contains('show')) liveScanLoop();
-  },550);
+  },50);
 }
 
 function liveScanCrop(){
@@ -3406,12 +3431,10 @@ function liveScanCrop(){
   sx=Math.max(0,sx); sy=Math.max(0,sy);
   sw=Math.max(40,Math.min(vw-sx,sw));
   sh=Math.max(28,Math.min(vh-sy,sh));
-  const outH=96, outW=Math.max(160,Math.round(sw/sh*outH));
+  const outH=160, outW=Math.max(280,Math.round(sw/sh*outH));
   c.width=outW; c.height=outH;
   const ctx=c.getContext('2d');
-  ctx.filter='contrast(1.35) saturate(0.2)';
   ctx.drawImage(v,sx,sy,sw,sh,0,0,outW,outH);
-  ctx.filter='none';
   return c;
 }
 
@@ -3425,23 +3448,18 @@ async function liveScanTick(){
   }
   liveScan.busy=true;
   try{
-    const blob=await new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',0.7));
+    const blob=await new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',0.55));
     if(!blob) return;
     const fd=new FormData();
-    fd.append('image',blob,'frame.jpg');
-    const r=await fetch(`${API_BASE_URL}/ocr/plate?fast=1&token=${encodeURIComponent(SYNC_TOKEN)}`,{
-      method:'POST',
-      body:fd,
-      credentials:'omit',
-      headers:{Authorization:'Bearer '+SYNC_TOKEN}
-    });
+    fd.append('image',blob,'f.jpg');
+    const r=await fetch((location.origin||'')+'/sync/ocr-plate?token='+encodeURIComponent(SYNC_TOKEN),{method:'POST',body:fd});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){
       const hint=document.getElementById('liveScanRaw');
       if(hint) hint.textContent='Сервер OCR: '+(j.detail||j.error||('http '+r.status));
       return;
     }
-    handleLiveText(j.plate||'');
+    handleLiveText(j.plate||j.raw||'');
   }finally{
     liveScan.busy=false;
   }
@@ -3466,13 +3484,13 @@ function handleLiveText(raw){
     if(candidate===liveScan.last) liveScan.same++; else {liveScan.last=candidate;liveScan.same=1;}
     const pop=livePopular(liveScan.hist);
     const cnt=Math.max(liveScan.same, liveScan.hist.filter(x=>x===pop).length);
-    found.textContent=pop+'  '+cnt+'/3';
-    if(hint) hint.textContent=raw ? ('Вижу: '+String(raw).replace(/\s+/g,' ').slice(0,90)) : ('Вижу: '+pop);
-    if(cnt>=3){
+    found.textContent=pop;
+    if(hint) hint.textContent='Вижу: '+pop;
+    if(cnt>=1){
       liveScan.best=pop;
-      found.textContent=pop;
       if(use) use.disabled=false;
-      if(hint) hint.textContent='Стабильно найдено. Можно нажать Использовать';
+      useLiveScan();
+      return;
     }
   }else if(!liveScan.best){
     found.textContent='Ищу...';
@@ -3520,13 +3538,16 @@ async function scanPhotoText(event, fieldId, type){
   if(status) status.textContent='Отправляю фото на сервер...';
   try{
     const blob=await ocrPrepareImage(file);
-    const fd=new FormData();
-    fd.append('image', blob, 'plate.jpg');
-    const r=await fetch(`${API_BASE_URL}/ocr/plate?token=${encodeURIComponent(SYNC_TOKEN)}`,{
+    const dataUrl=await new Promise((resolve,reject)=>{
+      const fr=new FileReader();
+      fr.onload=()=>resolve(String(fr.result||''));
+      fr.onerror=()=>reject(fr.error||new Error('file'));
+      fr.readAsDataURL(blob);
+    });
+    const r=await fetch((location.origin||'')+'/sync/ocr-plate?token='+encodeURIComponent(SYNC_TOKEN),{
       method:'POST',
-      body:fd,
-      credentials:'omit',
-      headers:{Authorization:'Bearer '+SYNC_TOKEN}
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SYNC_TOKEN},
+      body:JSON.stringify({image:dataUrl})
     });
     const j=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(j.detail||j.error||('http '+r.status));
@@ -3548,8 +3569,23 @@ function extractPlate(text){
   const map={'A':'А','B':'В','C':'С','E':'Е','H':'Н','K':'К','M':'М','O':'О','P':'Р','T':'Т','X':'Х','Y':'У'};
   s=s.replace(/[ABCEHKMOPTXY]/g,ch=>map[ch]||ch);
   s=s.replace(/[^АВЕКМНОРСТУХ0-9]/g,'');
+  if(s[0]==='0') s='О'+s.slice(1);
   const m=s.match(/[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}\d{2,3}/);
-  return m ? m[0] : '';
+  if(m) return m[0];
+  if(s.length>=8 && s.length<=9){
+    const L={'0':'О','3':'С','4':'А','7':'Т','8':'В','6':'Б'};
+    const D={'О':'0','А':'4','Т':'7','В':'8','Б':'6'};
+    const n=s.split('');
+    n[0]=L[n[0]]||n[0];
+    for(let i=1;i<4 && i<n.length;i++) n[i]=D[n[i]]||n[i];
+    if(n[4]) n[4]=L[n[4]]||n[4];
+    if(n[5]) n[5]=L[n[5]]||n[5];
+    for(let i=6;i<n.length;i++) n[i]=D[n[i]]||n[i];
+    const s2=n.join('');
+    const m2=s2.match(/[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}\d{2,3}/);
+    if(m2) return m2[0];
+  }
+  return '';
 }
 
 function extractVin(text){
@@ -4667,6 +4703,7 @@ openAutoStep=function(){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Добавить в работу</h2><div class="step-title">1/2 — Данные авто</div>
+    <div class="modal-body">
     <div class="form-group">
       <div class="form-group-title">Авто</div>
       <div class="form">
@@ -4689,20 +4726,28 @@ openAutoStep=function(){
         <div class="wide"><button class="aslanova-btn" type="button" onclick="startAslanovaFlow()">Асланова</button></div>
       </div>
     </div>
-    <div class="two-actions neon-bar"><div class="left"><button onclick="closeModal()">Отмена</button></div><div class="right"><button onclick="skipAutoStep()">Пропустить</button><button class="neon" onclick="nextWorkStep()">Далее</button></div></div>`;
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row"><button onclick="closeModal()">Отмена</button><button onclick="skipAutoStep()">Пропустить</button></div>
+      <button class="neon" onclick="nextWorkStep()">Далее</button>
+    </div>`;
   document.getElementById('modal').style.display='flex';
 };
 function startAslanovaFlow(){saveAutoDraft();draftCar.counterparty='Асланова';openAslanovaStep();}
 function openAslanovaStep(){normalizeAslanovaSettings();document.getElementById('modalBox').className='box compact';document.getElementById('modalBox').innerHTML=`
-  <h2>Асланова</h2><div class="step-title">Прошивка партнёра</div><div class="form">
+  <h2>Асланова</h2><div class="step-title">Прошивка партнёра</div>
+  <div class="modal-body"><div class="form">
   <div class="wide"><label>Работа</label><input value="Прошивка" readonly></div>
   <div class="wide"><label>Сумма</label><input id="aslanovaPrice" type="number" value="${aslanovaSettings.prices[0]||1300}" placeholder="1300"></div>
   <div class="wide"><div class="quick-row">${aslanovaPriceButtons('aslanovaPrice')}</div></div>
   <div class="wide"><label>Оплата</label><div class="quick-row"><button id="aslPaidByClient" class="quick-btn" type="button" onclick="toggleAslanovaPaid('aslPaidByClient','aslanovaPaidByClient')">Оплачено клиентом</button></div><input id="aslanovaPaidByClient" type="hidden" value="0"></div>
   <div class="wide"><label>Тип</label><div class="quick-row"><button id="aslTypeLocal" class="quick-btn" type="button" onclick="pickAslanovaType('local')">Прошито лично</button><button id="aslTypeRemote" class="quick-btn" type="button" onclick="pickAslanovaType('remote')">Удалённо</button></div><input id="aslanovaType" type="hidden" value="${aslanovaSettings.defaultType}"></div>
   <div class="wide"><label>Кто делал работу</label><div class="quick-row">${aslanovaMasterButtons('aslanovaMaster','aslanova-master')}</div><input id="aslanovaMaster" placeholder="Андрей или Александр" readonly value="${aslanovaSettings.defaultMaster}"></div>
-  </div><div class="hint">Деньги от Аслановой всегда записываются на Андрея. Если делал Александр — ему считается процент из настроек мастера.</div>
-  <div class="two-actions"><div class="left"><button onclick="openAutoStep()">Назад</button></div><div class="right"><button onclick="closeModal()">Отмена</button><button onclick="addAslanovaCar()">Добавить</button></div></div>`;document.getElementById('modal').style.display='flex';pickAslanovaType(aslanovaSettings.defaultType);pickMaster('aslanovaMaster','aslanova-master',aslanovaSettings.defaultMaster);}
+  </div><div class="hint">Деньги от Аслановой всегда записываются на Андрея. Если делал Александр — ему считается процент из настроек мастера.</div></div>
+  <div class="two-actions neon-bar modal-foot">
+    <div class="modal-foot-row"><button onclick="openAutoStep()">Назад</button><button onclick="closeModal()">Отмена</button></div>
+    <button class="neon" onclick="addAslanovaCar()">Добавить</button>
+  </div>`;document.getElementById('modal').style.display='flex';pickAslanovaType(aslanovaSettings.defaultType);pickMaster('aslanovaMaster','aslanova-master',aslanovaSettings.defaultMaster);}
 function toggleAslanovaPaid(btnId,inputId){const inp=document.getElementById(inputId); if(!inp)return; const on=inp.value!=='1'; inp.value=on?'1':'0'; const b=document.getElementById(btnId); if(b)b.classList.toggle('selected',on);}
 function pickAslanovaType(t){document.getElementById('aslanovaType').value=t;const l=document.getElementById('aslTypeLocal'),r=document.getElementById('aslTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
 function addAslanovaCar(){const price=val('aslanovaPrice')||'0';const master=val('aslanovaMaster')||'Андрей';const typ=val('aslanovaType')||'local';const now=new Date().toISOString();const stamp=new Date().toLocaleString('ru-RU');const c={id:Date.now(),number:draftCar.number||'БЕЗ НОМЕРА',brand:draftCar.brand||'Марка не указана',model:draftCar.model||'',ownerPhone:draftCar.ownerPhone||'',ownerName:draftCar.ownerName||'',counterparty:'Асланова',work:'Прошивка',agreedPrice:price,comment:'Асланова · '+aslanovaTypeLabel(typ),priority:'none',inAt:stamp,outAt:stamp,price:price,status:'done',isAslanova:true,aslanovaType:typ,aslanovaAmount:price,paidByClient:(val('aslanovaPaidByClient')==='1'),master:master,moneyMaster:'Андрей',statusChangedAt:now,doneAt:now,updatedAt:now};cars.unshift(c);save();closeModal();setTab('done');}
