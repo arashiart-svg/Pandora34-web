@@ -5,7 +5,7 @@ import re
 import cv2
 import numpy as np
 import pytesseract
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
 SYNC_TOKEN = os.environ.get("SYNC_TOKEN", "")
@@ -16,14 +16,19 @@ WHITELIST = "ABCEHKMOPTXYАВЕКМНОРСТУХ0123456789"
 app = FastAPI()
 
 
-def check_token(authorization: str | None) -> None:
+def check_token(authorization: str | None, token_q: str | None = None) -> None:
     if not SYNC_TOKEN:
         raise HTTPException(500, "ocr_not_configured")
-    token = ""
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization[7:].strip()
+    auth = (authorization or "").strip()
+    # Браузер после Basic Auth сайта сам шлёт Authorization: Basic — это не наш токен.
+    if auth.lower().startswith("basic "):
+        auth = ""
+    token = (token_q or "").strip()
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
     if token != SYNC_TOKEN:
-        raise HTTPException(401, "unauthorized_device")
+        # 403, не 401: иначе Chrome снова рисует серое окно логина сайта.
+        raise HTTPException(403, "unauthorized_device")
 
 
 def extract_plate(text: str) -> str:
@@ -90,6 +95,23 @@ def plate_crops(gray: np.ndarray) -> list[np.ndarray]:
     return [b[1] for b in boxes[:8]]
 
 
+def read_plate_fast(img_bgr: np.ndarray) -> str:
+    """Живой сканер: один-два прохода Tesseract, без полного перебора."""
+    img_bgr = resize_max(img_bgr, 900)
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
+    if h < 48:
+        gray = cv2.resize(gray, (max(80, int(w * 48 / max(h, 1))), 48), interpolation=cv2.INTER_CUBIC)
+    blur = cv2.bilateralFilter(gray, 7, 50, 50)
+    _, otsu = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    for img in (gray, blur, otsu, cv2.bitwise_not(otsu)):
+        for psm in (7, 8):
+            plate = extract_plate(ocr_image(img, psm))
+            if plate:
+                return plate
+    return ""
+
+
 def read_plate(img_bgr: np.ndarray) -> str:
     img_bgr = resize_max(img_bgr)
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
@@ -124,12 +146,15 @@ def health():
     return {"ok": True}
 
 
+@app.post("/ocr/plate")
 @app.post("/plate")
 async def plate(
     image: UploadFile = File(...),
     authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+    fast: bool = Query(default=False),
 ):
-    check_token(authorization)
+    check_token(authorization, token)
     data = await image.read()
     if not data:
         raise HTTPException(400, "empty")
@@ -146,5 +171,5 @@ async def plate(
             img = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
         except Exception as exc:
             raise HTTPException(400, "bad_image") from exc
-    value = read_plate(img)
+    value = read_plate_fast(img) if fast else read_plate(img)
     return JSONResponse({"plate": value, "ok": bool(value)})

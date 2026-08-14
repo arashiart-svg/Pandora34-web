@@ -3373,43 +3373,75 @@ function useLiveScan(){
 
 function liveScanLoop(){
   liveScan.timer=setTimeout(async()=>{
-    try{await liveScanTick();}catch(e){}
+    try{await liveScanTick();}catch(e){
+      const hint=document.getElementById('liveScanRaw');
+      if(hint && !liveScan.best) hint.textContent='Сбой камеры: '+String(e.message||e);
+    }
     if(document.getElementById('liveScan')?.classList.contains('show')) liveScanLoop();
-  },420);
+  },550);
 }
 
 function liveScanCrop(){
   const v=document.getElementById('liveScanVideo');
+  const frame=document.querySelector('.live-scan-frame');
   const c=document.getElementById('liveScanCanvas');
-  if(!v||!c||v.readyState<2) return null;
-  const w=v.videoWidth,h=v.videoHeight;
-  if(!w) return null;
-  const cw=Math.round(w*0.78),ch=Math.max(48,Math.round(h*0.18));
-  const cx=Math.round((w-cw)/2),cy=Math.round((h-ch)/2);
-  c.width=cw;c.height=ch;
-  c.getContext('2d').drawImage(v,cx,cy,cw,ch,0,0,cw,ch);
+  if(!v||!c||v.readyState<2||!v.videoWidth) return null;
+  const vw=v.videoWidth, vh=v.videoHeight;
+  const vr=v.getBoundingClientRect();
+  const scale=Math.max(vr.width/vw, vr.height/vh);
+  const dispW=vw*scale, dispH=vh*scale;
+  const offX=vr.left+(vr.width-dispW)/2;
+  const offY=vr.top+(vr.height-dispH)/2;
+  let sx,sy,sw,sh;
+  if(frame){
+    const fr=frame.getBoundingClientRect();
+    sx=(fr.left-offX)/scale;
+    sy=(fr.top-offY)/scale;
+    sw=fr.width/scale;
+    sh=fr.height/scale;
+  }else{
+    sw=vw*0.76; sh=Math.max(48,vh*0.16);
+    sx=(vw-sw)/2; sy=(vh-sh)/2;
+  }
+  sx=Math.max(0,sx); sy=Math.max(0,sy);
+  sw=Math.max(40,Math.min(vw-sx,sw));
+  sh=Math.max(28,Math.min(vh-sy,sh));
+  const outH=96, outW=Math.max(160,Math.round(sw/sh*outH));
+  c.width=outW; c.height=outH;
+  const ctx=c.getContext('2d');
+  ctx.filter='contrast(1.35) saturate(0.2)';
+  ctx.drawImage(v,sx,sy,sw,sh,0,0,outW,outH);
+  ctx.filter='none';
   return c;
 }
 
 async function liveScanTick(){
   if(liveScan.busy) return;
   const c=liveScanCrop();
-  if(!c) return;
+  if(!c){
+    const hint=document.getElementById('liveScanRaw');
+    if(hint && !liveScan.best) hint.textContent='Камера ещё стартует...';
+    return;
+  }
   liveScan.busy=true;
   try{
-    if('TextDetector' in window){
-      const bmp=await createImageBitmap(c);
-      const blocks=await new TextDetector().detect(bmp);
-      handleLiveText(blocks.map(b=>b.rawValue).join(' '));
-    }else{
-      const blob=await new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',0.72));
-      if(!blob) return;
-      const fd=new FormData();
-      fd.append('image',blob,'frame.jpg');
-      const r=await fetch(`${API_BASE_URL}/ocr/plate?token=${encodeURIComponent(SYNC_TOKEN)}`,{method:'POST',body:fd});
-      const j=await r.json().catch(()=>({}));
-      handleLiveText(j.plate||'');
+    const blob=await new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',0.7));
+    if(!blob) return;
+    const fd=new FormData();
+    fd.append('image',blob,'frame.jpg');
+    const r=await fetch(`${API_BASE_URL}/ocr/plate?fast=1&token=${encodeURIComponent(SYNC_TOKEN)}`,{
+      method:'POST',
+      body:fd,
+      credentials:'omit',
+      headers:{Authorization:'Bearer '+SYNC_TOKEN}
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){
+      const hint=document.getElementById('liveScanRaw');
+      if(hint) hint.textContent='Сервер OCR: '+(j.detail||j.error||('http '+r.status));
+      return;
     }
+    handleLiveText(j.plate||'');
   }finally{
     liveScan.busy=false;
   }
@@ -3444,7 +3476,9 @@ function handleLiveText(raw){
     }
   }else if(!liveScan.best){
     found.textContent='Ищу...';
-    if(raw && hint) hint.textContent='На экране: '+String(raw).replace(/\s+/g,' ').slice(0,90);
+    if(hint) hint.textContent=raw
+      ? ('Вижу текст, но не номер: '+String(raw).replace(/\s+/g,' ').slice(0,90))
+      : 'Кадр ушёл, номера нет. Держи табличку в полоске, ближе.';
   }
 }
 
@@ -3490,7 +3524,9 @@ async function scanPhotoText(event, fieldId, type){
     fd.append('image', blob, 'plate.jpg');
     const r=await fetch(`${API_BASE_URL}/ocr/plate?token=${encodeURIComponent(SYNC_TOKEN)}`,{
       method:'POST',
-      body:fd
+      body:fd,
+      credentials:'omit',
+      headers:{Authorization:'Bearer '+SYNC_TOKEN}
     });
     const j=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(j.detail||j.error||('http '+r.status));
