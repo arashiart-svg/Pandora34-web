@@ -10,8 +10,8 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Pandora34 CRM</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="/icon-192.png" />
   <style>
     :root{--bg:#dfe1ec;--panel:#f2f4f8;--card:#ffffff;--text:#1a2233;--muted:#97a1b3;--border:#e6e8f0;--border-strong:#dadfe8;--accent:#3b6fd6;--accent-contrast:#ffffff;--green:#17b16b;--orange:#f4a427;--gray:#6b7280;--red:#f0443a;--yellow:#f4a427;--radius:16px;--glow:0 6px 18px rgba(15,23,42,.08);--glow-strong:0 10px 26px rgba(15,23,42,.14);--sidebar-bg:#101e38;--sidebar-active-bg:#1f3358;--sidebar-border:#1c2c4c;--sidebar-text:#7c89a6;--neon:#4fc7ea;--neon-glow:rgba(79,199,234,.55);--plate-gray:#8a93a3;--pill-blue-bg:#e7f0fe;--pill-blue-text:#3b7dea;--pill-gray-bg:#eef0f4;--pill-gray-text:#6b7280}
     *{box-sizing:border-box}
@@ -74,7 +74,7 @@
     .brand{font-size:14px;font-weight:700;margin-top:4px;color:var(--muted)}
     .small{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.3}
     .badge{display:inline-block;margin-top:9px;padding:4px 10px;border-radius:6px;background:var(--sidebar-active-bg);color:#fff;font-weight:700;font-size:12px;border:1px solid var(--neon);box-shadow:0 0 10px var(--neon-glow)}
-    .modal{position:fixed;inset:0;background:rgba(15,20,30,.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{position:fixed;inset:0;z-index:200;background:rgba(15,20,30,.6);display:none;align-items:center;justify-content:center;padding:20px;padding-top:max(20px,env(safe-area-inset-top))}
     .box{max-height:88vh;overflow-y:auto;width:min(860px,94vw);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 60px rgba(15,23,42,.25)}
     .box h2{margin:0 0 16px;font-size:20px;font-weight:800;color:var(--text)}
     .form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -229,6 +229,10 @@
       .box.compact .quick-btn{padding:10px 15px;font-size:14px}
     }
 
+    .nav-toggle{display:none}
+    .nav-scrim{display:none;position:fixed;inset:0;z-index:30;background:rgba(8,14,28,.5);border:0!important;padding:0;margin:0;border-radius:0}
+    .side-top{display:contents}
+
     @media(min-width:1600px){
       main{padding:40px 56px}
     }
@@ -242,13 +246,22 @@
       .title{font-size:20px}
       .grid{grid-template-columns:1fr}
     }
-    @media(max-width:620px){
+    @media(max-width:900px){
       .app{display:block}
-      .side{position:sticky;top:0;z-index:10;padding:10px;padding-top:max(10px,env(safe-area-inset-top));background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
-      .logo{font-size:15px;margin-bottom:8px}
-      .menu{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
-      .menu button{min-width:max-content;margin:0;font-size:13px;padding:12px 14px;border-radius:8px}
+      .side-top{display:flex;align-items:center;gap:10px}
+      .nav-toggle{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:42px;height:42px;flex-shrink:0;padding:0;border:1.5px solid rgba(79,199,234,.45)!important;background:var(--sidebar-active-bg)!important;color:#fff!important;border-radius:10px;box-shadow:0 0 12px rgba(79,199,234,.25)}
+      .nav-toggle span{display:block;width:18px;height:2px;background:#fff;border-radius:1px}
+      .side{position:sticky;top:0;z-index:40;padding:8px 10px;padding-top:calc(env(safe-area-inset-top, 0px) + 8px);background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
+      .logo{font-size:16px;margin:0}
+      .crm-who,.menu{display:none}
+      .side.open .crm-who{display:block;margin:12px 4px 8px}
+      .side.open .menu{display:flex;flex-direction:column;gap:4px;overflow:visible;padding:6px 0 4px}
+      .menu button{width:100%;min-width:0;margin:0;font-size:15px;padding:14px 14px;border-radius:10px}
+      #menuLogout{margin-top:8px!important}
+      body.nav-open .nav-scrim{display:block}
       main{padding:16px 14px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+    }
+    @media(max-width:620px){
       .top{align-items:flex-start;gap:12px}
       .primary{padding:12px 14px;font-size:15px}
       .top-actions{width:100%;justify-content:flex-start}
@@ -258,7 +271,7 @@
       .grid{grid-template-columns:1fr}
     }
     @media(display-mode:standalone){
-      .side{padding-top:max(14px,env(safe-area-inset-top))}
+      .side{padding-top:calc(env(safe-area-inset-top, 0px) + 8px)}
     }
     #pwaInstall{display:none;position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:12000;background:#152544;border:1.5px solid var(--neon);border-radius:14px;padding:12px 14px;color:#fff;box-shadow:0 0 24px var(--neon-glow);align-items:center;justify-content:space-between;gap:10px}
     #pwaInstall span{font-size:14px;font-weight:700}
@@ -308,9 +321,16 @@
 </div>
 <div id="pwaInstall"><span>Установить Pandora34 на телефон</span><span><button type="button" class="neon" onclick="installPwa()">Установить</button> <button type="button" onclick="dismissPwa()">Позже</button></span></div>
 <div class="app">
-  <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div id="crmWho" class="crm-who"></div><div class="menu">
+  <aside class="side" id="sideNav">
+    <div class="side-top">
+      <button type="button" class="nav-toggle" id="navToggle" onclick="toggleNav()" aria-label="Меню"><span></span><span></span><span></span></button>
+      <div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div>
+    </div>
+    <div id="crmWho" class="crm-who"></div>
+    <div class="menu" id="navMenu">
     <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
   </div></aside>
+  <button type="button" class="nav-scrim" id="navScrim" onclick="closeNav()" aria-label="Закрыть меню"></button>
   <main>
     <section id="workSection">
       <div class="top"><div><div class="title">Работа</div><div class="date" id="today"></div></div><div class="top-actions"><button class="primary order-btn" onclick="openOrderBlank()">+ Заказ-наряд</button><button class="primary" onclick="openAdd()">+ Добавить в работу</button></div></div>
@@ -767,6 +787,18 @@ async function crmLogin(){
     showSection(firstAllowedSection());
   },80);
 }
+function toggleNav(){
+  const side=document.getElementById('sideNav');
+  if(!side) return;
+  const open=!side.classList.contains('open');
+  side.classList.toggle('open',open);
+  document.body.classList.toggle('nav-open',open);
+}
+function closeNav(){
+  const side=document.getElementById('sideNav');
+  if(side) side.classList.remove('open');
+  document.body.classList.remove('nav-open');
+}
 function crmLogout(){
   crmSession=null;
   storeSet('pandora_crm_session','');
@@ -816,6 +848,7 @@ function bootCrmAuth(){
 }
 
 function showSection(section){
+  closeNav();
   if(!canAccessSection(section)){
     const first=firstAllowedSection();
     if(first && first!==section){ showSection(first); return; }
