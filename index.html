@@ -135,6 +135,10 @@
     .photo-btn{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:700;text-align:left;box-shadow:none;cursor:pointer}
     .photo-btn:hover,.photo-btn:active{background:rgba(79,199,234,.1);border-color:rgba(79,199,234,.5)}
     .photo-btn span{color:var(--text);margin-right:8px}
+    .plate-row{display:flex;gap:8px;align-items:stretch}
+    .plate-row input{flex:1;min-width:0}
+    .plate-cam{width:auto!important;flex-shrink:0;padding:11px 16px!important;text-align:center;white-space:nowrap;margin:0}
+    .ocr-status{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
 
 
     .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:box-shadow .15s ease,border-color .15s ease}
@@ -314,7 +318,6 @@
     .crm-who{color:var(--sidebar-text);font-size:12px;margin:-14px 0 16px;padding:0 2px;min-height:16px}
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div id="loginScreen" class="login-screen">
@@ -3296,14 +3299,29 @@ function importIcsFile(event){
 
 function startNativeOcr(fieldId, type){
   const status=document.getElementById(fieldId+'OcrStatus');
-  if(status) status.textContent='Открываю live-сканер...';
   if(window.AndroidOcr && AndroidOcr.openLiveScanner){
+    if(status) status.textContent='Открываю камеру...';
     AndroidOcr.openLiveScanner(fieldId,type);
-  }else if(window.AndroidOcr && AndroidOcr.openCamera){
-    AndroidOcr.openCamera(fieldId,type);
-  }else{
-    alert('Распознавание доступно только в APK после обновления проекта.');
+    return;
   }
+  if(window.AndroidOcr && AndroidOcr.openCamera){
+    if(status) status.textContent='Открываю камеру...';
+    AndroidOcr.openCamera(fieldId,type);
+    return;
+  }
+  let inp=document.getElementById('ocrFile_'+fieldId);
+  if(!inp){
+    inp=document.createElement('input');
+    inp.type='file';
+    inp.accept='image/*';
+    inp.setAttribute('capture','environment');
+    inp.id='ocrFile_'+fieldId;
+    inp.style.display='none';
+    inp.onchange=function(e){scanPhotoText(e,fieldId,type);};
+    document.body.appendChild(inp);
+  }
+  if(status) status.textContent='Наведи камеру на госномер';
+  inp.click();
 }
 
 function receiveOcrText(fieldId, type, text){
@@ -3319,48 +3337,49 @@ function receiveOcrText(fieldId, type, text){
   }
 }
 
+async function ocrPrepareImage(file){
+  try{
+    const bmp=await createImageBitmap(file);
+    const max=1600;
+    let w=bmp.width,h=bmp.height;
+    if(w>max){h=Math.round(h*max/w);w=max;}
+    const c=document.createElement('canvas');
+    c.width=w;c.height=h;
+    const ctx=c.getContext('2d');
+    ctx.filter='contrast(1.25) saturate(0.3)';
+    ctx.drawImage(bmp,0,0,w,h);
+    return await new Promise(r=>c.toBlob(b=>r(b||file),'image/jpeg',0.85));
+  }catch(e){
+    return file;
+  }
+}
+
 async function scanPhotoText(event, fieldId, type){
   const file=event.target.files && event.target.files[0];
   if(!file) return;
-
   const input=document.getElementById(fieldId);
   const status=document.getElementById(fieldId+'OcrStatus');
-  if(status) status.textContent='Считываю фото...';
-
+  if(status) status.textContent='Отправляю фото на сервер...';
   try{
-    let text='';
-
-    if(window.Tesseract){
-      const lang = type==='plate' ? 'rus+eng' : 'eng';
-      const result = await Tesseract.recognize(file, lang, {
-        logger:m=>{
-          if(status && m.status){
-            const p=m.progress?Math.round(m.progress*100):'';
-            status.textContent='Распознавание: '+m.status+(p?(' '+p+'%'):'');
-          }
-        }
-      });
-      text=(result && result.data && result.data.text) ? result.data.text : '';
-    }else if('TextDetector' in window){
-      const bitmap=await createImageBitmap(file);
-      const detector=new TextDetector();
-      const blocks=await detector.detect(bitmap);
-      text=blocks.map(b=>b.rawValue).join(' ');
-    }else{
-      throw new Error('OCR не загрузился');
-    }
-
-    const cleaned = type==='plate' ? extractPlate(text) : extractVin(text);
-    if(cleaned){
-      input.value=cleaned;
-      if(status) status.textContent='Готово: '+cleaned;
-    }else{
-      if(status) status.textContent='Не смог распознать. Введи вручную или сфоткай ближе.';
-      alert('Не смог распознать текст. Сфоткай ближе, без бликов, ровно перед номером/VIN.');
+    const blob=await ocrPrepareImage(file);
+    const fd=new FormData();
+    fd.append('image', blob, 'plate.jpg');
+    const r=await fetch(`${API_BASE_URL}/ocr/plate`,{
+      method:'POST',
+      headers:{Authorization:'Bearer '+SYNC_TOKEN},
+      body:fd
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.detail||j.error||('http '+r.status));
+    const plate=j.plate||'';
+    if(plate && input){
+      input.value=plate;
+      if(status) status.textContent='Готово: '+plate;
+    }else if(status){
+      status.textContent='Не разобрал номер. Сфоткай ближе и ровнее.';
     }
   }catch(e){
-    if(status) status.textContent='OCR не сработал. Проверь интернет и разрешение камеры.';
-    alert('Фото сделано, но распознавание не сработало. Проверь интернет на планшете и попробуй ещё раз.');
+    if(status) status.textContent='Сервер не ответил. Попробуй ещё раз.';
   }
   event.target.value='';
 }
@@ -4492,7 +4511,13 @@ openAutoStep=function(){
     <div class="form-group">
       <div class="form-group-title">Авто</div>
       <div class="form">
-        <div><label>Госномер</label><input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}"></div>
+        <div><label>Госномер</label>
+          <div class="plate-row">
+            <input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}">
+            <button type="button" class="photo-btn plate-cam" onclick="startNativeOcr('number','plate')">Фото</button>
+          </div>
+          <div id="numberOcrStatus" class="ocr-status"></div>
+        </div>
         ${brandModelPickerHtml(draftCar.brand,draftCar.model,false)}
       </div>
     </div>

@@ -20,14 +20,15 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/sync") ||
     url.pathname.startsWith("/auth") ||
-    url.pathname.startsWith("/health")
+    url.pathname.startsWith("/health") ||
+    url.pathname.startsWith("/ocr")
   ) {
     return;
   }
   event.respondWith(
     fetch(req)
       .then((res) => {
-        if (res && res.ok && (url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.json")) {
+        if (res && res.ok && (url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname.endsWith(".png") || url.pathname === "/manifest.json")) {
           const copy = res.clone();
           caches.open(CACHE).then((cache) => cache.put(req, copy));
         }
