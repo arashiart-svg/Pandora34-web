@@ -2,8 +2,16 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101e38" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pandora34" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>Pandora34 CRM</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="/icons/icon-192.png" />
   <style>
     :root{--bg:#dfe1ec;--panel:#f2f4f8;--card:#ffffff;--text:#1a2233;--muted:#97a1b3;--border:#e6e8f0;--border-strong:#dadfe8;--accent:#3b6fd6;--accent-contrast:#ffffff;--green:#17b16b;--orange:#f4a427;--gray:#6b7280;--red:#f0443a;--yellow:#f4a427;--radius:16px;--glow:0 6px 18px rgba(15,23,42,.08);--glow-strong:0 10px 26px rgba(15,23,42,.14);--sidebar-bg:#101e38;--sidebar-active-bg:#1f3358;--sidebar-border:#1c2c4c;--sidebar-text:#7c89a6;--neon:#4fc7ea;--neon-glow:rgba(79,199,234,.55);--plate-gray:#8a93a3;--pill-blue-bg:#e7f0fe;--pill-blue-text:#3b7dea;--pill-gray-bg:#eef0f4;--pill-gray-text:#6b7280}
     *{box-sizing:border-box}
@@ -236,18 +244,25 @@
     }
     @media(max-width:620px){
       .app{display:block}
-      .side{position:sticky;top:0;z-index:10;padding:10px;background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
+      .side{position:sticky;top:0;z-index:10;padding:10px;padding-top:max(10px,env(safe-area-inset-top));background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
       .logo{font-size:15px;margin-bottom:8px}
-      .menu{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
-      .menu button{min-width:max-content;margin:0;font-size:13px;padding:10px 12px;border-radius:8px}
-      main{padding:16px 14px}
+      .menu{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+      .menu button{min-width:max-content;margin:0;font-size:13px;padding:12px 14px;border-radius:8px}
+      main{padding:16px 14px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
       .top{align-items:flex-start;gap:12px}
-      .primary{padding:11px 14px;font-size:13.5px}
+      .primary{padding:12px 14px;font-size:15px}
       .top-actions{width:100%;justify-content:flex-start}
       .form{grid-template-columns:1fr}
+      .form input,.form textarea,.login-box input{font-size:16px}
       .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
+    @media(display-mode:standalone){
+      .side{padding-top:max(14px,env(safe-area-inset-top))}
+    }
+    #pwaInstall{display:none;position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:12000;background:#152544;border:1.5px solid var(--neon);border-radius:14px;padding:12px 14px;color:#fff;box-shadow:0 0 24px var(--neon-glow);align-items:center;justify-content:space-between;gap:10px}
+    #pwaInstall span{font-size:14px;font-weight:700}
+    #pwaInstall button{margin:0;padding:10px 14px;font-size:13px}
   .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:8px;background:var(--sidebar-bg)!important;color:#fff!important;border:1.5px solid var(--neon)!important;box-shadow:0 0 10px rgba(79,199,234,.3)!important;cursor:pointer}
 
 .field-line{border-bottom:1px solid #111;padding:4px 6px;height:26px;display:flex;align-items:center}
@@ -291,6 +306,7 @@
     <div class="hint" style="margin:14px 0 0">На этом устройстве вход запоминается сам. Выйти — кнопка в меню.</div>
   </div>
 </div>
+<div id="pwaInstall"><span>Установить Pandora34 на телефон</span><span><button type="button" class="neon" onclick="installPwa()">Установить</button> <button type="button" onclick="dismissPwa()">Позже</button></span></div>
 <div class="app">
   <aside class="side"><div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div><div id="crmWho" class="crm-who"></div><div class="menu">
     <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
@@ -4495,6 +4511,32 @@ forceAutoBackup();
 render();
 startCloudSync();
 bootCrmAuth();
+
+let pwaPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  pwaPrompt=e;
+  if(storeGet('pwa_install_dismissed','')==='1') return;
+  const bar=document.getElementById('pwaInstall');
+  if(bar) bar.style.display='flex';
+});
+function installPwa(){
+  if(!pwaPrompt) return;
+  pwaPrompt.prompt();
+  pwaPrompt.userChoice.finally(()=>{
+    pwaPrompt=null;
+    const bar=document.getElementById('pwaInstall');
+    if(bar) bar.style.display='none';
+  });
+}
+function dismissPwa(){
+  storeSet('pwa_install_dismissed','1');
+  const bar=document.getElementById('pwaInstall');
+  if(bar) bar.style.display='none';
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
 
 render();
 
