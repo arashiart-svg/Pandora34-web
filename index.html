@@ -260,9 +260,15 @@
       .nav-toggle{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:42px;height:42px;flex-shrink:0;padding:0;border:1.5px solid rgba(79,199,234,.45)!important;background:var(--sidebar-active-bg)!important;color:#fff!important;border-radius:10px;box-shadow:0 0 12px rgba(79,199,234,.25)}
       .nav-toggle span{display:block;width:18px;height:2px;background:#fff;border-radius:1px}
       .side{position:sticky;top:0;z-index:40;padding:8px 10px;padding-top:calc(env(safe-area-inset-top, 0px) + 8px);background:var(--sidebar-bg);border-right:0;border-bottom:1px solid var(--sidebar-border)}
-      .logo{font-size:16px;margin:0}
-      .crm-who,.menu{display:none}
-      .side.open .crm-who{display:block;margin:12px 4px 8px}
+      .logo{font-size:16px;margin:0;flex:1;min-width:0}
+      .menu{display:none}
+      button.crm-who{
+        display:block;margin:0 0 0 auto;max-width:46%;min-height:42px;
+        padding:8px 12px;font-size:13px;font-weight:800;color:#fff;text-align:center;
+        border-radius:10px;border:1.5px solid rgba(79,199,234,.4);
+        background:rgba(79,199,234,.12);
+      }
+      button.crm-who:empty{display:none}
       .side.open .menu{display:flex;flex-direction:column;gap:4px;overflow:visible;padding:6px 0 4px}
       .menu button{width:100%;min-width:0;margin:0;font-size:15px;padding:14px 14px;border-radius:10px}
       #menuLogout{margin-top:8px!important}
@@ -329,7 +335,9 @@
     .login-box button{width:100%;border:1.5px solid var(--neon)!important;background:var(--sidebar-active-bg)!important;color:#fff!important;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 0 18px var(--neon-glow)}
     .login-box form{margin:0}
     .login-error{color:#ff8a8a;font-size:13px;font-weight:700;min-height:18px;margin:0 0 10px}
-    .crm-who{color:var(--sidebar-text);font-size:12px;margin:-14px 0 16px;padding:0 2px;min-height:16px}
+    button.crm-who{display:block;width:auto;max-width:100%;background:transparent;border:0;color:var(--sidebar-text);font-size:12px;font-weight:700;margin:-14px 0 16px;padding:0 2px;min-height:16px;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    button.crm-who:hover{color:#fff}
+    button.crm-who:empty{display:none}
     #liveScan{display:none;position:fixed;inset:0;z-index:40000;background:#000;flex-direction:column}
     #liveScan.show{display:flex}
     #liveScanVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -381,8 +389,8 @@
     <div class="side-top">
       <button type="button" class="nav-toggle" id="navToggle" onclick="toggleNav()" aria-label="Меню"><span></span><span></span><span></span></button>
       <div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h6l-1 8 11-13h-7l1-7Z"/></svg></span>Pandora34</div>
+      <button type="button" id="crmWho" class="crm-who" onclick="crmLogoutAsk()" title="Нажми, чтобы выйти"></button>
     </div>
-    <div id="crmWho" class="crm-who"></div>
     <div class="menu" id="navMenu">
     <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
   </div></aside>
@@ -788,7 +796,11 @@ function applyCrmAccess(){
   const out=document.getElementById('menuLogout');
   if(out) out.style.display=(crmSession && mastersWithLogin().length)?'':'none';
   const who=document.getElementById('crmWho');
-  if(who) who.textContent=(crmSession && crmSession.name)?crmSession.name:'';
+  if(who){
+    const name=(crmSession && crmSession.name)?crmSession.name:'';
+    who.textContent=name;
+    who.hidden=!name;
+  }
   applyMasterReportUi();
 }
 function applyMasterReportUi(){
@@ -855,10 +867,30 @@ function closeNav(){
   if(side) side.classList.remove('open');
   document.body.classList.remove('nav-open');
 }
+function crmLogoutAsk(){
+  const name=(crmSession&&crmSession.name)||'аккаунта';
+  if(!confirm('Выйти из учётной записи «'+name+'»?')) return;
+  crmLogout();
+}
 function crmLogout(){
   crmSession=null;
   storeSet('pandora_crm_session','');
-  location.href='/auth/web-logout';
+  closeNav();
+  showLoginScreen(true);
+  const err=document.getElementById('loginError');
+  if(err) err.textContent='';
+  const p=document.getElementById('loginPass');
+  if(p) p.value='';
+  const u=document.getElementById('loginUser');
+  const last=storeGet('pandora_crm_last_login','');
+  if(u){
+    u.value=last||'';
+    setTimeout(()=>{
+      if(last && p) p.focus();
+      else if(u) u.focus();
+    },50);
+  }
+  fetch('/auth/web-logout',{credentials:'include'}).catch(()=>{});
 }
 function restoreCrmSession(){
   if(!crmSession) return false;
