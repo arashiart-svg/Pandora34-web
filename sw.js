@@ -1,4 +1,4 @@
-const CACHE = "p34-pwa-v6";
+const CACHE = "p34-pwa-v7";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -25,8 +25,9 @@ self.addEventListener("fetch", (event) => {
   ) {
     return;
   }
+  const noStore = url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname === "/sw.js";
   event.respondWith(
-    fetch(req)
+    fetch(req, noStore ? { cache: "no-store" } : undefined)
       .then((res) => {
         if (res && res.ok && (url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname.endsWith(".png") || url.pathname === "/manifest.json")) {
           const copy = res.clone();

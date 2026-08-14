@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Pandora34" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <title>Pandora34 CRM</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -360,7 +362,6 @@
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
     <h1>Pandora34</h1>
-    <div class="hint">Админ — логин <b>admin</b>. Мастера — свой логин из настроек.</div>
     <div class="login-error" id="loginError"></div>
     <form id="loginForm" action="/" method="post" autocomplete="on" onsubmit="event.preventDefault();crmLogin();return false;">
       <label for="loginUser">Логин</label>
@@ -776,6 +777,11 @@ function filterCarsForSession(list){
   const name=sessionMasterName();
   return (list||[]).filter(c=>carHasMaster(c,name));
 }
+function canEditCar(c){
+  if(!c) return false;
+  if(c.status==='done' && isLimitedCrmUser()) return false;
+  return true;
+}
 function canDeleteCars(){
   if(!crmSession || !crmSession.access) return true;
   if(crmSession.owner) return true;
@@ -785,6 +791,8 @@ function canAccessSection(section){
   if(mastersWithLogin().length && !crmSession) return false;
   if(section==='backup') return !!(crmSession&&crmSession.access&&crmSession.access.settings);
   if(section==='deleteCar') return canDeleteCars();
+  if(crmSession && crmSession.owner) return true;
+  if(isLimitedCrmUser()) return !!(crmSession.access && crmSession.access[section]);
   if(!crmSession || !crmSession.access) return true;
   if(crmSession.access[section]===undefined) return true;
   return !!crmSession.access[section];
@@ -1875,21 +1883,23 @@ function openCarView(id){
     <div class="two-actions neon-bar modal-foot">
       <div class="modal-foot-row">
         <button onclick="closeModal()">Назад</button>
-        <button onclick="openCar(${c.id})">Изменить</button>
+        ${canEditCar(c)?`<button onclick="openCar(${c.id})">Изменить</button>`:''}
       </div>
       <div class="modal-foot-row">
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
-        ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
-        ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
-        ${c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
+        ${canEditCar(c) && c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
+        ${canEditCar(c) && c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+        ${canEditCar(c) && c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
-      ${canDeleteCars()?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
+      ${canDeleteCars() && canEditCar(c)?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
 
 function openCar(id){
   let c=cars.find(x=>x.id===id);
+  if(!c) return;
+  if(!canEditCar(c)) return openCarView(id);
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Карточка работы</h2>
@@ -1940,6 +1950,7 @@ function openCar(id){
 
 function saveCard(id){
   let c=cars.find(x=>x.id===id);
+  if(!c || !canEditCar(c)) return;
   c.number=val('editNumber')||'БЕЗ НОМЕРА';
   c.brand=val('editBrand')||'Марка не указана';
   c.model=val('editModel');
@@ -2102,6 +2113,7 @@ function doneCar(id){
 
 function saveCardNoClose(id){
   let c=cars.find(x=>x.id===id);
+  if(!c || !canEditCar(c)) return;
   if(!document.getElementById('editNumber')) return;
   c.number=val('editNumber')||'БЕЗ НОМЕРА';
   c.brand=val('editBrand')||'Марка не указана';
@@ -2675,7 +2687,8 @@ function renderMastersSettings(salaryOnly){
       const owner=isOwnerMaster(mm.name);
       const linked=(mm.linked||[]).map(x=>`${escapeHtml(x.name)} ${Number(x.percent)||0}%`).join(', ');
       const accessOn=owner || (mm.accessEnabled && mm.login);
-      const accessLabel=owner?'Админ · логин admin':(accessOn?'Вход: '+mm.login:'Без входа в CRM');
+      const sections=ACCESS_SECTIONS.filter(([k])=>mm.access&&mm.access[k]).map(([,l])=>l).join(', ');
+      const accessLabel=owner?'Админ · логин admin':(accessOn?'Вход: '+mm.login+(sections?' · '+sections:''):'Без входа в CRM');
       return `<div class="master-card" onclick="openMasterSettings(${i})">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div>
@@ -2772,8 +2785,9 @@ async function saveMasterDetails(i){
   const pass=owner?'':val('masterPassword');
   const accessEnabled=owner?true:!!document.getElementById('masterAccessOn')?.checked;
   const access={};
+  const root=document.getElementById('modalBox');
   ACCESS_CHIPS.forEach(([key])=>{
-    const box=document.querySelector('.access-flag[data-key="'+key+'"]');
+    const box=root && root.querySelector('.access-flag[data-key="'+key+'"]');
     access[key]=owner?true:!!(box&&box.checked);
   });
   if(owner) ACCESS_CHIPS.forEach(([key])=>access[key]=true);
@@ -4610,9 +4624,10 @@ function mergeMasterRecord(old,item){
   if(!out.accessEnabled) out.accessEnabled=!!(a.accessEnabled||b.accessEnabled);
   if(out.accessEnabled){
     const accA=a.access||{}, accB=b.access||{};
+    const count=acc=>ACCESS_CHIPS.reduce((n,[k])=>n+(acc&&acc[k]?1:0),0);
     const prefer=ta>=tb?accA:accB;
     const other=ta>=tb?accB:accA;
-    out.access={...other,...prefer};
+    out.access=(count(prefer)===0 && count(other)>0)?{...other}:{...other,...prefer};
   }
   if((a.linked||[]).length && !(out.linked||[]).length) out.linked=a.linked;
   if((b.linked||[]).length && !(out.linked||[]).length) out.linked=b.linked;
@@ -4661,7 +4676,7 @@ function mergeStrings(localArr,remoteArr){return [...new Set([...(Array.isArray(
 function mergeModels(localModels,remoteModels){const out={};const keys=new Set([...Object.keys(remoteModels||{}),...Object.keys(localModels||{})]);keys.forEach(k=>{out[k]=mergeStrings(localModels&&localModels[k],remoteModels&&remoteModels[k]);});return out;}
 function mergePayloads(local,remote){local=local||{}; remote=remote||{};const out={...remote,...local};out.app='Pandora34';out.version='v31-merge-done-safe';const tomb=[...new Set([...(Array.isArray(remote.deletedCarKeys)?remote.deletedCarKeys:[]),...(Array.isArray(local.deletedCarKeys)?local.deletedCarKeys:[])])];out.deletedCarKeys=tomb;out.cars=mergeObjectArrays(local.cars,remote.cars,'cars').filter(c=>!tomb.includes(itemKey('cars',c))&&!tomb.includes(carSyncKey(c)));const ptomb=[...new Set([...(Array.isArray(remote.deletedProductKeys)?remote.deletedProductKeys:[]),...(Array.isArray(local.deletedProductKeys)?local.deletedProductKeys:[])])];out.deletedProductKeys=ptomb;out.products=mergeObjectArrays(local.products,remote.products,'products').filter(p=>!ptomb.includes(itemKey('products',p)));out.stockLog=mergeObjectArrays(local.stockLog,remote.stockLog,'stockLog');out.appointments=mergeObjectArrays(local.appointments,remote.appointments,'appointments');out.clients=mergeObjectArrays(local.clients,remote.clients,'clients');out.clientGroups=mergeStrings(local.clientGroups,remote.clientGroups);out.organizations=mergeObjectArrays(local.organizations,remote.organizations,'organizations');out.masters=mergeObjectArrays(local.masters,remote.masters,'masters');out.suppliers=mergeStrings(local.suppliers,remote.suppliers);out.carBrands=mergeStrings(local.carBrands,remote.carBrands);out.carModels=mergeModels(local.carModels,remote.carModels);out.v27Works=mergeObjectArrays(local.v27Works,remote.v27Works,'works');out.v27Prices=mergeStrings(local.v27Prices,remote.v27Prices);out.orderWorks=mergeObjectArrays(local.orderWorks,remote.orderWorks,'works');out.orderPrices=mergeStrings(local.orderPrices,remote.orderPrices);out.googleCalendarIcsUrl=String(local.googleCalendarIcsUrl||'').trim()||String(remote.googleCalendarIcsUrl||'').trim();out.googleCalendarLastSync=String(local.googleCalendarLastSync||'').trim()||String(remote.googleCalendarLastSync||'').trim();out.cloudMeta={savedAt:new Date().toISOString(),deviceId:cloudDeviceId(),syncVersion:5,mode:'two_way_merge_done_safe',score:cloudScore(out)};return out;}
 function fingerprintPayload(d){const light={cars:d.cars||[],deletedCarKeys:d.deletedCarKeys||[],deletedProductKeys:d.deletedProductKeys||[],products:d.products||[],stockLog:d.stockLog||[],appointments:d.appointments||[],clients:d.clients||[],clientGroups:d.clientGroups||[],organizations:d.organizations||[],masters:d.masters||[],suppliers:d.suppliers||[],carBrands:d.carBrands||[],carModels:d.carModels||{},v27Works:d.v27Works||[],v27Prices:d.v27Prices||[],orderWorks:d.orderWorks||[],orderPrices:d.orderPrices||[],googleCalendarIcsUrl:d.googleCalendarIcsUrl||'',googleCalendarLastSync:d.googleCalendarLastSync||''};return JSON.stringify(light);}
-function applyPayloadToLocal(d){if(!d||typeof d!=='object')return;cloudApplying=true;try{cars=Array.isArray(d.cars)?d.cars:cars;deletedCarKeys=Array.isArray(d.deletedCarKeys)?d.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(d.deletedProductKeys)?d.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));products=Array.isArray(d.products)?d.products.filter(p=>!deletedProductKeys.includes(itemKey('products',p))):products;stockLog=Array.isArray(d.stockLog)?d.stockLog:stockLog;appointments=Array.isArray(d.appointments)?d.appointments:appointments;clients=Array.isArray(d.clients)?d.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(d.clientGroups)?d.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(d.organizations)?d.organizations:organizations;masters=Array.isArray(d.masters)?d.masters.map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(d.suppliers)?d.suppliers:suppliers;carBrands=Array.isArray(d.carBrands)?d.carBrands:carBrands;carModels=(d.carModels&&typeof d.carModels==='object')?d.carModels:carModels;if(typeof v27Works!=='undefined'&&Array.isArray(d.v27Works))v27Works=d.v27Works;if(typeof v27Prices!=='undefined'&&Array.isArray(d.v27Prices))v27Prices=d.v27Prices;if(typeof orderWorks!=='undefined'&&Array.isArray(d.orderWorks))orderWorks=d.orderWorks;if(typeof orderPrices!=='undefined'&&Array.isArray(d.orderPrices))orderPrices=d.orderPrices;normalizeBrandModels();ensureOwnerMaster();if(typeof setGoogleCalendarIcsUrl==='function'&&String(d.googleCalendarIcsUrl||'').trim())setGoogleCalendarIcsUrl(d.googleCalendarIcsUrl);if(d.googleCalendarLastSync!=null){googleCalendarLastSync=String(d.googleCalendarLastSync||'');storeSet('google_calendar_last_sync',googleCalendarLastSync);}saveAll();if(typeof v27Save==='function')v27Save();if(typeof orderSave==='function')orderSave();render();renderBackupStatus();}finally{cloudApplying=false;}}
+function applyPayloadToLocal(d){if(!d||typeof d!=='object')return;cloudApplying=true;try{cars=Array.isArray(d.cars)?d.cars:cars;deletedCarKeys=Array.isArray(d.deletedCarKeys)?d.deletedCarKeys:deletedCarKeys;deletedProductKeys=Array.isArray(d.deletedProductKeys)?d.deletedProductKeys:deletedProductKeys;storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));products=Array.isArray(d.products)?d.products.filter(p=>!deletedProductKeys.includes(itemKey('products',p))):products;stockLog=Array.isArray(d.stockLog)?d.stockLog:stockLog;appointments=Array.isArray(d.appointments)?d.appointments:appointments;clients=Array.isArray(d.clients)?d.clients.map(normalizeClient).filter(c=>c.name):clients;clientGroups=Array.isArray(d.clientGroups)?d.clientGroups.map(g=>String(g||'').trim()).filter(Boolean):clientGroups;organizations=Array.isArray(d.organizations)?d.organizations:organizations;masters=Array.isArray(d.masters)?mergeObjectArrays(masters,d.masters,'masters').map(normalizeMaster).filter(m=>m.name):masters;suppliers=Array.isArray(d.suppliers)?d.suppliers:suppliers;carBrands=Array.isArray(d.carBrands)?d.carBrands:carBrands;carModels=(d.carModels&&typeof d.carModels==='object')?d.carModels:carModels;if(typeof v27Works!=='undefined'&&Array.isArray(d.v27Works))v27Works=d.v27Works;if(typeof v27Prices!=='undefined'&&Array.isArray(d.v27Prices))v27Prices=d.v27Prices;if(typeof orderWorks!=='undefined'&&Array.isArray(d.orderWorks))orderWorks=d.orderWorks;if(typeof orderPrices!=='undefined'&&Array.isArray(d.orderPrices))orderPrices=d.orderPrices;normalizeBrandModels();ensureOwnerMaster();if(typeof setGoogleCalendarIcsUrl==='function'&&String(d.googleCalendarIcsUrl||'').trim())setGoogleCalendarIcsUrl(d.googleCalendarIcsUrl);if(d.googleCalendarLastSync!=null){googleCalendarLastSync=String(d.googleCalendarLastSync||'');storeSet('google_calendar_last_sync',googleCalendarLastSync);}saveAll();if(typeof v27Save==='function')v27Save();if(typeof orderSave==='function')orderSave();render();renderBackupStatus();}finally{cloudApplying=false;}}
 async function cloudFetchRemote(){const r=await fetch(`${API_BASE_URL}/sync/state`,{headers:cloudHeaders()});if(!r.ok) throw new Error('fetch '+r.status);const obj=await r.json();return obj&&obj.id?obj:null;}
 async function cloudWriteRemote(payload){const body={id:CLOUD_ROW_ID,data:payload};const r=await fetch(`${API_BASE_URL}/sync/state`,{method:'POST',headers:cloudHeaders(),body:JSON.stringify(body)});if(r.status===409) return null;if(!r.ok) throw new Error('push '+r.status);const arr=await r.json().catch(()=>[]);return Array.isArray(arr)?arr:[arr];}
 async function cloudSyncNow(manual=false){
@@ -4673,8 +4688,8 @@ async function cloudSyncNow(manual=false){
   }
   cloudBusy=true;setCloudStatus('Облако: сверка...');
   try{
-    const local=cloudPayload();
     const row=await cloudFetchRemote();
+    const local=cloudPayload();
     const remote=row&&row.data?row.data:{};
     if(isCloudPayloadEmpty(local)&&isCloudPayloadEmpty(remote)){setCloudStatus('Облако: обе базы пустые');return;}
     const merged=mergePayloads(local,remote);
