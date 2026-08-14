@@ -137,8 +137,9 @@
     .photo-btn span{color:var(--text);margin-right:8px}
     .plate-row{display:flex;gap:8px;align-items:stretch}
     .plate-row input{flex:1;min-width:0}
-    .plate-cam{width:auto!important;flex-shrink:0;padding:11px 16px!important;text-align:center;white-space:nowrap;margin:0}
-    .ocr-status{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+    .plate-cam{width:auto!important;flex-shrink:0;padding:11px 16px!important;text-align:center;white-space:nowrap;margin:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .plate-cam input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+    .ocr-status{font-size:13px;color:#c2410c;font-weight:700;margin-top:8px;min-height:18px}
 
 
     .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 8px 22px rgba(15,23,42,.08);transition:box-shadow .15s ease,border-color .15s ease}
@@ -316,6 +317,16 @@
     .login-box form{margin:0}
     .login-error{color:#ff8a8a;font-size:13px;font-weight:700;min-height:18px;margin:0 0 10px}
     .crm-who{color:var(--sidebar-text);font-size:12px;margin:-14px 0 16px;padding:0 2px;min-height:16px}
+    #liveScan{display:none;position:fixed;inset:0;z-index:40000;background:#000;flex-direction:column}
+    #liveScan.show{display:flex}
+    #liveScanVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .live-scan-top,.live-scan-bottom{position:relative;z-index:2;background:rgba(8,14,28,.88);padding:14px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+    .live-scan-bottom{margin-top:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;gap:10px}
+    .live-scan-bottom button{flex:1;padding:14px;font-size:16px;font-weight:800;border-radius:10px}
+    #liveScanFound{color:var(--neon);font-size:26px;font-weight:800;text-align:center;margin:8px 0 4px}
+    #liveScanRaw{color:#cbd5e1;font-size:13px;text-align:center}
+    .live-scan-hint{color:#facc15;font-size:12px;text-align:center;margin-top:6px}
+    .live-scan-frame{position:absolute;left:12%;right:12%;top:50%;height:88px;margin-top:-44px;border:2px solid var(--neon);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);z-index:1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 1px 4px #000;pointer-events:none}
 
 </style>
 </head>
@@ -336,6 +347,21 @@
   </div>
 </div>
 <div id="pwaInstall"><span>Установить Pandora34 на телефон</span><span><button type="button" class="neon" onclick="installPwa()">Установить</button> <button type="button" onclick="dismissPwa()">Позже</button></span></div>
+<div id="liveScan">
+  <video id="liveScanVideo" autoplay playsinline muted></video>
+  <div class="live-scan-frame">Держи номер в этой полосе</div>
+  <div class="live-scan-top">
+    <div style="color:#fff;font-size:20px;font-weight:800;text-align:center">Сканер госномера</div>
+    <div id="liveScanFound">Ищу стабильный результат...</div>
+    <div id="liveScanRaw">Наведи ближе, держи ровно, без бликов</div>
+    <div class="live-scan-hint">Формат А123ВС77 или А123ВС777</div>
+  </div>
+  <div class="live-scan-bottom">
+    <button type="button" onclick="closeLiveScan()">Назад</button>
+    <button type="button" class="neon" id="liveScanUse" disabled onclick="useLiveScan()">Использовать</button>
+  </div>
+  <canvas id="liveScanCanvas" style="display:none"></canvas>
+</div>
 <div class="app">
   <aside class="side" id="sideNav">
     <div class="side-top">
@@ -3298,30 +3324,128 @@ function importIcsFile(event){
 
 
 function startNativeOcr(fieldId, type){
-  const status=document.getElementById(fieldId+'OcrStatus');
   if(window.AndroidOcr && AndroidOcr.openLiveScanner){
-    if(status) status.textContent='Открываю камеру...';
-    AndroidOcr.openLiveScanner(fieldId,type);
+    AndroidOcr.openLiveScanner(fieldId,type||'plate');
     return;
   }
-  if(window.AndroidOcr && AndroidOcr.openCamera){
-    if(status) status.textContent='Открываю камеру...';
-    AndroidOcr.openCamera(fieldId,type);
-    return;
+  openLivePlateScan(fieldId);
+}
+
+let liveScan={stream:null,timer:null,fieldId:'number',busy:false,best:'',last:'',same:0,hist:[]};
+
+async function openLivePlateScan(fieldId){
+  liveScan.fieldId=fieldId;
+  liveScan.best='';liveScan.last='';liveScan.same=0;liveScan.hist=[];liveScan.busy=false;
+  const box=document.getElementById('liveScan');
+  const use=document.getElementById('liveScanUse');
+  document.getElementById('liveScanFound').textContent='Ищу стабильный результат...';
+  document.getElementById('liveScanRaw').textContent='Наведи ближе, держи ровно, без бликов';
+  if(use) use.disabled=true;
+  box.classList.add('show');
+  try{
+    liveScan.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+    const v=document.getElementById('liveScanVideo');
+    v.srcObject=liveScan.stream;
+    await v.play();
+    liveScanLoop();
+  }catch(e){
+    document.getElementById('liveScanFound').textContent='Нет доступа к камере';
+    document.getElementById('liveScanRaw').textContent=String(e.message||e);
   }
-  let inp=document.getElementById('ocrFile_'+fieldId);
-  if(!inp){
-    inp=document.createElement('input');
-    inp.type='file';
-    inp.accept='image/*';
-    inp.setAttribute('capture','environment');
-    inp.id='ocrFile_'+fieldId;
-    inp.style.display='none';
-    inp.onchange=function(e){scanPhotoText(e,fieldId,type);};
-    document.body.appendChild(inp);
+}
+
+function closeLiveScan(){
+  if(liveScan.timer){clearTimeout(liveScan.timer);liveScan.timer=null;}
+  if(liveScan.stream){liveScan.stream.getTracks().forEach(t=>t.stop());liveScan.stream=null;}
+  const v=document.getElementById('liveScanVideo');
+  if(v) v.srcObject=null;
+  const box=document.getElementById('liveScan');
+  if(box) box.classList.remove('show');
+}
+
+function useLiveScan(){
+  const input=document.getElementById(liveScan.fieldId);
+  if(input && liveScan.best) input.value=liveScan.best;
+  const st=document.getElementById(liveScan.fieldId+'OcrStatus');
+  if(st && liveScan.best) st.textContent='Готово: '+liveScan.best;
+  closeLiveScan();
+}
+
+function liveScanLoop(){
+  liveScan.timer=setTimeout(async()=>{
+    try{await liveScanTick();}catch(e){}
+    if(document.getElementById('liveScan')?.classList.contains('show')) liveScanLoop();
+  },420);
+}
+
+function liveScanCrop(){
+  const v=document.getElementById('liveScanVideo');
+  const c=document.getElementById('liveScanCanvas');
+  if(!v||!c||v.readyState<2) return null;
+  const w=v.videoWidth,h=v.videoHeight;
+  if(!w) return null;
+  const cw=Math.round(w*0.78),ch=Math.max(48,Math.round(h*0.18));
+  const cx=Math.round((w-cw)/2),cy=Math.round((h-ch)/2);
+  c.width=cw;c.height=ch;
+  c.getContext('2d').drawImage(v,cx,cy,cw,ch,0,0,cw,ch);
+  return c;
+}
+
+async function liveScanTick(){
+  if(liveScan.busy) return;
+  const c=liveScanCrop();
+  if(!c) return;
+  liveScan.busy=true;
+  try{
+    if('TextDetector' in window){
+      const bmp=await createImageBitmap(c);
+      const blocks=await new TextDetector().detect(bmp);
+      handleLiveText(blocks.map(b=>b.rawValue).join(' '));
+    }else{
+      const blob=await new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',0.72));
+      if(!blob) return;
+      const fd=new FormData();
+      fd.append('image',blob,'frame.jpg');
+      const r=await fetch(`${API_BASE_URL}/ocr/plate?token=${encodeURIComponent(SYNC_TOKEN)}`,{method:'POST',body:fd});
+      const j=await r.json().catch(()=>({}));
+      handleLiveText(j.plate||'');
+    }
+  }finally{
+    liveScan.busy=false;
   }
-  if(status) status.textContent='Наведи камеру на госномер';
-  inp.click();
+}
+
+function livePopular(arr){
+  const counts={};
+  let best='',n=0;
+  arr.forEach(s=>{counts[s]=(counts[s]||0)+1;if(counts[s]>n){n=counts[s];best=s;}});
+  return best;
+}
+
+function handleLiveText(raw){
+  const candidate=extractPlate(raw);
+  const found=document.getElementById('liveScanFound');
+  const hint=document.getElementById('liveScanRaw');
+  const use=document.getElementById('liveScanUse');
+  if(!found) return;
+  if(candidate){
+    liveScan.hist.push(candidate);
+    if(liveScan.hist.length>10) liveScan.hist.shift();
+    if(candidate===liveScan.last) liveScan.same++; else {liveScan.last=candidate;liveScan.same=1;}
+    const pop=livePopular(liveScan.hist);
+    const cnt=Math.max(liveScan.same, liveScan.hist.filter(x=>x===pop).length);
+    found.textContent=pop+'  '+cnt+'/3';
+    if(hint) hint.textContent=raw ? ('Вижу: '+String(raw).replace(/\s+/g,' ').slice(0,90)) : ('Вижу: '+pop);
+    if(cnt>=3){
+      liveScan.best=pop;
+      found.textContent=pop;
+      if(use) use.disabled=false;
+      if(hint) hint.textContent='Стабильно найдено. Можно нажать Использовать';
+    }
+  }else if(!liveScan.best){
+    found.textContent='Ищу...';
+    if(raw && hint) hint.textContent='На экране: '+String(raw).replace(/\s+/g,' ').slice(0,90);
+  }
 }
 
 function receiveOcrText(fieldId, type, text){
@@ -3364,9 +3488,8 @@ async function scanPhotoText(event, fieldId, type){
     const blob=await ocrPrepareImage(file);
     const fd=new FormData();
     fd.append('image', blob, 'plate.jpg');
-    const r=await fetch(`${API_BASE_URL}/ocr/plate`,{
+    const r=await fetch(`${API_BASE_URL}/ocr/plate?token=${encodeURIComponent(SYNC_TOKEN)}`,{
       method:'POST',
-      headers:{Authorization:'Bearer '+SYNC_TOKEN},
       body:fd
     });
     const j=await r.json().catch(()=>({}));
@@ -3379,7 +3502,7 @@ async function scanPhotoText(event, fieldId, type){
       status.textContent='Не разобрал номер. Сфоткай ближе и ровнее.';
     }
   }catch(e){
-    if(status) status.textContent='Сервер не ответил. Попробуй ещё раз.';
+    if(status) status.textContent='Не дошло до сервера: '+(e.message||e);
   }
   event.target.value='';
 }
@@ -4514,7 +4637,7 @@ openAutoStep=function(){
         <div><label>Госномер</label>
           <div class="plate-row">
             <input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}">
-            <button type="button" class="photo-btn plate-cam" onclick="startNativeOcr('number','plate')">Фото</button>
+            <button type="button" class="photo-btn plate-cam" onclick="startNativeOcr('number','plate')">Сканер</button>
           </div>
           <div id="numberOcrStatus" class="ocr-status"></div>
         </div>
