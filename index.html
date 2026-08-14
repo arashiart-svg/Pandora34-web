@@ -260,6 +260,20 @@
       #menuLogout{margin-top:8px!important}
       body.nav-open .nav-scrim{display:block}
       main{padding:16px 14px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+      .modal{padding:0;align-items:stretch;justify-content:stretch}
+      .box,.box.compact{
+        width:100%;max-width:none;height:100%;max-height:none;
+        border-radius:0;border:0;box-shadow:none;
+        padding:16px 14px;
+        padding-top:calc(env(safe-area-inset-top, 0px) + 12px);
+        padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+      }
+      .box .actions,.box .two-actions{
+        position:sticky;bottom:0;z-index:2;
+        background:var(--card);margin-top:12px;padding-top:12px;
+        padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 4px);
+      }
+      .brand-picker-grid{max-height:none}
     }
     @media(max-width:620px){
       .top{align-items:flex-start;gap:12px}
@@ -267,7 +281,6 @@
       .top-actions{width:100%;justify-content:flex-start}
       .form{grid-template-columns:1fr}
       .form input,.form textarea,.login-box input{font-size:16px}
-      .box{max-height:85vh;overflow-y:auto;width:96vw}
       .grid{grid-template-columns:1fr}
     }
     @media(display-mode:standalone){
