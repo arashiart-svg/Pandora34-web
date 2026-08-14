@@ -297,6 +297,11 @@
       .box .two-actions.modal-foot{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:10px}
       .box .two-actions.modal-foot .modal-foot-row button,
       .box .two-actions.modal-foot>button{flex:1;min-height:48px;padding:14px 10px;font-size:15px}
+      .modal-foot-row:empty{display:none}
+      .box .two-actions.modal-foot .left,
+      .box .two-actions.modal-foot .right{display:flex;flex-wrap:wrap;width:100%;flex:none}
+      .box .two-actions.modal-foot .left button,
+      .box .two-actions.modal-foot .right button{flex:1;min-height:48px}
       .brand-picker-grid{max-height:none}
     }
     @media(max-width:620px){
@@ -842,13 +847,14 @@ async function crmLogin(){
   }else{
     if(!pass){ if(err) err.textContent='Введи логин и пароль'; return; }
     const hash=await hashCrmPass(pass);
-    m=masters.map(normalizeMaster).find(x=>x.accessEnabled && x.login===login && x.passwordHash===hash);
+    m=masters.map(normalizeMaster).find(x=>x.accessEnabled && String(x.login||'').toLowerCase()===login.toLowerCase() && x.passwordHash===hash);
   }
   if(!m){ if(err) err.textContent='Неверный логин или пароль'; return; }
   const owner=isOwnerMaster(m.name);
   crmSession={name:owner?OWNER_MASTER:m.name,login:owner?OWNER_LOGIN:(m.login||login),access:m.access,owner:owner};
   storeSet('pandora_crm_session', JSON.stringify(crmSession));
   storeSet('pandora_crm_last_login', crmSession.login);
+  storeSet('pandora_crm_logged_out','0');
   setTimeout(()=>{
     showLoginScreen(false);
     applyCrmAccess();
@@ -875,6 +881,7 @@ function crmLogoutAsk(){
 function crmLogout(){
   crmSession=null;
   storeSet('pandora_crm_session','');
+  storeSet('pandora_crm_logged_out','1');
   closeNav();
   showLoginScreen(true);
   const err=document.getElementById('loginError');
@@ -908,15 +915,8 @@ function restoreCrmSession(){
   return true;
 }
 function bootCrmAuth(){
-  const need=mastersWithLogin().length>0;
-  if(!need){
-    crmSession={name:OWNER_MASTER,login:OWNER_LOGIN,access:normalizeMaster({name:OWNER_MASTER}).access,owner:true};
-    storeSet('pandora_crm_session', JSON.stringify(crmSession));
-    showLoginScreen(false);
-    applyCrmAccess();
-    return;
-  }
-  if(restoreCrmSession()){
+  const loggedOut=storeGet('pandora_crm_logged_out','')==='1';
+  if(!loggedOut && restoreCrmSession()){
     showLoginScreen(false);
     applyCrmAccess();
     showSection(firstAllowedSection());
@@ -1868,18 +1868,22 @@ function openCarView(id){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2 class="view-plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</h2>
+    <div class="modal-body">
     <div class="car-plate-row" style="padding:0 0 12px"><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
     <div class="view-body">${rowsHtml}</div>
-    <div class="two-actions neon-bar">
-      <div class="left"><button onclick="closeModal()">Назад</button></div>
-      <div class="right">
-        ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row">
+        <button onclick="closeModal()">Назад</button>
         <button onclick="openCar(${c.id})">Изменить</button>
+      </div>
+      <div class="modal-foot-row">
+        ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
         ${c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
-        ${canDeleteCars()?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
       </div>
+      ${canDeleteCars()?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -1889,6 +1893,7 @@ function openCar(id){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Карточка работы</h2>
+    <div class="modal-body">
     <div class="form-group">
       <div class="form-group-title">Авто</div>
       <div class="form">
@@ -1915,16 +1920,19 @@ function openCar(id){
       <div><label>Статус</label><input value="${statusLabel(c.status)}" disabled></div>
       <div class="wide"><label>Комментарий</label><textarea id="editComment" rows="3" placeholder="Необязательно" ${c.status==='done'?'readonly':''}>${escapeHtml(c.comment)}</textarea></div>
     </div>
-    <div class="two-actions neon-bar">
-      <div class="left"><button onclick="closeModal()">Закрыть</button></div>
-      <div class="right">
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row">
+        <button onclick="closeModal()">Закрыть</button>
+        ${c.status==='done'?'':`<button class="neon" onclick="saveCard(${c.id})">Сохранить</button>`}
+      </div>
+      <div class="modal-foot-row">
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
-        ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдали авто</button>`:''}
-        ${canDeleteCars()?(c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`):''}
-        ${c.status==='done'?'':`<button class="neon" onclick="saveCard(${c.id})">Сохранить</button>`}
+        ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
+      ${canDeleteCars()?(c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`):''}
     </div>`;
   document.getElementById('modal').style.display='flex';
   updateWorkButtons('editWork');
@@ -1995,6 +2003,7 @@ function openDoneWizard(id){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Выдать авто</h2>
+    <div class="modal-body">
     <div class="step-title">Кто делал работу</div>
     <div class="quick-row">
       ${masterNames().map(x=>`<button class="quick-btn master-work" type="button" data-master="${x}" onclick="toggleMaster('doneMaster','master-work','${x}')">${x}</button>`).join('')}
@@ -2022,10 +2031,9 @@ function openDoneWizard(id){
         <input id="moneyMaster" placeholder="Выбери мастера" readonly>
       </div>
     </div>
-
-    <div class="two-actions neon-bar">
-      <div class="left"><button onclick="openCar(${id})">Назад</button></div>
-      <div class="right"><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row"><button onclick="openCar(${id})">Назад</button><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2706,7 +2714,7 @@ function openMasterSettings(i){
     </div>
     <div class="form-group">
       <div class="form-group-title">Доступ в CRM</div>
-      ${owner?`<div class="small" style="margin-bottom:12px">Ты уже админ. Логин <b>admin</b>, пароль тот же что на входе на сервер. Тут ничего заводить не надо.</div>`:`<label class="access-chip" style="margin-bottom:12px;max-width:280px"><input type="checkbox" id="masterAccessOn" ${mm.accessEnabled?'checked':''}>Может входить в CRM</label>`}
+      ${owner?`<div class="small" style="margin-bottom:12px">Ты уже админ. Логин <b>admin</b>, пароль тот же что на входе на сервер. Тут ничего заводить не надо.</div>`:`<label class="access-chip" style="margin-bottom:12px;max-width:280px"><input type="checkbox" id="masterAccessOn" ${mm.accessEnabled || !mm.login?'checked':''}>Может входить в CRM</label>`}
       ${owner?'':`<div class="form">
         <div><label>Логин</label><input id="masterLogin" value="${escapeHtml(mm.login)}" placeholder="например roman"></div>
         <div><label>Пароль</label><input id="masterPassword" type="password" placeholder="${mm.passwordHash?'не менять':'новый пароль'}"></div>
@@ -2770,7 +2778,7 @@ async function saveMasterDetails(i){
   });
   if(owner) ACCESS_CHIPS.forEach(([key])=>access[key]=true);
   if(accessEnabled && !owner){
-    if(!ACCESS_SECTIONS.some(([key])=>access[key])){alert('Отметь хотя бы один раздел');return;}
+    if(!ACCESS_SECTIONS.some(([key])=>access[key])) access.work=true;
     if(!login){alert('Укажи логин для входа');return;}
     if(isAdminLogin(login)){alert('Логин admin занят — это ты');return;}
     const taken=masters.map(normalizeMaster).some((m,idx)=>idx!==i && m.login && m.login.toLowerCase()===login.toLowerCase());
@@ -2778,10 +2786,14 @@ async function saveMasterDetails(i){
     if(!old.passwordHash && !pass){alert('Задай пароль для входа');return;}
   }
   let passwordHash=old.passwordHash||'';
-  if(!owner && pass) passwordHash=await hashCrmPass(pass);
+  if(!owner && pass){
+    try{passwordHash=await hashCrmPass(pass);}
+    catch(e){alert('Не удалось сохранить пароль. Открой CRM по https и попробуй ещё раз.');return;}
+  }
   masters[i]={name,percent,linked,login,passwordHash,accessEnabled,access,updatedAt:new Date().toISOString()};
   ensureOwnerMaster();
   saveAll();
+  if(typeof cloudSyncNow==='function') cloudSyncNow(true);
   if(crmSession && (crmSession.login===old.login || crmSession.login===login || (owner && crmSession.owner))){
     if(login && passwordHash){
       crmSession={name,login,access,owner};
@@ -4581,18 +4593,31 @@ function isDefaultMasterRecord(m){
   const defaultPct=owner?0:50;
   const noLinks=!mm.linked || mm.linked.length===0;
   const noTime=!(m&&typeof m==='object'&&(m.updatedAt||m._updatedAt||m.savedAt));
-  return def && noLinks && Number(mm.percent)===defaultPct && noTime;
+  const noAuth=!mm.login && !mm.passwordHash && !mm.accessEnabled;
+  return def && noLinks && Number(mm.percent)===defaultPct && noTime && noAuth;
 }
 function mergeMasterRecord(old,item){
   const a=normalizeMaster(old), b=normalizeMaster(item);
   const ta=Date.parse(old?.updatedAt||old?._updatedAt||old?.savedAt||0)||0;
   const tb=Date.parse(item?.updatedAt||item?._updatedAt||item?.savedAt||0)||0;
-  if(isDefaultMasterRecord(item) && !isDefaultMasterRecord(old)) return {...a,updatedAt:old?.updatedAt||old?._updatedAt||old?.savedAt};
-  if(isDefaultMasterRecord(old) && !isDefaultMasterRecord(item)) return {...b,updatedAt:item?.updatedAt||item?._updatedAt||item?.savedAt};
-  if(ta||tb) return ta>=tb?{...a,...(old||{})}:{...b,...(item||{})};
-  const out={...a,...b};
-  if((a.linked||[]).length && !(b.linked||[]).length) out.linked=a.linked;
-  if(isOwnerMaster(out.name)) out.percent=0;
+  let out;
+  if(isDefaultMasterRecord(item) && !isDefaultMasterRecord(old)) out={...a};
+  else if(isDefaultMasterRecord(old) && !isDefaultMasterRecord(item)) out={...b};
+  else if(ta||tb) out={...(ta>=tb?a:b)};
+  else out={...a,...b};
+  if(!out.login) out.login=a.login||b.login||'';
+  if(!out.passwordHash) out.passwordHash=a.passwordHash||b.passwordHash||'';
+  if(!out.accessEnabled) out.accessEnabled=!!(a.accessEnabled||b.accessEnabled);
+  if(out.accessEnabled){
+    const accA=a.access||{}, accB=b.access||{};
+    const prefer=ta>=tb?accA:accB;
+    const other=ta>=tb?accB:accA;
+    out.access={...other,...prefer};
+  }
+  if((a.linked||[]).length && !(out.linked||[]).length) out.linked=a.linked;
+  if((b.linked||[]).length && !(out.linked||[]).length) out.linked=b.linked;
+  out.updatedAt=new Date(Math.max(ta,tb)||Date.now()).toISOString();
+  if(isOwnerMaster(out.name)){out.percent=0;out.login=OWNER_LOGIN;out.accessEnabled=true;}
   return out;
 }
 function mergeCarRecord(old,item){
@@ -4812,6 +4837,30 @@ const aslanovaOldMergePayloads=mergePayloads;mergePayloads=function(local,remote
 const aslanovaOldFingerprintPayload=fingerprintPayload;fingerprintPayload=function(d){return aslanovaOldFingerprintPayload(d)+JSON.stringify((d&&d.aslanovaSettings)||{});};
 const aslanovaOldApplyPayloadToLocal=applyPayloadToLocal;applyPayloadToLocal=function(d){aslanovaOldApplyPayloadToLocal(d);if(d&&d.aslanovaSettings){aslanovaSettings=d.aslanovaSettings;normalizeAslanovaSettings();storeSet('aslanova_settings_demo',JSON.stringify(aslanovaSettings));}};
 /* === /Pandora34 Aslanova Partner Flow v1 === */
+
+function layoutModal(){
+  const box=document.getElementById('modalBox');
+  if(!box || box.querySelector(':scope > .modal-body')) return;
+  const kids=Array.from(box.children);
+  const foot=kids.reverse().find(el=>el.classList && (el.classList.contains('two-actions')||el.classList.contains('actions')||el.classList.contains('modal-foot')));
+  if(!foot) return;
+  foot.classList.add('modal-foot');
+  const body=document.createElement('div');
+  body.className='modal-body';
+  Array.from(box.childNodes).forEach(n=>{
+    if(n===foot) return;
+    if(n.nodeType===1 && n.tagName==='H2') return;
+    body.appendChild(n);
+  });
+  if(body.childNodes.length) box.insertBefore(body, foot);
+}
+const modalBoxEl=document.getElementById('modalBox');
+if(modalBoxEl){
+  new MutationObserver(()=>{
+    const modal=document.getElementById('modal');
+    if(modal && modal.style.display==='flex') layoutModal();
+  }).observe(modalBoxEl,{childList:true});
+}
 
 autoBackupReady=true;
 forceAutoBackup();
