@@ -54,7 +54,13 @@
     .priority-low .car-priority-head{background:var(--green)}
     .done .car-priority-head{background:#3a4356}
     .car-plate-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 16px 0}
-    .car-plate-row .plate{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:16px;font-weight:600;letter-spacing:.5px;color:var(--plate-gray)}
+    .ru-plate{display:inline-flex;align-items:stretch;background:#fff;color:#111;border:2.5px solid #111;border-radius:4px;overflow:hidden;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.18);vertical-align:middle;min-height:36px}
+    .ru-plate-main{font-family:"Arial Narrow","Helvetica Neue Condensed",Impact,Tahoma,Arial,sans-serif;font-weight:800;font-size:18px;letter-spacing:.14em;padding:8px 10px 7px;white-space:nowrap}
+    .ru-plate-reg{border-left:2px solid #111;min-width:34px;padding:2px 4px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;gap:1px}
+    .ru-plate-flag{width:16px;height:9px;border:1px solid #9aa;background:linear-gradient(#fff 0 33.3%,#0039a6 33.3% 66.6%,#d52b1e 66.6% 100%)}
+    .ru-plate-code{font-family:"Arial Narrow","Helvetica Neue Condensed",Impact,Tahoma,Arial,sans-serif;font-weight:800;font-size:14px;letter-spacing:.02em;line-height:1}
+    .ru-plate-rus{font-family:Arial,sans-serif;font-size:7px;font-weight:800;letter-spacing:.08em;line-height:1;color:#111}
+    .ru-plate-empty .ru-plate-main{letter-spacing:.04em;font-size:13px;color:#666}
     .car-status-pill{background:var(--pill-blue-bg);color:var(--pill-blue-text);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap}
     .car-status-pill.gray{background:var(--pill-gray-bg);color:var(--pill-gray-text)}
     .car-status-pill.done{background:#eef0f4;color:#5b6472}
@@ -126,7 +132,7 @@
     .two-actions.neon-bar button.neon{color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.2),0 0 20px var(--neon-glow)}
     .two-actions.neon-bar button.neon:hover{box-shadow:0 0 0 1px rgba(79,199,234,.3),0 0 26px var(--neon-glow)}
 
-    .view-plate{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-weight:800;letter-spacing:.5px}
+    .view-plate{margin:0 0 12px}
     .view-body{padding:2px 16px;display:flex;flex-direction:column;gap:2px;background:var(--panel);border-radius:10px;border:1px solid var(--border);margin-top:4px}
     .view-body .car-row:last-child{border-bottom:0}
 
@@ -1040,6 +1046,15 @@ function doneSortTime(c){
   return Number(c.doneAt || c.updatedAt || c.id || 0) || 0;
 }
 
+function plateBadgeHtml(raw){
+  const s=String(raw||'').trim().toUpperCase();
+  if(!s || s==='БЕЗ НОМЕРА') return `<span class="ru-plate ru-plate-empty"><span class="ru-plate-main">БЕЗ НОМЕРА</span></span>`;
+  const lat={'A':'А','B':'В','C':'С','E':'Е','H':'Н','K':'К','M':'М','O':'О','P':'Р','T':'Т','X':'Х','Y':'У'};
+  const n=s.replace(/[ABCEHKMOPTXY]/g,ch=>lat[ch]||ch).replace(/\s+/g,'');
+  const m=n.match(/^([АВЕКМНОРСТУХ])(\d{3})([АВЕКМНОРСТУХ]{2})(\d{2,3})$/);
+  if(m) return `<span class="ru-plate"><span class="ru-plate-main">${m[1]} ${m[2]} ${m[3]}</span><span class="ru-plate-reg"><span class="ru-plate-code">${m[4]}</span><span class="ru-plate-flag"></span><span class="ru-plate-rus">RUS</span></span></span>`;
+  return `<span class="ru-plate"><span class="ru-plate-main">${escapeHtml(s)}</span></span>`;
+}
 function statusLabel(status){
   if(status==='ready') return 'Готово';
   if(status==='done') return 'Выдано';
@@ -1101,7 +1116,7 @@ function render(){
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCarView(${c.id})">
       <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
-      <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
+      <div class="car-plate-row">${plateBadgeHtml(c.number)}<span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${orderBtn}${badge}</div>
@@ -1116,6 +1131,10 @@ let reportMode='current';
 let selectedDayKey='';
 let analysisOpen=false;
 let salaryOpen=false;
+let salaryMode='current';
+let salaryDayKey='';
+let salaryWeekKey='';
+let salaryMonthKey='';
 
 function startOfWeek(d){
   const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
@@ -1230,6 +1249,34 @@ function toggleSalaryReport(){
   if(salaryOpen) analysisOpen=false;
   updateReportControlsActive();
   renderReport();
+}
+function setSalaryMode(mode){
+  salaryMode=mode;
+  salaryOpen=true;
+  analysisOpen=false;
+  updateReportControlsActive();
+  renderReport();
+}
+function getSalaryRange(){
+  const now=new Date();
+  if(salaryMode==='current') return {from:startOfWeek(now),to:endOfWeek(now),title:'Текущая неделя'};
+  if(salaryMode==='day'){
+    if(!salaryDayKey) salaryDayKey=dateKey(now);
+    const p=salaryDayKey.split('-').map(Number);
+    const from=new Date(p[0],p[1]-1,p[2],0,0,0,0);
+    const to=new Date(from); to.setDate(to.getDate()+1);
+    return {from,to,title:'День: '+from.toLocaleDateString('ru-RU',{weekday:'long',day:'2-digit',month:'long'})};
+  }
+  if(salaryMode==='week'){
+    if(!salaryWeekKey) salaryWeekKey=weekKey(now);
+    const p=salaryWeekKey.split('-').map(Number);
+    const from=new Date(p[0],p[1]-1,p[2],0,0,0,0);
+    const to=new Date(from); to.setDate(to.getDate()+7);
+    return {from,to,title:'Неделя: '+weekLabelByStart(salaryWeekKey)};
+  }
+  if(!salaryMonthKey) salaryMonthKey=ymKey(now);
+  const [y,m]=salaryMonthKey.split('-').map(Number);
+  return {from:new Date(y,m-1,1),to:new Date(y,m,1),title:'Месяц: '+new Date(y,m-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'})};
 }
 
 function getDoneCarsInRange(from,to){
@@ -1404,10 +1451,23 @@ function getSalaryEntries(done){
   return entries;
 }
 
-function renderSalaryReport(done){
+function renderSalaryReport(){
   const block=document.getElementById('salaryBlock');
   if(!block) return;
   if(!salaryOpen){block.style.display='none';return;}
+  const range=getSalaryRange();
+  const done=getDoneCarsInRange(range.from, range.to);
+  const dated=filterCarsForSession(cars.filter(c=>c.status==='done')).map(c=>({c,date:parseRuDate(c.outAt)})).filter(x=>x.date);
+  const weeks=[...new Set(dated.map(x=>weekKey(x.date)))].sort().reverse();
+  const months=[...new Set(dated.map(x=>ymKey(x.date)))].sort().reverse();
+  if(!salaryDayKey) salaryDayKey=dateKey(new Date());
+  if(!salaryWeekKey) salaryWeekKey=weeks[0]||weekKey(new Date());
+  if(!salaryMonthKey) salaryMonthKey=months[0]||ymKey(new Date());
+  const btn=(m,t)=>`<button class="${salaryMode===m?'active':''}" type="button" onclick="setSalaryMode('${m}')">${t}</button>`;
+  let extra='';
+  if(salaryMode==='day') extra=`<input type="date" id="salaryDayPick" value="${salaryDayKey}" onchange="salaryDayKey=this.value;renderReport()" style="margin:0 0 12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px">`;
+  if(salaryMode==='week') extra=`<select id="salaryWeekPick" onchange="salaryWeekKey=this.value;renderReport()" style="margin:0 0 12px;width:100%;max-width:360px;padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px">${weeks.map(w=>`<option value="${w}" ${w===salaryWeekKey?'selected':''}>${weekLabelByStart(w)}</option>`).join('')||`<option value="${weekKey(new Date())}">${weekLabelByStart(weekKey(new Date()))}</option>`}</select>`;
+  if(salaryMode==='month') extra=`<select id="salaryMonthPick" onchange="salaryMonthKey=this.value;renderReport()" style="margin:0 0 12px;width:100%;max-width:360px;padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px">${months.map(m=>{const [y,mo]=m.split('-').map(Number);return `<option value="${m}" ${m===salaryMonthKey?'selected':''}>${new Date(y,mo-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`;}).join('')||`<option value="${ymKey(new Date())}">${new Date().toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`}</select>`;
   const entries=getSalaryEntries(done);
   const html=entries.map(([name,v])=>{
     const netEarned=Math.round(v.base+v.linkedIn-v.linkedOut);
@@ -1425,13 +1485,17 @@ function renderSalaryReport(done){
       </div>`;
   }).join('') || '<div class="small">Нет данных для расчёта зарплаты</div>';
   block.style.display='block';
-  block.innerHTML=`<h2 style="font-size:22px;margin:0 0 10px">Зарплата за выбранный период</h2>${html}`;
+  block.innerHTML=`<h2 style="font-size:22px;margin:0 0 10px">Зарплата</h2>
+    <div class="report-controls" style="margin:0 0 12px">${btn('current','Текущая неделя')}${btn('day','День')}${btn('week','Неделя')}${btn('month','Месяц')}</div>
+    ${extra}
+    <div class="small" style="margin:0 0 12px">${escapeHtml(range.title)}</div>
+    ${html}`;
 }
 
 function openSalaryDetail(encodedName){
   const name=decodeURIComponent(encodedName);
   if(isLimitedCrmUser() && name!==sessionMasterName()) return;
-  const range=getReportRange();
+  const range=getSalaryRange();
   const done=getDoneCarsInRange(range.from, range.to);
   const rows=calcSalaryRows(done);
   const v=rows[name];
@@ -1521,7 +1585,7 @@ function renderReport(){
   `;
 
   renderAnalysis(done);
-  renderSalaryReport(done);
+  renderSalaryReport();
 
   const grid=document.getElementById('reportGrid');
   if(grid) grid.innerHTML='';
@@ -1877,7 +1941,7 @@ function openCarView(id){
   const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
-    <h2 class="view-plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</h2>
+    <div class="view-plate">${plateBadgeHtml(c.number)}</div>
     <div class="modal-body">
     <div class="car-plate-row" style="padding:0 0 12px"><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
     <div class="view-body">${rowsHtml}</div>
@@ -3411,6 +3475,18 @@ function startNativeOcr(fieldId, type){
 
 let liveScan={stream:null,timer:null,fieldId:'number',busy:false,best:'',last:'',same:0,hist:[]};
 
+function liveScanHasLive(){
+  return !!(liveScan.stream && liveScan.stream.getVideoTracks().some(t=>t.readyState==='live'));
+}
+function pauseLiveScanCamera(){
+  if(liveScan.stream) liveScan.stream.getTracks().forEach(t=>t.enabled=false);
+}
+function stopLiveScanCamera(){
+  if(liveScan.timer){clearTimeout(liveScan.timer);liveScan.timer=null;}
+  if(liveScan.stream){liveScan.stream.getTracks().forEach(t=>t.stop());liveScan.stream=null;}
+  const v=document.getElementById('liveScanVideo');
+  if(v) v.srcObject=null;
+}
 async function openLivePlateScan(fieldId){
   liveScan.fieldId=fieldId;
   liveScan.best='';liveScan.last='';liveScan.same=0;liveScan.hist=[];liveScan.busy=false;
@@ -3428,8 +3504,14 @@ async function openLivePlateScan(fieldId){
     if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e);
   });
   try{
-    liveScan.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+    if(liveScanHasLive()){
+      liveScan.stream.getTracks().forEach(t=>t.enabled=true);
+    }else{
+      liveScan.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
+    }
     const v=document.getElementById('liveScanVideo');
+    v.setAttribute('playsinline','');
+    v.setAttribute('webkit-playsinline','');
     v.srcObject=liveScan.stream;
     await v.play();
     liveScanLoop();
@@ -3441,12 +3523,12 @@ async function openLivePlateScan(fieldId){
 
 function closeLiveScan(){
   if(liveScan.timer){clearTimeout(liveScan.timer);liveScan.timer=null;}
-  if(liveScan.stream){liveScan.stream.getTracks().forEach(t=>t.stop());liveScan.stream=null;}
-  const v=document.getElementById('liveScanVideo');
-  if(v) v.srcObject=null;
+  pauseLiveScanCamera();
   const box=document.getElementById('liveScan');
   if(box) box.classList.remove('show');
 }
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopLiveScanCamera(); });
+window.addEventListener('pagehide', stopLiveScanCamera);
 
 function useLiveScan(){
   const input=document.getElementById(liveScan.fieldId);
@@ -3734,7 +3816,7 @@ function renderArchive(){
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}" onclick="openCarView(${c.id})">
       <div class="car-priority-head"><span class="dot"></span>${escapeHtml(priLabel)}</div>
-      <div class="car-plate-row"><span class="plate">${escapeHtml(c.number||'БЕЗ НОМЕРА')}</span><span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
+      <div class="car-plate-row">${plateBadgeHtml(c.number)}<span class="car-status-pill ${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div>
       <div class="car-head"><div class="brand">${escapeHtml((c.brand||'Марка не указана')+(c.model?' '+c.model:''))}</div></div>
       <div class="car-body">${rowsHtml}</div>
       <div class="car-foot">${badge}</div>
@@ -4777,7 +4859,15 @@ function aslanovaTodayInput(){const d=new Date();const p=n=>String(n).padStart(2
 function aslanovaDateLabel(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'.'+m[2]+'.'+m[1]:new Date().toLocaleDateString('ru-RU');}
 function syncAslanovaDateLabel(el){const lab=document.getElementById(el.id+'Label'); if(lab) lab.textContent=aslanovaDateLabel(el.value);}
 function aslanovaDateBtnHtml(id,iso){const v=iso||aslanovaTodayInput();return `<label class="pick-btn aslanova-date-btn"><b id="${id}Label">${aslanovaDateLabel(v)}</b><span class="arrow">▾</span><input id="${id}" type="date" value="${v}" onchange="syncAslanovaDateLabel(this)"></label>`;}
-function aslanovaStampsFromInput(iso){let dt=new Date();const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m) dt=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);return {stamp:dt.toLocaleString('ru-RU'), iso:dt.toISOString()};}
+function aslanovaStampsFromInput(iso){
+  const now=new Date();
+  const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return {stamp:now.toLocaleString('ru-RU'), iso:now.toISOString()};
+  const y=Number(m[1]), mo=Number(m[2])-1, d=Number(m[3]);
+  const today=now.getFullYear()===y && now.getMonth()===mo && now.getDate()===d;
+  const dt=today ? now : new Date(y, mo, d, now.getHours(), now.getMinutes(), now.getSeconds());
+  return {stamp:dt.toLocaleString('ru-RU'), iso:dt.toISOString()};
+}
 openAutoStep=function(){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
@@ -4956,19 +5046,31 @@ document.addEventListener('focusin', (e)=>{
       oldShow(section);
     };
   }
+  function pushDummy(){
+    try{history.pushState({p34:1},'',location.href);}catch(e){}
+  }
   window.appHandleBack=function(){
+    const scan=document.getElementById('liveScan');
+    if(scan&&scan.classList.contains('show')){ closeLiveScan(); return true; }
+    if(document.body.classList.contains('nav-open')){ closeNav(); return true; }
     const modal=document.getElementById('modal');
     if(modal&&modal.style.display==='flex'){ closeModal(); return true; }
     const prev=stack.pop();
     if(prev&&typeof oldShow==='function'){ current=prev; oldShow(prev); return true; }
     return false;
   };
+  window.addEventListener('popstate',function(){
+    window.appHandleBack();
+    pushDummy();
+  });
+  pushDummy();
 })();
 </script>
 <script>
 /* === Pandora34 Aslanova report fixed screen like PDF === */
 (function(){
   let mode='half';
+  let aslAnchor='';
   function esc(x){return escapeHtml(String(x==null?'':x))}
   function money(n){return (Number(n)||0).toLocaleString('ru-RU')+' ₽'}
   function price(c){return Number(c.price||c.aslanovaAmount||c.agreedPrice)||0}
@@ -4976,7 +5078,11 @@ document.addEventListener('focusin', (e)=>{
   function startWeek(d){const x=startDay(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x}
   function fmt(d){return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'})}
   function short(d){return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit'})}
-  function range(){const now=new Date(); if(mode==='day'){const f=startDay(now),t=new Date(f);t.setDate(t.getDate()+1);return{from:f,to:t,title:'Сегодня: '+fmt(f)}} if(mode==='week'){const f=startWeek(now),t=new Date(f);t.setDate(t.getDate()+7);const e=new Date(t.getTime()-86400000);return{from:f,to:t,title:'Неделя: '+fmt(f)+' — '+fmt(e)}} if(mode==='month'){const f=new Date(now.getFullYear(),now.getMonth(),1),t=new Date(now.getFullYear(),now.getMonth()+1,1),e=new Date(t.getTime()-86400000);return{from:f,to:t,title:'Месяц: '+fmt(f)+' — '+fmt(e)}} if(mode==='year'){const f=new Date(now.getFullYear(),0,1),t=new Date(now.getFullYear()+1,0,1),e=new Date(now.getFullYear(),11,31);return{from:f,to:t,title:'Год: '+fmt(f)+' — '+fmt(e)}} const y=now.getFullYear(),m=now.getMonth(),d=now.getDate(); let f,t,e; if(d<=15){f=new Date(y,m,1);t=new Date(y,m,16);e=new Date(y,m,15)}else{f=new Date(y,m,16);t=new Date(y,m+1,1);e=new Date(y,m+1,0)} return{from:f,to:t,title:'Период: '+fmt(f)+' — '+fmt(e)}}
+  function pad2(n){return String(n).padStart(2,'0')}
+  function todayKey(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+  function anchorKey(){return aslAnchor||todayKey()}
+  function parseAnchor(){const m=String(anchorKey()).match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return new Date(); return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]))}
+  function range(){const now=parseAnchor(); if(mode==='day'){const f=startDay(now),t=new Date(f);t.setDate(t.getDate()+1);return{from:f,to:t,title:'День: '+fmt(f)}} if(mode==='week'){const f=startWeek(now),t=new Date(f);t.setDate(t.getDate()+7);const e=new Date(t.getTime()-86400000);return{from:f,to:t,title:'Неделя: '+fmt(f)+' — '+fmt(e)}} if(mode==='month'){const f=new Date(now.getFullYear(),now.getMonth(),1),t=new Date(now.getFullYear(),now.getMonth()+1,1),e=new Date(t.getTime()-86400000);return{from:f,to:t,title:'Месяц: '+fmt(f)+' — '+fmt(e)}} if(mode==='year'){const f=new Date(now.getFullYear(),0,1),t=new Date(now.getFullYear()+1,0,1),e=new Date(now.getFullYear(),11,31);return{from:f,to:t,title:'Год: '+fmt(f)+' — '+fmt(e)}} const y=now.getFullYear(),m=now.getMonth(),d=now.getDate(); let f,t,e; if(d<=15){f=new Date(y,m,1);t=new Date(y,m,16);e=new Date(y,m,15)}else{f=new Date(y,m,16);t=new Date(y,m+1,1);e=new Date(y,m+1,0)} return{from:f,to:t,title:'Период: '+fmt(f)+' — '+fmt(e)}}
   function workDate(c){try{return parseRuDate(c.outAt)||(c.doneAt?new Date(c.doneAt):null)||(c.updatedAt?new Date(c.updatedAt):null)}catch(e){return (c.doneAt?new Date(c.doneAt):null)||(c.updatedAt?new Date(c.updatedAt):null)}}
   function listCars(){const r=range(); return (window.cars||cars||[]).filter(c=>c.isAslanova).map(c=>({c,d:workDate(c)})).filter(x=>x.d&&x.d>=r.from&&x.d<r.to).sort((a,b)=>b.d-a.d).map(x=>x.c)}
   function countMap(list,fn){const m={}; list.forEach(c=>{const k=fn(c)||'Не указано'; m[k]=(m[k]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))}
@@ -4984,8 +5090,9 @@ document.addEventListener('focusin', (e)=>{
   function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#4fc7ea','#17b16b','#f4a427','#f0443a','#1f3358','#6b7280','#2a6f8a','#101e38']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; openAslanovaReport()};
+  window.setAslanovaAnchor=function(iso){aslAnchor=iso||todayKey(); openAslanovaReport()};
   window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} const page=document.querySelector('.asl-report-page'); if(page){printReportAsPdf(page.innerHTML,p.title);}else{alert('Не удалось сформировать PDF')}};
-  window.openAslanovaReport=function(){if(typeof isLimitedCrmUser==='function'&&isLimitedCrmUser())return;const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div><div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
+  window.openAslanovaReport=function(){if(typeof isLimitedCrmUser==='function'&&isLimitedCrmUser())return;const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap;align-items:center"><input type="date" value="${anchorKey()}" onchange="setAslanovaAnchor(this.value)" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px"><span class="small" style="margin:0">от этой даты</span>${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div><div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
 })();
 </script>
 
