@@ -1,8 +1,4 @@
-fastapi==0.115.6
-uvicorn==0.34.0
-python-multipart==0.0.20
-opencv-python-headless==4.10.0.84
-numpy==1.26.4
-pillow==11.1.0
-rapidocr
-onnxruntime
+aiogram>=3.30.0,<4
+anthropic>=0.57.0
+python-dotenv>=1.0.1
+Pillow>=10.4.0

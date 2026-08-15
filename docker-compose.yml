@@ -1,0 +1,6 @@
+services:
+  smm-bot:
+    build: .
+    container_name: pandora34-smm-bot
+    restart: unless-stopped
+    env_file: .env
