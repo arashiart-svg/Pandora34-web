@@ -121,8 +121,13 @@
     .pick-btn.empty{color:var(--muted);font-weight:500}
     .pick-btn:hover{background:rgba(79,199,234,.08)!important;border-color:rgba(79,199,234,.5)!important}
     .pick-btn .arrow{color:var(--muted);font-size:12px;flex-shrink:0}
-    .aslanova-date-btn{position:relative;overflow:hidden;min-height:48px}
-    .aslanova-date-btn input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
+    .aslanova-date-btn{position:relative;overflow:hidden;min-height:48px;cursor:pointer}
+    .aslanova-date-btn input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px;z-index:2}
+    #aslPayPop{position:fixed;inset:0;z-index:300;background:rgba(15,20,30,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+    .asl-pay-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;width:min(380px,100%);display:flex;flex-direction:column;gap:8px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+    .asl-pay-title{font-weight:800;font-size:17px;margin-bottom:6px;color:var(--text)}
+    .asl-pay-card button{width:100%;text-align:center}
+    .asl-pay-card input[type=number]{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:16px}
     .pick-btn b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .aslanova-btn{width:100%;border:0!important;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;background:var(--orange)!important;color:#fff!important;box-shadow:0 8px 20px rgba(244,164,39,.4)!important}
     .aslanova-btn:hover{filter:brightness(1.05)}
@@ -1591,7 +1596,7 @@ function renderReport(){
   if(grid) grid.innerHTML='';
 }
 
-function closeModal(){document.getElementById('modal').style.display='none'}
+function closeModal(){closeAslanovaPaidPop();document.getElementById('modal').style.display='none'}
 function val(id){let el=document.getElementById(id); return el ? el.value.trim() : ''}
 
 function comboHtml(id,label,placeholder,hint){
@@ -4858,7 +4863,101 @@ function aslanovaMasterButtons(inputId,cls){return ['Андрей','Алекса
 function aslanovaTodayInput(){const d=new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 function aslanovaDateLabel(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'.'+m[2]+'.'+m[1]:new Date().toLocaleDateString('ru-RU');}
 function syncAslanovaDateLabel(el){const lab=document.getElementById(el.id+'Label'); if(lab) lab.textContent=aslanovaDateLabel(el.value);}
-function aslanovaDateBtnHtml(id,iso){const v=iso||aslanovaTodayInput();return `<label class="pick-btn aslanova-date-btn"><b id="${id}Label">${aslanovaDateLabel(v)}</b><span class="arrow">▾</span><input id="${id}" type="date" value="${v}" onchange="syncAslanovaDateLabel(this)"></label>`;}
+function aslanovaDateBtnHtml(id,iso){const v=iso||aslanovaTodayInput();return `<label class="pick-btn aslanova-date-btn" onclick="openAslanovaDatePicker('${id}')"><b id="${id}Label">${aslanovaDateLabel(v)}</b><span class="arrow">▾</span><input id="${id}" type="date" value="${v}" onchange="syncAslanovaDateLabel(this)" onclick="openAslanovaDatePicker('${id}')"></label>`;}
+function openAslanovaDatePicker(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  try{
+    if(typeof el.showPicker==='function') el.showPicker();
+    else el.focus();
+  }catch(e){
+    el.focus();
+  }
+}
+function aslanovaPaidFieldsHtml(prefix, car){
+  const paid=!!(car&&car.paidByClient);
+  const kick=Number(car&&car.aslanovaKickback)||0;
+  const client=Number(car&&car.aslanovaClientPaid)||0;
+  const btnId=prefix+'Btn';
+  const label=paid?(kick>0?'Оплачено клиентом + откат':'Оплачено клиентом'):'Оплачено клиентом';
+  const hint=paid?(kick>0?'Откат сервису Асланова: '+kick.toLocaleString('ru-RU')+' ₽':'Клиент оплатил прошивку'):'';
+  return `<div class="wide"><label>Оплата</label>
+    <div class="quick-row"><button id="${btnId}" class="quick-btn ${paid?'selected':''}" type="button" onclick="toggleAslanovaPaid('${btnId}','${prefix}Paid','${prefix}Kick','${prefix}Client')">${label}</button></div>
+    <input id="${prefix}Paid" type="hidden" value="${paid?'1':'0'}">
+    <input id="${prefix}Kick" type="hidden" value="${kick}">
+    <input id="${prefix}Client" type="hidden" value="${client}">
+    <div id="${btnId}Hint" class="hint">${hint}</div>
+  </div>`;
+}
+function aslanovaFirmwarePrice(){return Number(val('aslanovaPrice')||val('aslanovaDonePrice')||0)||0}
+function closeAslanovaPaidPop(){const p=document.getElementById('aslPayPop'); if(p) p.remove();}
+function updateAslanovaPaidUi(btnId,paidId,kickId){
+  const on=val(paidId)==='1';
+  const kick=Number(val(kickId))||0;
+  const b=document.getElementById(btnId);
+  if(b){b.classList.toggle('selected',on); b.textContent=on?(kick>0?'Оплачено клиентом + откат':'Оплачено клиентом'):'Оплачено клиентом';}
+  const h=document.getElementById(btnId+'Hint');
+  if(h) h.textContent=on?(kick>0?'Откат сервису Асланова: '+kick.toLocaleString('ru-RU')+' ₽':'Клиент оплатил прошивку'):'';
+}
+function applyAslanovaPaid(btnId,paidId,kickId,clientId,kick,clientPaid){
+  const p=document.getElementById(paidId); if(p) p.value='1';
+  const k=document.getElementById(kickId); if(k) k.value=String(Math.max(0,Number(kick)||0));
+  const c=document.getElementById(clientId); if(c) c.value=String(Math.max(0,Number(clientPaid)||0));
+  updateAslanovaPaidUi(btnId,paidId,kickId);
+  closeAslanovaPaidPop();
+}
+function chooseAslanovaFirmwarePaid(btnId,paidId,kickId,clientId){
+  applyAslanovaPaid(btnId,paidId,kickId,clientId,0,aslanovaFirmwarePrice());
+}
+function showAslanovaKickback(btnId,paidId,kickId,clientId){
+  const firmware=aslanovaFirmwarePrice();
+  const card=document.querySelector('#aslPayPop .asl-pay-card');
+  if(!card) return;
+  if(firmware<=0){alert('Сначала укажи сумму прошивки');return;}
+  card.innerHTML=`<div class="asl-pay-title">Прошивка + откат</div>
+    <div class="small">Прошивка: ${firmware.toLocaleString('ru-RU')} ₽</div>
+    <label>Клиент заплатил</label>
+    <input id="aslKickPaid" type="number" value="${firmware}" min="${firmware}">
+    <div id="aslKickHint" class="hint">Откат сервису: 0 ₽</div>
+    <button class="quick-btn selected" type="button" onclick="confirmAslanovaKickback('${btnId}','${paidId}','${kickId}','${clientId}')">Готово</button>
+    <button class="quick-btn" type="button" onclick="openAslanovaPaidPop('${btnId}','${paidId}','${kickId}','${clientId}')">Назад</button>`;
+  const inp=document.getElementById('aslKickPaid');
+  const hint=document.getElementById('aslKickHint');
+  const recalc=()=>{const paid=Number(inp.value)||0; const kick=Math.max(0,paid-firmware); hint.textContent='Откат сервису: '+kick.toLocaleString('ru-RU')+' ₽';};
+  inp.addEventListener('input',recalc);
+  inp.focus(); inp.select();
+}
+function confirmAslanovaKickback(btnId,paidId,kickId,clientId){
+  const firmware=aslanovaFirmwarePrice();
+  const paid=Number(document.getElementById('aslKickPaid')?.value)||0;
+  if(paid<firmware){alert('Клиент заплатил меньше суммы прошивки');return;}
+  applyAslanovaPaid(btnId,paidId,kickId,clientId,paid-firmware,paid);
+}
+function openAslanovaPaidPop(btnId,paidId,kickId,clientId){
+  closeAslanovaPaidPop();
+  const pop=document.createElement('div');
+  pop.id='aslPayPop';
+  pop.innerHTML=`<div class="asl-pay-card" onclick="event.stopPropagation()">
+    <div class="asl-pay-title">Оплата клиентом</div>
+    <button class="quick-btn" type="button" onclick="chooseAslanovaFirmwarePaid('${btnId}','${paidId}','${kickId}','${clientId}')">Оплачена прошивка</button>
+    <button class="quick-btn" type="button" onclick="showAslanovaKickback('${btnId}','${paidId}','${kickId}','${clientId}')">Оплачена прошивка + откат</button>
+    <button class="quick-btn" type="button" onclick="closeAslanovaPaidPop()">Отмена</button>
+  </div>`;
+  pop.addEventListener('click',closeAslanovaPaidPop);
+  document.body.appendChild(pop);
+}
+function toggleAslanovaPaid(btnId,paidId,kickId,clientId){
+  const inp=document.getElementById(paidId);
+  if(!inp) return;
+  if(inp.value==='1'){
+    inp.value='0';
+    const k=document.getElementById(kickId); if(k) k.value='0';
+    const c=document.getElementById(clientId); if(c) c.value='0';
+    updateAslanovaPaidUi(btnId,paidId,kickId);
+    return;
+  }
+  openAslanovaPaidPop(btnId,paidId,kickId,clientId);
+}
 function aslanovaStampsFromInput(iso){
   const now=new Date();
   const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -4908,7 +5007,7 @@ function openAslanovaStep(){normalizeAslanovaSettings();document.getElementById(
   <div class="modal-body"><div class="form">
   <div class="wide"><label>Сумма</label><input id="aslanovaPrice" type="number" value="${aslanovaSettings.prices[0]||1300}" placeholder="1300"></div>
   <div class="wide"><div class="quick-row">${aslanovaPriceButtons('aslanovaPrice')}</div></div>
-  <div class="wide"><label>Оплата</label><div class="quick-row"><button id="aslPaidByClient" class="quick-btn" type="button" onclick="toggleAslanovaPaid('aslPaidByClient','aslanovaPaidByClient')">Оплачено клиентом</button></div><input id="aslanovaPaidByClient" type="hidden" value="0"></div>
+  ${aslanovaPaidFieldsHtml('aslanova')}
   <div class="wide"><label>Тип</label><div class="quick-row"><button id="aslTypeLocal" class="quick-btn" type="button" onclick="pickAslanovaType('local')">Прошито лично</button><button id="aslTypeRemote" class="quick-btn" type="button" onclick="pickAslanovaType('remote')">Удалённо</button></div><input id="aslanovaType" type="hidden" value="${aslanovaSettings.defaultType}"></div>
   <div class="wide"><label>Кто делал работу</label><div class="quick-row">${aslanovaMasterButtons('aslanovaMaster','aslanova-master')}</div><input id="aslanovaMaster" type="hidden" value="${aslanovaSettings.defaultMaster}"></div>
   <div class="wide"><label>Дата работы</label>${aslanovaDateBtnHtml('aslanovaWorkDate',aslanovaTodayInput())}</div>
@@ -4917,23 +5016,22 @@ function openAslanovaStep(){normalizeAslanovaSettings();document.getElementById(
     <div class="modal-foot-row"><button onclick="openAutoStep()">Назад</button><button onclick="closeModal()">Отмена</button></div>
     <button class="neon" onclick="addAslanovaCar()">Добавить</button>
   </div>`;document.getElementById('modal').style.display='flex';pickAslanovaType(aslanovaSettings.defaultType);pickMaster('aslanovaMaster','aslanova-master',aslanovaSettings.defaultMaster);}
-function toggleAslanovaPaid(btnId,inputId){const inp=document.getElementById(inputId); if(!inp)return; const on=inp.value!=='1'; inp.value=on?'1':'0'; const b=document.getElementById(btnId); if(b)b.classList.toggle('selected',on);}
 function pickAslanovaType(t){document.getElementById('aslanovaType').value=t;const l=document.getElementById('aslTypeLocal'),r=document.getElementById('aslTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
-function addAslanovaCar(){const price=val('aslanovaPrice')||'0';const master=val('aslanovaMaster')||'Андрей';const typ=val('aslanovaType')||'local';const t=aslanovaStampsFromInput(val('aslanovaWorkDate'));const c={id:Date.now(),number:draftCar.number||'БЕЗ НОМЕРА',brand:draftCar.brand||'Марка не указана',model:draftCar.model||'',ownerPhone:draftCar.ownerPhone||'',ownerName:draftCar.ownerName||'',counterparty:'Асланова',work:'Прошивка',agreedPrice:price,comment:'Асланова · '+aslanovaTypeLabel(typ),priority:'none',inAt:t.stamp,outAt:t.stamp,price:price,status:'done',isAslanova:true,aslanovaType:typ,aslanovaAmount:price,paidByClient:(val('aslanovaPaidByClient')==='1'),master:master,moneyMaster:'Андрей',statusChangedAt:t.iso,doneAt:t.iso,updatedAt:t.iso};cars.unshift(c);save();closeModal();setTab('done');}
+function addAslanovaCar(){const price=val('aslanovaPrice')||'0';const master=val('aslanovaMaster')||'Андрей';const typ=val('aslanovaType')||'local';const t=aslanovaStampsFromInput(val('aslanovaWorkDate'));const paid=val('aslanovaPaid')==='1';const kick=paid?(Number(val('aslanovaKick'))||0):0;const clientPaid=paid?(Number(val('aslanovaClient'))||Number(price)||0):0;const c={id:Date.now(),number:draftCar.number||'БЕЗ НОМЕРА',brand:draftCar.brand||'Марка не указана',model:draftCar.model||'',ownerPhone:draftCar.ownerPhone||'',ownerName:draftCar.ownerName||'',counterparty:'Асланова',work:'Прошивка',agreedPrice:price,comment:'Асланова · '+aslanovaTypeLabel(typ),priority:'none',inAt:t.stamp,outAt:t.stamp,price:price,status:'done',isAslanova:true,aslanovaType:typ,aslanovaAmount:price,paidByClient:paid,aslanovaKickback:kick,aslanovaClientPaid:clientPaid,master:master,moneyMaster:'Андрей',statusChangedAt:t.iso,doneAt:t.iso,updatedAt:t.iso};cars.unshift(c);save();closeModal();setTab('done');}
 const aslanovaOldOpenCar=openCar;
 openCar=function(id){const c=cars.find(x=>x.id===id);if(c&&c.isAslanova&&c.status==='work')return openAslanovaDone(id);return aslanovaOldOpenCar(id);};
 function openAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;document.getElementById('modalBox').className='box compact';document.getElementById('modalBox').innerHTML=`
   <h2>Выдать Асланова</h2><div class="small">${escapeHtml(c.number)} · ${escapeHtml([c.brand,c.model].filter(Boolean).join(' '))}</div><div class="form" style="margin-top:14px">
   <div class="wide"><label>Сумма</label><input id="aslanovaDonePrice" type="number" value="${escapeHtml(c.aslanovaAmount||c.agreedPrice||'')}"></div>
   <div class="wide"><div class="quick-row">${aslanovaPriceButtons('aslanovaDonePrice')}</div></div>
-  <div class="wide"><label>Оплата</label><div class="quick-row"><button id="aslDonePaidByClient" class="quick-btn ${c.paidByClient?'selected':''}" type="button" onclick="toggleAslanovaPaid('aslDonePaidByClient','aslanovaDonePaidByClient')">Оплачено клиентом</button></div><input id="aslanovaDonePaidByClient" type="hidden" value="${c.paidByClient?'1':'0'}"></div>
+  ${aslanovaPaidFieldsHtml('aslanovaDone',c)}
   <div class="wide"><label>Тип</label><div class="quick-row"><button id="aslDoneTypeLocal" class="quick-btn" type="button" onclick="pickAslanovaDoneType('local')">Прошито лично</button><button id="aslDoneTypeRemote" class="quick-btn" type="button" onclick="pickAslanovaDoneType('remote')">Удалённо</button></div><input id="aslanovaDoneType" type="hidden" value="${c.aslanovaType||'local'}"></div>
   <div class="wide"><label>Кто делал</label><div class="quick-row">${aslanovaMasterButtons('aslanovaDoneMaster','aslanova-done-master')}</div><input id="aslanovaDoneMaster" type="hidden" value="${escapeHtml(c.master||aslanovaSettings.defaultMaster||'Андрей')}"></div>
   <div class="wide"><label>Дата работы</label>${aslanovaDateBtnHtml('aslanovaDoneDate',aslanovaTodayInput())}</div>
   <div class="wide"><label>Кто взял деньги</label><input value="Андрей" readonly></div></div>
   <div class="actions"><button onclick="aslanovaOldOpenCar(${id})">Обычная выдача</button><button onclick="finishAslanovaDone(${id})">Подтвердить выдачу</button></div>`;document.getElementById('modal').style.display='flex';pickAslanovaDoneType(c.aslanovaType||'local');pickMaster('aslanovaDoneMaster','aslanova-done-master',c.master||aslanovaSettings.defaultMaster||'Андрей');}
 function pickAslanovaDoneType(t){document.getElementById('aslanovaDoneType').value=t;const l=document.getElementById('aslDoneTypeLocal'),r=document.getElementById('aslDoneTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
-function finishAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;const t=aslanovaStampsFromInput(val('aslanovaDoneDate'));c.work='Прошивка';c.counterparty='Асланова';c.isAslanova=true;c.aslanovaType=val('aslanovaDoneType')||c.aslanovaType||'local';c.aslanovaAmount=val('aslanovaDonePrice')||c.aslanovaAmount||c.agreedPrice||'0';c.paidByClient=(val('aslanovaDonePaidByClient')==='1');c.master=val('aslanovaDoneMaster')||c.master||'Андрей';c.moneyMaster='Андрей';c.price=c.aslanovaAmount;c.inAt=t.stamp;c.outAt=t.stamp;c.status='done';c.statusChangedAt=t.iso;c.doneAt=t.iso;c.updatedAt=t.iso;save();closeModal();setTab('done');}
+function finishAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;const t=aslanovaStampsFromInput(val('aslanovaDoneDate'));const paid=val('aslanovaDonePaid')==='1';c.work='Прошивка';c.counterparty='Асланова';c.isAslanova=true;c.aslanovaType=val('aslanovaDoneType')||c.aslanovaType||'local';c.aslanovaAmount=val('aslanovaDonePrice')||c.aslanovaAmount||c.agreedPrice||'0';c.paidByClient=paid;c.aslanovaKickback=paid?(Number(val('aslanovaDoneKick'))||0):0;c.aslanovaClientPaid=paid?(Number(val('aslanovaDoneClient'))||Number(c.aslanovaAmount)||0):0;c.master=val('aslanovaDoneMaster')||c.master||'Андрей';c.moneyMaster='Андрей';c.price=c.aslanovaAmount;c.inAt=t.stamp;c.outAt=t.stamp;c.status='done';c.statusChangedAt=t.iso;c.doneAt=t.iso;c.updatedAt=t.iso;save();closeModal();setTab('done');}
 const aslanovaOldCalcSalaryRows=calcSalaryRows;
 calcSalaryRows=function(done){const normal=done.filter(c=>!c.isAslanova);const rows=aslanovaOldCalcSalaryRows(normal);const ensure=(name)=>{if(!rows[name])rows[name]={count:0,workSum:0,base:0,linkedIn:0,linkedOut:0,collected:0,details:[]};return rows[name];};done.filter(c=>c.isAslanova).forEach(c=>{const price=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;if(price<=0)return;const orderNo=c.number||'БЕЗ НОМЕРА';const carTitle=[c.brand,c.model].filter(Boolean).join(' ')||'Авто без марки';const workTitle='Прошивка ('+aslanovaTypeLabel(c.aslanovaType)+')';const counterparty='Асланова';const master=String(c.master||'Андрей').trim()||'Андрей';if(isOwnerMaster(master)){const r=ensure(OWNER_MASTER);r.count++;r.workSum+=price;r.base+=price;r.collected+=price;r.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:100,amount:price,taken:price,text:'Асланова · работа владельца'});}else{const pct=masterPercent(master);const amount=Math.round(price*pct/100);const m=ensure(master);m.count++;m.workSum+=price;m.base+=amount;m.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:pct,amount,taken:0,text:`Асланова · ${price.toLocaleString('ru-RU')} ₽ × ${pct}%`});const o=ensure(OWNER_MASTER);o.count++;o.workSum+=price;o.base+=Math.max(0,price-amount);o.collected+=price;o.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:Math.max(0,price-amount),taken:price,text:'Асланова · деньги получил Андрей'});}});return rows;};
 const aslanovaOldRenderReport=renderReport;
@@ -5050,6 +5148,7 @@ document.addEventListener('focusin', (e)=>{
     try{history.pushState({p34:1},'',location.href);}catch(e){}
   }
   window.appHandleBack=function(){
+    if(document.getElementById('aslPayPop')){ closeAslanovaPaidPop(); return true; }
     const scan=document.getElementById('liveScan');
     if(scan&&scan.classList.contains('show')){ closeLiveScan(); return true; }
     if(document.body.classList.contains('nav-open')){ closeNav(); return true; }
@@ -5087,13 +5186,15 @@ document.addEventListener('focusin', (e)=>{
   function workDate(c){try{return parseRuDate(c.outAt)||(c.doneAt?new Date(c.doneAt):null)||(c.updatedAt?new Date(c.updatedAt):null)}catch(e){return (c.doneAt?new Date(c.doneAt):null)||(c.updatedAt?new Date(c.updatedAt):null)}}
   function listCars(){const r=range(); return (window.cars||cars||[]).filter(c=>c.isAslanova).map(c=>({c,d:workDate(c)})).filter(x=>x.d&&x.d>=r.from&&x.d<r.to).sort((a,b)=>b.d-a.d).map(x=>x.c)}
   function countMap(list,fn){const m={}; list.forEach(c=>{const k=fn(c)||'Не указано'; m[k]=(m[k]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))}
-  function payload(){const r=range(),list=listCars(); const total=list.reduce((s,c)=>s+(c.paidByClient?0:price(c)),0); return{reportType:'aslanova',title:'Отчёт Асланова',period:r.title,createdAt:new Date().toLocaleString('ru-RU'),count:list.length,total:Math.round(total),localCount:list.filter(c=>c.aslanovaType!=='remote').length,remoteCount:list.filter(c=>c.aslanovaType==='remote').length,byBrand:countMap(list,c=>[c.brand,c.model].filter(Boolean).join(' ')||c.brand||'Не указано'),byPrice:countMap(list,c=>money(price(c))),rows:list.map((c,i)=>({n:i+1,number:c.number||'БЕЗ НОМЕРА',brand:[c.brand,c.model].filter(Boolean).join(' '),work:'Прошивка · '+aslanovaTypeLabel(c.aslanovaType),master:c.master||'',price:price(c),paidByClient:!!c.paidByClient,outAt:workDate(c)?short(workDate(c)):'',aslanovaType:aslanovaTypeLabel(c.aslanovaType)}))}}
+  function kick(c){return Math.max(0, Number(c.aslanovaKickback)||0)}
+  function lineSum(c){return c.paidByClient ? -kick(c) : price(c)}
+  function payload(){const r=range(),list=listCars(); const total=list.reduce((s,c)=>s+lineSum(c),0); return{reportType:'aslanova',title:'Отчёт Асланова',period:r.title,createdAt:new Date().toLocaleString('ru-RU'),count:list.length,total:Math.round(total),localCount:list.filter(c=>c.aslanovaType!=='remote').length,remoteCount:list.filter(c=>c.aslanovaType==='remote').length,byBrand:countMap(list,c=>[c.brand,c.model].filter(Boolean).join(' ')||c.brand||'Не указано'),byPrice:countMap(list,c=>money(price(c))),rows:list.map((c,i)=>({n:i+1,number:c.number||'БЕЗ НОМЕРА',brand:[c.brand,c.model].filter(Boolean).join(' '),work:'Прошивка · '+aslanovaTypeLabel(c.aslanovaType),master:c.master||'',price:price(c),paidByClient:!!c.paidByClient,kickback:kick(c),outAt:workDate(c)?short(workDate(c)):'',aslanovaType:aslanovaTypeLabel(c.aslanovaType)}))}}
   function analysis(title,items){items=(items||[]).filter(x=>Number(x.count)>0); const total=items.reduce((s,x)=>s+Number(x.count||0),0); const colors=['#4fc7ea','#17b16b','#f4a427','#f0443a','#1f3358','#6b7280','#2a6f8a','#101e38']; let start=0; const segs=items.map((x,i)=>{const v=total?Number(x.count)/total*100:0,end=start+v,part=`${colors[i%colors.length]} ${start}% ${end}%`; start=end; return part}).join(',')||'#cbd5e1 0 100%'; const leg=items.slice(0,8).map((x,i)=>`<div class="asl-legend-row"><span class="asl-dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.name)}</span><b>${x.count}</b></div>`).join('')||'<div class="asl-legend-row">Нет данных</div>'; return `<div class="asl-analysis-card"><div class="asl-analysis-title">${esc(title)}</div><div class="asl-analysis-body"><div class="asl-pie" style="background:conic-gradient(${segs})"></div><div>${leg}</div></div></div>`}
   window.aslanovaReportPayload=payload;
   window.setAslanovaPeriod=function(m){mode=m; if(m==='range') ensureRangeDefaults(); openAslanovaReport()};
   window.setAslanovaRange=function(a,b){mode='range'; aslFrom=a||aslFrom; aslTo=b||aslTo; if(aslFrom&&aslTo&&aslFrom>aslTo){const t=aslFrom; aslFrom=aslTo; aslTo=t} openAslanovaReport()};
   window.saveAslanovaReport=function(){const p=payload(); if(window.AndroidPdf&&AndroidPdf.saveReport){AndroidPdf.saveReport(JSON.stringify(p));return} const page=document.querySelector('.asl-report-page'); if(page){printReportAsPdf(page.innerHTML,p.title);}else{alert('Не удалось сформировать PDF')}};
-  window.openAslanovaReport=function(){if(typeof isLimitedCrmUser==='function'&&isLimitedCrmUser())return;const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const dateSt='padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px'; const extra=mode==='range'?`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px"><span class="small" style="margin:0">с</span><input type="date" value="${aslFrom}" onchange="setAslanovaRange(this.value,'${aslTo}')" style="${dateSt}"><span class="small" style="margin:0">по</span><input type="date" value="${aslTo}" onchange="setAslanovaRange('${aslFrom}',this.value)" style="${dateSt}"></div>`:''; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price">${money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}${btn('range','Диапазон')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div>${extra}<div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
+  window.openAslanovaReport=function(){if(typeof isLimitedCrmUser==='function'&&isLimitedCrmUser())return;const p=payload(); const btn=(m,t)=>`<button class="${mode===m?'active':''}" onclick="setAslanovaPeriod('${m}')">${t}</button>`; const dateSt='padding:10px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);font-size:15px'; const extra=mode==='range'?`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px"><span class="small" style="margin:0">с</span><input type="date" value="${aslFrom}" onchange="setAslanovaRange(this.value,'${aslTo}')" style="${dateSt}"><span class="small" style="margin:0">по</span><input type="date" value="${aslTo}" onchange="setAslanovaRange('${aslFrom}',this.value)" style="${dateSt}"></div>`:''; const rows=p.rows.map(r=>`<div class="asl-row"><div class="asl-row-main"><b>${r.n}. ${esc(r.number)} · ${esc(r.brand||'Авто')}</b><div class="asl-row-sub">Делал: ${esc(r.master||'Не указан')}</div><div class="asl-row-sub">${esc(r.work)}</div>${r.paidByClient?'<div class="asl-row-paid">ОПЛАЧЕНО КЛИЕНТОМ'+(r.kickback>0?'<br>−'+money(r.kickback):'')+'</div>':''}</div><div class="asl-row-side">${esc(r.outAt)}<span class="asl-row-price"${r.paidByClient&&r.kickback>0?' style="color:#dc2626"':''}>${r.paidByClient?(r.kickback>0?'−'+money(r.kickback):'0 ₽'):money(r.price)}</span></div></div>`).join('')||'<div class="asl-row"><div>За выбранный период машин Аслановой нет</div></div>'; document.getElementById('modalBox').className='box'; document.getElementById('modalBox').innerHTML=`<div class="report-controls" style="margin:0 0 14px;gap:8px;display:flex;flex-wrap:wrap">${btn('day','День')}${btn('week','Неделя')}${btn('half','Полмесяца')}${btn('month','Месяц')}${btn('year','Год')}${btn('range','Диапазон')}<button class="report-print" onclick="saveAslanovaReport()">Сохранить PDF</button></div>${extra}<div class="asl-report-page"><div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div><h1 class="asl-report-title">Отчёт Асланова</h1><div class="asl-report-created">Создано: ${esc(p.createdAt)}</div><div class="asl-summary"><div class="asl-summary-card"><div class="asl-summary-label">Прошито авто</div><div class="asl-summary-num">${p.count}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div><div class="asl-summary-card"><div class="asl-summary-label">Лично / удалённо</div><div class="asl-summary-num">${p.localCount} / ${p.remoteCount}</div></div></div><div class="asl-section-title">Список авто</div><div class="asl-rows">${rows}</div><div class="asl-analysis-grid">${analysis('Анализ марок авто',p.byBrand)}${analysis('Анализ сумм прошивок',p.byPrice)}</div></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`; document.getElementById('modal').style.display='flex'};
 })();
 </script>
 
