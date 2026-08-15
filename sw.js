@@ -1,4 +1,4 @@
-const CACHE = "p34-pwa-v8";
+const CACHE = "p34-pwa-v9";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
