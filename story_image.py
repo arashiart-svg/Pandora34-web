@@ -55,7 +55,7 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[st
             current = word
     if current:
         lines.append(current)
-    return lines[:4]
+    return lines[:7]
 
 
 def _cover(photo: Image.Image) -> Image.Image:
@@ -81,7 +81,7 @@ def _load_logo(size: int) -> Image.Image:
 def _bottom_fade() -> Image.Image:
     layer = Image.new("RGBA", (STORY_W, STORY_H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
-    start = int(STORY_H * 0.62)
+    start = int(STORY_H * 0.52)
     span = STORY_H - start
     for y in range(start, STORY_H):
         t = (y - start) / max(1, span)
@@ -111,18 +111,26 @@ def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> byt
     canvas.paste(shadow, (lx - 16, ly - 8), shadow)
     canvas.paste(logo, (lx, ly), logo)
 
-    handle_font = _ttf(_DISPLAY_FONTS, 42)
-    sub_font = _ttf(_UI_FONTS, 28)
-    tx = lx + logo_size + 16
-    ty = ly + 88
-    _stroke_text(draw, (tx, ty), HANDLE, handle_font, (*CYAN, 255), 2)
-    draw.text((tx, ty + 56), "АВТОСЕРВИС", font=sub_font, fill=(255, 255, 255, 230))
+    handle_font = _ttf(_DISPLAY_FONTS, 40)
+    sub_font = _ttf(_UI_FONTS, 26)
+    tx = lx + logo_size + 20
+    ty = ly + 78
+    handle_w = draw.textlength(HANDLE, font=handle_font)
+    sub_w = draw.textlength("АВТОСЕРВИС", font=sub_font)
+    pill_w = int(max(handle_w, sub_w) + 48)
+    pill_h = 148
+    pill = Image.new("RGBA", (pill_w, pill_h), (0, 0, 0, 0))
+    ImageDraw.Draw(pill).rounded_rectangle((0, 0, pill_w - 1, pill_h - 1), radius=28, fill=(0, 0, 0, 225))
+    canvas.paste(pill, (tx - 22, ty - 28), pill)
+    draw = ImageDraw.Draw(canvas)
+    draw.text((tx, ty), HANDLE, font=handle_font, fill=(*CYAN, 255))
+    draw.text((tx, ty + 58), "АВТОСЕРВИС", font=sub_font, fill=(*WHITE, 255))
 
     body = (text or "").strip() or "Pandora34"
-    body_font = _ttf(_DISPLAY_FONTS, 54)
+    body_font = _ttf(_DISPLAY_FONTS, 46)
     lines = _wrap(draw, body, body_font, STORY_W - 96)
-    line_h = 68
-    y = STORY_H - 100 - len(lines) * line_h
+    line_h = 60
+    y = STORY_H - 88 - len(lines) * line_h
     draw.rectangle((40, y - 22, 40 + 88, y - 14), fill=(*CYAN, 255))
     for line in lines:
         _stroke_text(draw, (40, y), line, body_font, (*WHITE, 255), 3)
