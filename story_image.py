@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 STORY_W = 1080
 STORY_H = 1920
 HANDLE = "@PANDORA34RU"
+SUBTITLE = "Фирменный установочный центр"
 CYAN = (45, 156, 245)
 NEON = (0, 186, 255)
 SOFT = (45, 156, 245)
@@ -131,19 +132,25 @@ def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> byt
     canvas.paste(logo, (lx, ly), logo)
 
     handle_font = _ttf(_DISPLAY_FONTS, 40)
-    sub_font = _ttf(_UI_FONTS, 26)
+    sub_font = _ttf(_UI_FONTS, 22)
     tx = lx + logo_size + 20
-    ty = ly + 78
+    ty = ly + 70
+    max_sub_w = STORY_W - tx - 40
+    sub_lines = _wrap(draw, SUBTITLE, sub_font, max_sub_w, 2) or [SUBTITLE]
     handle_w = draw.textlength(HANDLE, font=handle_font)
-    sub_w = draw.textlength("АВТОСЕРВИС", font=sub_font)
-    pill_w = int(max(handle_w, sub_w) + 48)
-    pill_h = 148
+    sub_w = max(draw.textlength(line, font=sub_font) for line in sub_lines)
+    pill_w = int(min(STORY_W - (tx - 22) - 16, max(handle_w, sub_w) + 48))
+    sub_h = 28
+    pill_h = 52 + len(sub_lines) * sub_h + 36
     pill = Image.new("RGBA", (pill_w, pill_h), (0, 0, 0, 0))
     ImageDraw.Draw(pill).rounded_rectangle((0, 0, pill_w - 1, pill_h - 1), radius=28, fill=(0, 0, 0, 225))
     canvas.paste(pill, (tx - 22, ty - 28), pill)
     draw = ImageDraw.Draw(canvas)
     draw.text((tx, ty), HANDLE, font=handle_font, fill=(*CYAN, 255))
-    draw.text((tx, ty + 58), "АВТОСЕРВИС", font=sub_font, fill=(*WHITE, 255))
+    sy = ty + 52
+    for line in sub_lines:
+        draw.text((tx, sy), line, font=sub_font, fill=(*WHITE, 255))
+        sy += sub_h
 
     lines, body_font = _fit_caption(draw, text)
     size = getattr(body_font, "size", 50) or 50
