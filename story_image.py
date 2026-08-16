@@ -66,31 +66,20 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int, max_lines:
     return lines
 
 
-def _first_sentence(text: str) -> str:
-    raw = " ".join(text.replace("\n", " ").split())
-    for sep in (". ", "! ", "? ", " — ", " – "):
-        if sep in raw:
-            head = raw.split(sep, 1)[0].strip(" —–")
-            if len(head) >= 12:
-                return head + ("." if sep.startswith(".") else "")
-    return raw
-
-
 def _fit_caption(draw: ImageDraw.ImageDraw, text: str) -> tuple[list[str], ImageFont.FreeTypeFont | ImageFont.ImageFont]:
-    max_w = STORY_W - 200
+    max_w = STORY_W - 180
     body = " ".join((text or "").split()) or "Pandora34"
-    candidates = [body]
-    short = _first_sentence(body)
-    if short != body:
-        candidates.append(short)
-    for size in (56, 50, 46, 42):
-        font = _ttf(_DISPLAY_FONTS, size)
-        for candidate in candidates:
-            lines = _wrap(draw, candidate, font, max_w, 2)
+    for max_lines in (2, 3):
+        for size in (50, 46, 42, 38, 34, 30):
+            font = _ttf(_DISPLAY_FONTS, size)
+            lines = _wrap(draw, body, font, max_w, max_lines)
             if lines:
                 return lines, font
-    font = _ttf(_DISPLAY_FONTS, 42)
-    return _wrap(draw, short, font, max_w, 2) or [short[:28]], font
+    font = _ttf(_DISPLAY_FONTS, 28)
+    lines = _wrap(draw, body, font, max_w, 4)
+    if lines:
+        return lines, font
+    return [body], font
 
 
 def _cover(photo: Image.Image) -> Image.Image:
