@@ -41,8 +41,10 @@ def _ttf(paths, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[str]:
+def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int, max_lines: int) -> list[str] | None:
     words = text.replace("\n", " ").split()
+    if not words:
+        return []
     lines: list[str] = []
     current = ""
     for word in words:
@@ -53,9 +55,40 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[st
             if current:
                 lines.append(current)
             current = word
+            if draw.textlength(current, font=font) > max_width:
+                return None
     if current:
         lines.append(current)
-    return lines[:3]
+    if len(lines) > max_lines:
+        return None
+    return lines
+
+
+def _first_sentence(text: str) -> str:
+    raw = " ".join(text.replace("\n", " ").split())
+    for sep in (". ", "! ", "? ", " — ", " – "):
+        if sep in raw:
+            head = raw.split(sep, 1)[0].strip(" —–")
+            if len(head) >= 12:
+                return head + ("." if sep.startswith(".") else "")
+    return raw
+
+
+def _fit_caption(draw: ImageDraw.ImageDraw, text: str) -> tuple[list[str], ImageFont.FreeTypeFont | ImageFont.ImageFont]:
+    max_w = STORY_W - 80
+    body = " ".join((text or "").split()) or "Pandora34"
+    candidates = [body]
+    short = _first_sentence(body)
+    if short != body:
+        candidates.append(short)
+    for size in (56, 50, 46, 42):
+        font = _ttf(_DISPLAY_FONTS, size)
+        for candidate in candidates:
+            lines = _wrap(draw, candidate, font, max_w, 2)
+            if lines:
+                return lines, font
+    font = _ttf(_DISPLAY_FONTS, 42)
+    return _wrap(draw, short, font, max_w, 2) or [short[:28]], font
 
 
 def _cover(photo: Image.Image) -> Image.Image:
@@ -126,11 +159,9 @@ def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> byt
     draw.text((tx, ty), HANDLE, font=handle_font, fill=(*CYAN, 255))
     draw.text((tx, ty + 58), "АВТОСЕРВИС", font=sub_font, fill=(*WHITE, 255))
 
-    body = (text or "").strip() or "Pandora34"
-    body_font = _ttf(_DISPLAY_FONTS, 52)
-    lines = _wrap(draw, body, body_font, STORY_W - 80)
-    line_h = 66
-    y = STORY_H - 96 - len(lines) * line_h
+    lines, body_font = _fit_caption(draw, text)
+    line_h = int(body_font.size * 1.28) if getattr(body_font, "size", None) else 66
+    y = STORY_H - 88 - len(lines) * line_h
     draw.rectangle((40, y - 22, 40 + 88, y - 14), fill=(*CYAN, 255))
     for line in lines:
         _stroke_text(draw, (40, y), line, body_font, (*WHITE, 255), 3)
