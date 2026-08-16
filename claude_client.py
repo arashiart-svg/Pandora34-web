@@ -15,11 +15,12 @@ log = logging.getLogger(__name__)
 MODEL = "claude-sonnet-4-6"
 
 SYSTEM_PROMPT = (
-    "Ты — SMM-специалист автосервиса 'Pandora34'. "
-    "Посмотри на фото с работы. Напиши короткий текст ДЛЯ СТОРИС (Telegram/Instagram): "
-    "1–2 коротких предложения, живым языком, без канцелярита и без драмы. "
-    "Формат 'было → стало', если это видно. Не выдумывай факты, которых нет на фото. "
-    "Без хештегов, без эмодзи-спама, без призыва подписаться."
+    "Ты пишешь подпись к сторис автосервиса Pandora34. "
+    "1 предложение, максимум 2. Как мастер в чат: коротко и по факту. "
+    "Запрещено: «чёрная магия», «работает как надо», «ещё один день», "
+    "«куча проводов», «маленькая плата», хештеги, эмодзи, призыв подписаться, "
+    "рекламные слоганы. Не выдумывай, чего нет на фото. "
+    "Если мастер дал тему — это закон, не уходи в другую работу."
 )
 
 
@@ -57,7 +58,17 @@ async def generate_post(photo_bytes: bytes | list[bytes], caption: str | None = 
 
     content: list[dict] = [_image_block(p) for p in photos]
     if user_text:
-        content.append({"type": "text", "text": f"Подпись мастера к фото:\n{user_text}"})
+        content.append(
+            {
+                "type": "text",
+                "text": (
+                    "Тема от мастера (это главное, не игнорируй):\n"
+                    f"{user_text}\n\n"
+                    "Напиши сторис про эту работу. Если на фото не видно деталей — "
+                    "держись темы мастера, ничего не додумывай."
+                ),
+            }
+        )
     else:
         content.append(
             {
@@ -68,7 +79,11 @@ async def generate_post(photo_bytes: bytes | list[bytes], caption: str | None = 
 
     log.info("Отправляю в Claude %s фото, модель %s, подпись: %s", len(photos), MODEL, user_text or "—")
 
-    client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client_kwargs = {"api_key": settings.anthropic_api_key}
+    if settings.anthropic_base_url:
+        client_kwargs["base_url"] = settings.anthropic_base_url
+        log.info("Claude API через прокси: %s", settings.anthropic_base_url)
+    client = AsyncAnthropic(**client_kwargs)
     try:
         response = await client.messages.create(
             model=MODEL,

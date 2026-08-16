@@ -10,5 +10,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py config.py access.py handlers.py claude_client.py story_image.py ./
+COPY assets ./assets
 
 CMD ["python", "main.py"]
