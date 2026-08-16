@@ -55,7 +55,7 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[st
             current = word
     if current:
         lines.append(current)
-    return lines[:7]
+    return lines[:3]
 
 
 def _cover(photo: Image.Image) -> Image.Image:
@@ -81,7 +81,7 @@ def _load_logo(size: int) -> Image.Image:
 def _bottom_fade() -> Image.Image:
     layer = Image.new("RGBA", (STORY_W, STORY_H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
-    start = int(STORY_H * 0.52)
+    start = int(STORY_H * 0.68)
     span = STORY_H - start
     for y in range(start, STORY_H):
         t = (y - start) / max(1, span)
@@ -127,10 +127,10 @@ def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> byt
     draw.text((tx, ty + 58), "АВТОСЕРВИС", font=sub_font, fill=(*WHITE, 255))
 
     body = (text or "").strip() or "Pandora34"
-    body_font = _ttf(_DISPLAY_FONTS, 46)
-    lines = _wrap(draw, body, body_font, STORY_W - 96)
-    line_h = 60
-    y = STORY_H - 88 - len(lines) * line_h
+    body_font = _ttf(_DISPLAY_FONTS, 52)
+    lines = _wrap(draw, body, body_font, STORY_W - 80)
+    line_h = 66
+    y = STORY_H - 96 - len(lines) * line_h
     draw.rectangle((40, y - 22, 40 + 88, y - 14), fill=(*CYAN, 255))
     for line in lines:
         _stroke_text(draw, (40, y), line, body_font, (*WHITE, 255), 3)
