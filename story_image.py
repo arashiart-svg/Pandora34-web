@@ -11,6 +11,8 @@ STORY_W = 1080
 STORY_H = 1920
 HANDLE = "@PANDORA34RU"
 CYAN = (45, 156, 245)
+NEON = (0, 186, 255)
+SOFT = (45, 156, 245)
 WHITE = (255, 255, 255)
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
@@ -75,7 +77,7 @@ def _first_sentence(text: str) -> str:
 
 
 def _fit_caption(draw: ImageDraw.ImageDraw, text: str) -> tuple[list[str], ImageFont.FreeTypeFont | ImageFont.ImageFont]:
-    max_w = STORY_W - 80
+    max_w = STORY_W - 200
     body = " ".join((text or "").split()) or "Pandora34"
     candidates = [body]
     short = _first_sentence(body)
@@ -122,11 +124,6 @@ def _bottom_fade() -> Image.Image:
     return layer
 
 
-def _stroke_text(draw, xy, text, font, fill, stroke):
-    x, y = xy
-    draw.text((x, y), text, font=font, fill=fill, stroke_width=stroke, stroke_fill=(0, 0, 0, 220))
-
-
 def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> bytes:
     del brand
     src = Image.open(BytesIO(photo_bytes)).convert("RGB")
@@ -160,12 +157,33 @@ def render_story(photo_bytes: bytes, text: str, brand: str = "PANDORA34") -> byt
     draw.text((tx, ty + 58), "АВТОСЕРВИС", font=sub_font, fill=(*WHITE, 255))
 
     lines, body_font = _fit_caption(draw, text)
-    line_h = int(body_font.size * 1.28) if getattr(body_font, "size", None) else 66
-    y = STORY_H - 88 - len(lines) * line_h
-    draw.rectangle((40, y - 22, 40 + 88, y - 14), fill=(*CYAN, 255))
-    for line in lines:
-        _stroke_text(draw, (40, y), line, body_font, (*WHITE, 255), 3)
-        y += line_h
+    size = getattr(body_font, "size", 50) or 50
+    line_h = int(size * 1.2)
+    pad_x, pad_y, accent = 32, 26, 12
+    max_line_w = max(draw.textlength(line, font=body_font) for line in lines) if lines else 200
+    box_w = int(min(STORY_W - 48, accent + pad_x * 2 + max_line_w))
+    box_h = int(pad_y * 2 + max(1, len(lines)) * line_h - 8)
+    bx, by = 28, STORY_H - 48 - box_h
+
+    glow = Image.new("RGBA", (box_w + 90, box_h + 90), (0, 0, 0, 0))
+    ImageDraw.Draw(glow).rounded_rectangle(
+        (18, 18, box_w + 70, box_h + 70), radius=34, fill=(45, 180, 255, 80)
+    )
+    glow = glow.filter(ImageFilter.GaussianBlur(16))
+    canvas.paste(glow, (bx - 36, by - 36), glow)
+
+    cap = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
+    cd = ImageDraw.Draw(cap)
+    cd.rounded_rectangle((0, 0, box_w - 1, box_h - 1), radius=24, fill=(6, 8, 12, 236))
+    cd.rounded_rectangle((10, 16, 10 + accent, box_h - 17), radius=5, fill=(*NEON, 255))
+    canvas.paste(cap, (bx, by), cap)
+    draw = ImageDraw.Draw(canvas)
+    ty = by + pad_y - 6
+    tx = bx + accent + pad_x
+    for i, line in enumerate(lines):
+        fill = NEON if i == 0 else SOFT
+        draw.text((tx, ty), line, font=body_font, fill=(*fill, 255))
+        ty += line_h
 
     out = BytesIO()
     canvas.convert("RGB").save(out, format="JPEG", quality=95)
