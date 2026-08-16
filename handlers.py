@@ -54,6 +54,7 @@ class Draft:
     file_ids: list[str]
     photos: list[bytes]
     text: str
+    variants: list[str] = field(default_factory=list)
     processed: bool = False
     admin_copies: list[AdminCopy] = field(default_factory=list)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -81,7 +82,9 @@ def _draft_kb(draft_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Сторис мне", callback_data=f"pub:{draft_id}"),
+                InlineKeyboardButton(text="1", callback_data=f"pub:{draft_id}:0"),
+                InlineKeyboardButton(text="2", callback_data=f"pub:{draft_id}:1"),
+                InlineKeyboardButton(text="3", callback_data=f"pub:{draft_id}:2"),
             ],
             [
                 InlineKeyboardButton(text="✏️ Изменить текст", callback_data=f"edit:{draft_id}"),
@@ -92,10 +95,13 @@ def _draft_kb(draft_id: str) -> InlineKeyboardMarkup:
 
 
 def _draft_body(draft: Draft, footer: str | None = None) -> str:
+    variants = draft.variants or [draft.text]
+    lines = [f"{i}) {item}" for i, item in enumerate(variants[:3], start=1)]
     text = (
         f"Черновик сторис\n\n"
         f"От: {draft.employee_label}\n\n"
-        f"{draft.text}"
+        + "\n\n".join(lines)
+        + "\n\nЖми 1 / 2 / 3 — соберу сторис с этим текстом."
     )
     if footer:
         text += f"\n\n{footer}"
@@ -155,7 +161,8 @@ async def cmd_start(message: Message) -> None:
     if is_admin(uid):
         await message.answer(
             f"Ты админ. Черновики сторис приходят сюда. Кнопка «Сторис мне» — "
-            f"готовая картинка 9:16 тебе в чат, выкладываешь со своего аккаунта.\n"
+            f"готовая картинка 9:16 тебе в чат, выкладываешь со своего аккаунта. "
+            f"Придёт три варианта текста — жми 1, 2 или 3.\n"
             f"Твой chat_id: {uid}"
         )
         return
@@ -221,7 +228,7 @@ async def _handle_submission(messages: list[Message], bot: Bot) -> None:
     photos: list[bytes] = []
     try:
         photos = [await _download_photo(bot, fid) for fid in file_ids]
-        text = await generate_post(photos, caption)
+        variants = await generate_post(photos, caption)
     except Exception as exc:
         log.exception("Не смог сделать черновик")
         await first.answer(f"Не получилось собрать пост: {exc}")
@@ -239,10 +246,11 @@ async def _handle_submission(messages: list[Message], bot: Bot) -> None:
         employee_label=_who(user),
         file_ids=file_ids,
         photos=photos,
-        text=text,
+        text=variants[0],
+        variants=variants,
     )
     drafts[draft_id] = draft
-    log.info("Черновик %s готов, текст: %s", draft_id, text)
+    log.info("Черновик %s готов, вариантов: %s", draft_id, len(variants))
 
     await first.answer("Принято, отправил на согласование")
 
@@ -300,7 +308,14 @@ async def _decide(callback: CallbackQuery, bot: Bot, action: str) -> None:
         await callback.answer("Это только для админа.", show_alert=True)
         return
 
-    draft_id = (callback.data or "").split(":", 1)[-1]
+    parts = (callback.data or "").split(":")
+    draft_id = parts[1] if len(parts) > 1 else ""
+    variant_i = 0
+    if action == "publish" and len(parts) > 2:
+        try:
+            variant_i = int(parts[2])
+        except ValueError:
+            variant_i = 0
     draft = drafts.get(draft_id)
     if draft is None:
         await callback.answer("Черновик уже не найден.", show_alert=True)
@@ -324,8 +339,10 @@ async def _decide(callback: CallbackQuery, bot: Bot, action: str) -> None:
                 log.exception("Не смог написать сотруднику %s", draft.employee_id)
             return
 
-        log.info("Черновик %s — сторис для %s", draft.id, who)
+        log.info("Черновик %s — сторис для %s, вариант %s", draft.id, who, variant_i + 1)
         try:
+            if draft.variants and 0 <= variant_i < len(draft.variants):
+                draft.text = draft.variants[variant_i]
             await _send_story(bot, draft, user.id)
         except Exception as exc:
             draft.processed = False
@@ -376,6 +393,7 @@ async def on_new_text(message: Message, state: FSMContext, bot: Bot) -> None:
         return
 
     draft.text = new_text
+    draft.variants = [new_text, new_text, new_text]
     log.info("Админ %s переписал черновик %s", _who(message.from_user), draft.id)
     await _refresh_admin_copies(bot, draft)
     await message.answer("Текст обновил, кнопки снова на черновике.")
