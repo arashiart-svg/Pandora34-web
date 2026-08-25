@@ -863,11 +863,10 @@ async function crmLogin(){
   let m=null;
   if(isAdminLogin(login)){
     m=masters.map(normalizeMaster).find(x=>isOwnerMaster(x.name))||normalizeMaster({name:OWNER_MASTER});
-    if(m.passwordHash){
-      if(!pass){ if(err) err.textContent='Введи пароль'; return; }
-      const hash=await hashCrmPass(pass);
-      if(hash!==m.passwordHash){ if(err) err.textContent='Неверный логин или пароль'; return; }
-    }
+    if(!pass){ if(err) err.textContent='Введи пароль'; return; }
+    if(!m.passwordHash){ if(err) err.textContent='Пароль admin не задан. Зайди другой учёткой → Настройки → Андрей → задай пароль'; return; }
+    const hash=await hashCrmPass(pass);
+    if(hash!==m.passwordHash){ if(err) err.textContent='Неверный логин или пароль'; return; }
   }else{
     if(!pass){ if(err) err.textContent='Введи логин и пароль'; return; }
     const hash=await hashCrmPass(pass);
@@ -2984,7 +2983,11 @@ function openMasterSettings(i){
     </div>
     <div class="form-group">
       <div class="form-group-title">Доступ в CRM</div>
-      ${owner?`<div class="small" style="margin-bottom:12px">Ты уже админ. Логин <b>admin</b>, пароль тот же что на входе на сервер. Тут ничего заводить не надо.</div>`:`<label class="access-chip" style="margin-bottom:12px;max-width:280px"><input type="checkbox" id="masterAccessOn" ${mm.accessEnabled || !mm.login?'checked':''}>Может входить в CRM</label>`}
+      ${owner?`<div class="small" style="margin-bottom:12px">Логин <b>admin</b>. Задай пароль здесь. Пока пароль не сохранён — вход admin закрыт.</div>
+      <div class="form">
+        <div><label>Логин</label><input value="admin" readonly></div>
+        <div><label>Пароль</label><input id="masterPassword" type="password" placeholder="${mm.passwordHash?'не менять, если не трогать':'задайте пароль admin'}"></div>
+      </div>`:`<label class="access-chip" style="margin-bottom:12px;max-width:280px"><input type="checkbox" id="masterAccessOn" ${mm.accessEnabled || !mm.login?'checked':''}>Может входить в CRM</label>`}
       ${owner?'':`<div class="form">
         <div><label>Логин</label><input id="masterLogin" value="${escapeHtml(mm.login)}" placeholder="например roman"></div>
         <div><label>Пароль</label><input id="masterPassword" type="password" placeholder="${mm.passwordHash?'не менять':'новый пароль'}"></div>
@@ -3039,7 +3042,7 @@ async function saveMasterDetails(i){
     if(ln && ln!==name && lp>0) linked.push({name:ln,percent:lp});
   });
   const login=owner?OWNER_LOGIN:val('masterLogin').trim();
-  const pass=owner?'':val('masterPassword');
+  const pass=val('masterPassword');
   const accessEnabled=owner?true:!!document.getElementById('masterAccessOn')?.checked;
   const access={};
   const root=document.getElementById('modalBox');
@@ -3056,8 +3059,9 @@ async function saveMasterDetails(i){
     if(taken){alert('Такой логин уже занят');return;}
     if(!old.passwordHash && !pass){alert('Задай пароль для входа');return;}
   }
+  if(owner && !old.passwordHash && !pass){alert('Задай пароль для admin');return;}
   let passwordHash=old.passwordHash||'';
-  if(!owner && pass){
+  if(pass){
     try{passwordHash=await hashCrmPass(pass);}
     catch(e){alert('Не удалось сохранить пароль. Открой CRM по https и попробуй ещё раз.');return;}
   }
@@ -4432,7 +4436,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v32 · владелец Андрей · приоритет · затраты · антидубль · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v33 · владелец Андрей · пароль admin обязателен · приоритет · затраты · антидубль · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
