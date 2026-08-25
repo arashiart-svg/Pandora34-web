@@ -180,6 +180,10 @@
     .report-print:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(23,177,107,.45)!important;color:#fff!important}
     .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
     .report-line:first-child{border-top:0}
+    .report-details{display:flex;flex-direction:column;gap:18px}
+    .report-details .report-card{width:100%;max-width:none}
+    .report-day-head{font-weight:800;font-size:15px;margin:16px 0 4px;color:var(--text)}
+    .report-day-head:first-child{margin-top:0}
     .day-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
     .day-buttons button{border:1.5px solid rgba(79,199,234,.4)!important;border-radius:10px;padding:9px 13px;background:var(--sidebar-bg)!important;color:#b7c3dd!important;font-size:13.5px;font-weight:700;cursor:pointer}
     .day-buttons button:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 12px rgba(79,199,234,.35)}
@@ -444,7 +448,7 @@
       <div id="dayButtons" class="day-buttons" style="display:none"></div>
       <div class="grid" id="reportStats"></div>
       <div style="height:18px"></div>
-      <div class="grid" id="reportDetails"></div>
+      <div id="reportDetails" class="report-details"></div>
       <div style="height:18px"></div>
       <div id="analysisBlock" class="report-card" style="display:none;margin-bottom:18px"></div>
       <div id="salaryBlock" class="report-card" style="display:none;margin-bottom:18px"></div>
@@ -1036,9 +1040,13 @@ function showSection(section){
 
 function parseRuDate(s){
   if(!s) return null;
-  const m=s.match(/(\d{2})\.(\d{2})\.(\d{4}),?\s*(\d{2}):(\d{2}):?(\d{2})?/);
-  if(!m) return null;
-  return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]),Number(m[5]),Number(m[6]||0));
+  if(s instanceof Date && !isNaN(s.getTime())) return s;
+  const t=String(s||'').trim();
+  if(!t) return null;
+  const m=t.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0));
+  const iso=Date.parse(t);
+  return isNaN(iso)?null:new Date(iso);
 }
 function carPartsCost(c){
   return (Array.isArray(c && c.partsCosts)?c.partsCosts:[]).reduce((s,x)=>s+(Number(x.amount)||0),0);
@@ -1550,6 +1558,20 @@ function openSalaryDetail(encodedName){
     <div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;
   document.getElementById('modal').style.display='flex';
 }
+function renderJobsByDateHtml(done){
+  const sorted=done.slice().sort((a,b)=>doneSortTime(a)-doneSortTime(b));
+  if(!sorted.length) return '<div class="small">Нет выдач за этот период. Открой неделю или месяц сверху.</div>';
+  let last='';
+  return sorted.map(c=>{
+    const day=formatRuDay(c.outAt);
+    const cost=carPartsCost(c);
+    const profit=carProfit(c);
+    const head=day!==last?`<div class="report-day-head">${escapeHtml(day)}</div>`:'';
+    last=day;
+    return `${head}<div class="report-line"><span>${escapeHtml(c.number||'БЕЗ НОМЕРА')} · ${escapeHtml(c.master||'Не указан')}<div class="small">${escapeHtml(c.work||'Работа не указана')}${cost?(' · затраты '+Math.round(cost).toLocaleString('ru-RU')+' ₽'):''}</div></span><b>${Math.round(profit).toLocaleString('ru-RU')} ₽</b></div>`;
+  }).join('');
+}
+
 function renderReport(){
   fillReportSelects();
   renderDayButtons();
@@ -1600,11 +1622,7 @@ function renderReport(){
     <div class="report-card"><div class="small">Средний чек</div><div class="report-num">${done.length?Math.round(total/done.length).toLocaleString('ru-RU'):0} ₽</div></div>
   `;
 
-  const jobsHtml=done.slice().sort((a,b)=>doneSortTime(a)-doneSortTime(b)).map(c=>{
-    const cost=carPartsCost(c);
-    const profit=carProfit(c);
-    return `<div class="report-line"><span><b>${escapeHtml(formatRuDay(c.outAt))}</b> · ${escapeHtml(c.number||'БЕЗ НОМЕРА')} · ${escapeHtml(c.master||'Не указан')}<div class="small">${escapeHtml(c.work||'Работа не указана')}${cost?(' · затраты '+Math.round(cost).toLocaleString('ru-RU')+' ₽'):''}</div></span><b>${Math.round(profit).toLocaleString('ru-RU')} ₽</b></div>`;
-  }).join('') || '<div class="small">Нет данных</div>';
+  const jobsHtml=renderJobsByDateHtml(done);
 
   const mastersHtml=Object.entries(byMaster).map(([name,v])=>`
     <div class="report-line"><span>${name}</span><b>${v.count} работ / ${Math.round(v.profit).toLocaleString('ru-RU')} ₽</b></div>
@@ -4451,7 +4469,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v34 · владелец Андрей · пароль admin · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v35 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
