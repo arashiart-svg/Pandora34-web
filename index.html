@@ -124,11 +124,13 @@
     .pick-btn .arrow{color:var(--muted);font-size:12px;flex-shrink:0}
     .aslanova-date-btn{position:relative;overflow:hidden;min-height:48px;cursor:pointer}
     .aslanova-date-btn input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px;z-index:2}
-    #aslPayPop{position:fixed;inset:0;z-index:300;background:rgba(15,20,30,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+    #aslPayPop,#doneCostsPop{position:fixed;inset:0;z-index:400;background:rgba(15,20,30,.5);display:flex;align-items:center;justify-content:center;padding:20px}
     .asl-pay-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;width:min(380px,100%);display:flex;flex-direction:column;gap:8px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+    .done-costs-btn{width:100%;padding:18px 16px;font-size:20px;font-weight:800;margin:8px 0 4px;border-radius:12px}
+    .asl-pay-card select{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:15px}
     .asl-pay-title{font-weight:800;font-size:17px;margin-bottom:6px;color:var(--text)}
     .asl-pay-card button{width:100%;text-align:center}
-    .asl-pay-card input[type=number]{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:16px}
+    .asl-pay-card input,.asl-pay-card input[type=number]{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:16px}
     .pick-btn b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .aslanova-btn{width:100%;border:0!important;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;background:var(--orange)!important;color:#fff!important;box-shadow:0 8px 20px rgba(244,164,39,.4)!important}
     .aslanova-btn:hover{filter:brightness(1.05)}
@@ -400,7 +402,6 @@
   </div>
   <div class="live-scan-bottom">
     <button type="button" onclick="closeLiveScan()">Назад</button>
-    <button type="button" onclick="liveScanTakePhoto()">Снять фото</button>
     <button type="button" class="neon" id="liveScanUse" disabled onclick="useLiveScan()">Использовать</button>
   </div>
   <canvas id="liveScanCanvas" style="display:none"></canvas>
@@ -1628,7 +1629,7 @@ function renderReport(){
   if(grid) grid.innerHTML='';
 }
 
-function closeModal(){closeAslanovaPaidPop();document.getElementById('modal').style.display='none'}
+function closeModal(){closeAslanovaPaidPop();if(typeof closeDoneCostsPop==='function')closeDoneCostsPop();document.getElementById('modal').style.display='none'}
 function val(id){let el=document.getElementById(id); return el ? el.value.trim() : ''}
 
 function comboHtml(id,label,placeholder,hint){
@@ -2209,30 +2210,7 @@ function renderDoneWizard(id){
     <div class="step-title" style="margin-top:18px">Затраты на запчасти</div>
     <div class="small" id="doneProfitHint" style="margin-bottom:8px">Прибыль: ${(price-costsSum).toLocaleString('ru-RU')} ₽</div>
     ${costsHtml}
-    <div class="actions" style="justify-content:flex-start;margin:10px 0">
-      <button type="button" onclick="doneCostsOpen=!doneCostsOpen;rememberDoneWizardFields();renderDoneWizard(${id})">Затраты</button>
-    </div>
-    ${doneCostsOpen?`
-    <div class="form">
-      <div>
-        <label>Сумма вручную</label>
-        <input id="doneCostAmount" type="number" placeholder="500">
-      </div>
-      <div>
-        <label>Комментарий</label>
-        <input id="doneCostComment" placeholder="Запчасти">
-      </div>
-      <div class="wide"><button type="button" onclick="addDoneCostManual()">Добавить сумму</button></div>
-      <div class="wide">
-        <label>Товар со склада</label>
-        <select id="doneCostProduct" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
-      </div>
-      <div>
-        <label>Количество</label>
-        <select id="doneCostQty" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
-      </div>
-      <div class="wide"><button type="button" onclick="addDoneCostStock()">Списать со склада</button></div>
-    </div>`:''}
+    <button type="button" class="danger done-costs-btn" onclick="openDoneCostsPicker()">Затраты</button>
     </div>
     <div class="two-actions neon-bar modal-foot">
       <div class="modal-foot-row"><button onclick="openCar(${id})">Назад</button><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
@@ -2271,6 +2249,7 @@ function addDoneCostManual(){
   const comment=val('doneCostComment')||'Запчасти';
   if(!(amount>0)){alert('Введи сумму затраты');return;}
   doneCostsDraft.push({id:Date.now(),kind:'manual',amount,comment});
+  closeDoneCostsPop();
   renderDoneWizard(doneWizardCarId);
 }
 function addDoneCostStock(){
@@ -2281,12 +2260,53 @@ function addDoneCostStock(){
   if(!p || qty<=0){alert('Выбери товар и количество');return;}
   if(Number(p.qty||0)<qty && !confirm('Расход больше остатка. Всё равно списать при выдаче?')) return;
   doneCostsDraft.push({id:Date.now(),kind:'stock',productId:p.id,productName:p.name,qty,price:Number(p.price)||0,amount:(Number(p.price)||0)*qty,comment:p.name});
+  closeDoneCostsPop();
   renderDoneWizard(doneWizardCarId);
 }
 function removeDoneCost(cid){
   rememberDoneWizardFields();
   doneCostsDraft=doneCostsDraft.filter(x=>x.id!==cid);
   renderDoneWizard(doneWizardCarId);
+}
+function closeDoneCostsPop(){const p=document.getElementById('doneCostsPop'); if(p) p.remove();}
+function doneCostsPopCard(){
+  closeDoneCostsPop();
+  const pop=document.createElement('div');
+  pop.id='doneCostsPop';
+  pop.innerHTML='<div class="asl-pay-card" onclick="event.stopPropagation()"></div>';
+  pop.addEventListener('click',closeDoneCostsPop);
+  document.body.appendChild(pop);
+  return pop.querySelector('.asl-pay-card');
+}
+function openDoneCostsPicker(){
+  rememberDoneWizardFields();
+  const card=doneCostsPopCard();
+  card.innerHTML=`<div class="asl-pay-title">Затраты</div>
+    <button class="quick-btn" type="button" onclick="showDoneCostManual()">Вручную</button>
+    <button class="quick-btn" type="button" onclick="showDoneCostStock()">Со склада</button>
+    <button class="quick-btn" type="button" onclick="closeDoneCostsPop()">Отмена</button>`;
+}
+function showDoneCostManual(){
+  const card=document.querySelector('#doneCostsPop .asl-pay-card');
+  if(!card) return;
+  card.innerHTML=`<div class="asl-pay-title">Сумма вручную</div>
+    <label>Сумма</label>
+    <input id="doneCostAmount" type="number" placeholder="500" inputmode="numeric">
+    <label>Комментарий</label>
+    <input id="doneCostComment" placeholder="Запчасти">
+    <button class="neon" type="button" onclick="addDoneCostManual()">Добавить</button>
+    <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
+}
+function showDoneCostStock(){
+  const card=document.querySelector('#doneCostsPop .asl-pay-card');
+  if(!card) return;
+  card.innerHTML=`<div class="asl-pay-title">Со склада</div>
+    <label>Товар</label>
+    <select id="doneCostProduct">${productOptions()}</select>
+    <label>Количество</label>
+    <select id="doneCostQty">${qtyOptions()}</select>
+    <button class="neon" type="button" onclick="addDoneCostStock()">Добавить</button>
+    <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
 }
 function applyPartsStockOut(c){
   (c.partsCosts||[]).forEach((x,i)=>{
@@ -3665,10 +3685,6 @@ function startNativeOcr(fieldId, type){
   if(window.AndroidOcr && AndroidOcr.openLiveScanner){
     try{AndroidOcr.openLiveScanner(fieldId,type||'plate');return;}catch(e){}
   }
-  if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    startCaptureOcr(fieldId);
-    return;
-  }
   openLivePlateScan(fieldId);
 }
 function startCaptureOcr(fieldId){
@@ -3679,9 +3695,7 @@ function startCaptureOcr(fieldId){
   el.onchange=function(ev){scanPhotoText(ev, window._ocrFieldId||'number','plate');};
   el.click();
 }
-function liveScanTakePhoto(){
-  startCaptureOcr(liveScan.fieldId||window._ocrFieldId||'number');
-}
+function liveScanTakePhoto(){}
 
 let liveScan={stream:null,timer:null,fieldId:'number',busy:false,best:'',last:'',same:0,hist:[]};
 
@@ -3718,12 +3732,12 @@ async function openLivePlateScan(fieldId){
   document.getElementById('liveScanRaw').textContent='Наведи ближе, держи ровно, без бликов';
   if(use) use.disabled=true;
   box.classList.add('show');
-  fetch((location.origin||'')+'/sync/ocr-health').then(r=>r.json()).then(j=>{
+  fetch('/ocr/health',{credentials:'omit',cache:'no-store'}).then(r=>r.json()).then(j=>{
     const hint=document.getElementById('liveScanRaw');
     if(hint && j && j.ok) hint.textContent='Связь с распознаванием есть. Наведи номер в полоску';
   }).catch(e=>{
     const hint=document.getElementById('liveScanRaw');
-    if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e)+'. Можно снять фото.';
+    if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e);
   });
   try{
     if(liveScanHasLive()){
@@ -3738,9 +3752,8 @@ async function openLivePlateScan(fieldId){
     await v.play();
     liveScanLoop();
   }catch(e){
-    document.getElementById('liveScanFound').textContent='Камера в браузере недоступна';
-    document.getElementById('liveScanRaw').textContent='Открой фото с камеры телефона — так работает и с мобильного интернета.';
-    setTimeout(()=>startCaptureOcr(fieldId),250);
+    document.getElementById('liveScanFound').textContent='Камера недоступна';
+    document.getElementById('liveScanRaw').textContent='Разреши камеру в браузере.';
   }
 }
 
@@ -3768,7 +3781,7 @@ function liveScanLoop(){
       if(hint && !liveScan.best) hint.textContent='Нет связи с OCR: '+String(e.message||e);
     }
     if(document.getElementById('liveScan')?.classList.contains('show')) liveScanLoop();
-  },400);
+  },700);
 }
 
 function liveScanCrop(){
@@ -3817,7 +3830,7 @@ async function liveScanTick(){
     if(!blob) return;
     const fd=new FormData();
     fd.append('image',blob,'f.jpg');
-    const r=await fetch((location.origin||'')+'/sync/ocr-plate?token='+encodeURIComponent(SYNC_TOKEN),{method:'POST',body:fd});
+    const r=await fetch('/ocr/plate?token='+encodeURIComponent(SYNC_TOKEN),{method:'POST',body:fd,credentials:'omit',cache:'no-store'});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){
       const hint=document.getElementById('liveScanRaw');
@@ -3909,9 +3922,11 @@ async function scanPhotoText(event, fieldId, type){
       fr.onerror=()=>reject(fr.error||new Error('file'));
       fr.readAsDataURL(blob);
     });
-    const r=await fetch((location.origin||'')+'/sync/ocr-plate?token='+encodeURIComponent(SYNC_TOKEN),{
+    const r=await fetch('/ocr/plate?token='+encodeURIComponent(SYNC_TOKEN),{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SYNC_TOKEN},
+      headers:{'Content-Type':'application/json'},
+      credentials:'omit',
+      cache:'no-store',
       body:JSON.stringify({image:dataUrl})
     });
     const j=await r.json().catch(()=>({}));
@@ -4436,7 +4451,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v33 · владелец Андрей · пароль admin обязателен · приоритет · затраты · антидубль · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v34 · владелец Андрей · пароль admin · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5226,7 +5241,6 @@ openAutoStep=function(){
           <div class="plate-row">
             <input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}">
             <button type="button" class="photo-btn plate-cam" onclick="startNativeOcr('number','plate')">Сканер</button>
-            <button type="button" class="photo-btn plate-cam" onclick="startCaptureOcr('number')">Фото</button>
           </div>
           <div id="numberOcrStatus" class="ocr-status"></div>
         </div>
