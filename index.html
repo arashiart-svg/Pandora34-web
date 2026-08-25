@@ -130,7 +130,7 @@
     #doneCostsPop .asl-pay-card{width:min(420px,100%);gap:12px;padding:22px}
     #doneCostsPop .asl-pay-title{font-size:22px;margin-bottom:10px}
     #doneCostsPop button{width:100%;min-height:56px;padding:16px 18px;font-size:18px;font-weight:800;border-radius:12px;text-align:center}
-    #doneCostsPop button.neon{min-height:62px;font-size:20px}
+    #doneCostsPop button.neon,#doneCostsPop button.done-costs-add{min-height:62px;font-size:20px;background:var(--green)!important;border-color:var(--green)!important;color:#fff!important;box-shadow:0 6px 18px rgba(23,177,107,.4)!important}
     #doneCostsPop input,#doneCostsPop select{min-height:52px;font-size:17px;padding:14px 12px}
     .asl-pay-card select{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:15px}
     .asl-pay-title{font-weight:800;font-size:17px;margin-bottom:6px;color:var(--text)}
@@ -2317,7 +2317,7 @@ function showDoneCostManual(){
     <input id="doneCostAmount" type="number" placeholder="500" inputmode="numeric">
     <label>Комментарий</label>
     <input id="doneCostComment" placeholder="Запчасти">
-    <button class="neon" type="button" onclick="addDoneCostManual()">Добавить</button>
+    <button class="done-costs-add" type="button" onclick="addDoneCostManual()">Добавить</button>
     <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
 }
 function showDoneCostStock(){
@@ -2328,7 +2328,7 @@ function showDoneCostStock(){
     <select id="doneCostProduct">${productOptions()}</select>
     <label>Количество</label>
     <select id="doneCostQty">${qtyOptions()}</select>
-    <button class="neon" type="button" onclick="addDoneCostStock()">Добавить</button>
+    <button class="done-costs-add" type="button" onclick="addDoneCostStock()">Добавить</button>
     <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
 }
 function applyPartsStockOut(c){
@@ -4474,7 +4474,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v36 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v37 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
