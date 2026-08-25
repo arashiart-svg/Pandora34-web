@@ -1,0 +1,160 @@
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    add_header Permissions-Policy "camera=(self), microphone=()" always;
+
+    client_max_body_size 20m;
+
+    location = /sync/live {
+        proxy_pass http://api:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 24h;
+        chunked_transfer_encoding off;
+    }
+
+    # Вебхук Avito-мессенджера: включить, когда появится packages/bot-avito и сервис bot-avito
+    # вернётся в depends_on nginx (docker-compose.yml).
+    # location /avito/ {
+    #     proxy_pass http://bot-avito:4100/;
+    #     proxy_http_version 1.1;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    # }
+
+    location = /sync/ocr-health {
+        proxy_pass http://ocr:8090/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    location = /sync/ocr-plate {
+        proxy_pass http://ocr:8090/plate;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 120s;
+        client_max_body_size 12m;
+    }
+
+    # Основной REST API (синхронизация Android-приложения, авторизация, отчёты) — без префикса,
+    # т.к. Android-приложение ходит на /health, /auth/login, /sync/state напрямую от корня.
+    location ~ ^/(health|auth|sync)(/|$) {
+        proxy_pass http://api:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ^~ /ocr/ {
+        auth_basic off;
+        proxy_pass http://ocr:8090/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_hide_header WWW-Authenticate;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        client_max_body_size 12m;
+    }
+
+    location = /launch.html {
+        root /usr/share/nginx/web;
+    }
+
+    location = /enter.html {
+        root /usr/share/nginx/web;
+    }
+
+    location = /manifest.json {
+        root /usr/share/nginx/web;
+        default_type application/manifest+json;
+        add_header Cache-Control "no-cache";
+    }
+
+    location = /sw.js {
+        root /usr/share/nginx/web;
+        add_header Cache-Control "no-cache";
+    }
+
+    location ~ ^/(icon-192|icon-512|apple-touch-icon)\.png$ {
+        root /usr/share/nginx/web;
+        expires 7d;
+    }
+
+    location ^~ /icons/ {
+        root /usr/share/nginx/web;
+        expires 7d;
+    }
+
+    location = /auth/web-login-form {
+        proxy_pass http://api:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /auth/web-logout {
+        proxy_pass http://api:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /__web_check {
+        internal;
+        proxy_pass http://api:4000/auth/web-check;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Cookie $http_cookie;
+    }
+
+    location @gotologin {
+        return 302 /enter.html;
+    }
+
+    # Веб-версия CRM. Вход через /enter.html + cookie на год (телефон умеет запомнить форму).
+    # API (/health, /auth, /sync) без этой двери — туда ходит приложение со своим токеном.
+    location / {
+        auth_request /__web_check;
+        error_page 401 = @gotologin;
+        root /usr/share/nginx/web;
+        index index.html;
+        try_files $uri /index.html;
+    }
+}

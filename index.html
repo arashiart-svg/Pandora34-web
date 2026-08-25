@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Pandora34" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=()" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Pandora34 CRM</title>
@@ -399,10 +400,12 @@
   </div>
   <div class="live-scan-bottom">
     <button type="button" onclick="closeLiveScan()">Назад</button>
+    <button type="button" onclick="liveScanTakePhoto()">Снять фото</button>
     <button type="button" class="neon" id="liveScanUse" disabled onclick="useLiveScan()">Использовать</button>
   </div>
   <canvas id="liveScanCanvas" style="display:none"></canvas>
 </div>
+<input type="file" id="ocrCaptureInput" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
 <div class="app">
   <aside class="side" id="sideNav">
     <div class="side-top">
@@ -1037,6 +1040,18 @@ function parseRuDate(s){
   if(!m) return null;
   return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]),Number(m[5]),Number(m[6]||0));
 }
+function carPartsCost(c){
+  return (Array.isArray(c && c.partsCosts)?c.partsCosts:[]).reduce((s,x)=>s+(Number(x.amount)||0),0);
+}
+function carProfit(c){
+  return (Number(c && c.price)||0) - carPartsCost(c);
+}
+function formatRuDay(s){
+  const d=parseRuDate(s);
+  if(d) return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const t=String(s||'').trim();
+  return t || 'без даты';
+}
 
 function isDoneVisibleInWork(c){
   if(c.status!=='done') return true;
@@ -1412,17 +1427,22 @@ function calcSalaryRows(done){
       r.count++;
       r.workSum+=price;
       r.base+=amount;
-      const detail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:pct,amount,taken:0,text:`${price.toLocaleString('ru-RU')} ₽ × ${pct}%`};
+      const dateLabel=formatRuDay(c.outAt||c.inAt);
+      const dateTs=parseRuDate(c.outAt||c.inAt)?.getTime()||0;
+      const detail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:pct,amount,taken:0,date:dateLabel,dateTs,text:`${price.toLocaleString('ru-RU')} ₽ × ${pct}%`};
       r.details.push(detail);
       workDetailByMaster[name]=detail;
     });
 
-    const ownerBase=Math.max(0, price-paidTotal);
+    const costs=carPartsCost(c);
+    const ownerBase=Math.max(0, price-paidTotal-costs);
     const owner=ensure(OWNER_MASTER);
     owner.count++;
     owner.workSum+=price;
     owner.base+=ownerBase;
-    const ownerDetail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:ownerBase,taken:0,text:team.length&&team.some(n=>!isOwnerMaster(n))?'остаток после мастеров':'работа владельца'};
+    const dateLabel=formatRuDay(c.outAt||c.inAt);
+    const dateTs=parseRuDate(c.outAt||c.inAt)?.getTime()||0;
+    const ownerDetail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:ownerBase,taken:0,date:dateLabel,dateTs,text:team.length&&team.some(n=>!isOwnerMaster(n))?(costs?'остаток после мастеров и затрат':'остаток после мастеров'):(costs?'работа владельца минус затраты':'работа владельца')};
     owner.details.push(ownerDetail);
     workDetailByMaster[OWNER_MASTER]=ownerDetail;
 
@@ -1433,7 +1453,7 @@ function calcSalaryRows(done){
       if(existing){
         existing.taken=(Number(existing.taken)||0)+price;
       }else{
-        r.details.push({type:'collected_only',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:0,taken:price,text:'деньги уже взял с клиента'});
+        r.details.push({type:'collected_only',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:0,taken:price,date:dateLabel,dateTs,text:'деньги уже взял с клиента'});
       }
     }
   });
@@ -1509,7 +1529,7 @@ function openSalaryDetail(encodedName){
   const payable=Math.round(netEarned-v.collected);
   const obj=getMasterObj(name);
   const label=isOwnerMaster(name)?'владелец':((obj?obj.percent:0)+'%');
-  const detailRows=(v.details||[]).map(d=>{
+  const detailRows=(v.details||[]).slice().sort((a,b)=>(a.dateTs||0)-(b.dateTs||0)).map(d=>{
     const earned=Math.round(Number(d.amount)||0);
     const amount=Math.abs(earned).toLocaleString('ru-RU');
     const sign=earned<0?'−':'+';
@@ -1517,7 +1537,7 @@ function openSalaryDetail(encodedName){
     const takenHtml=takenVal>0 ? `<div style="margin-top:8px;text-align:center;color:#fecaca;background:rgba(127,29,29,.55);border:1px solid rgba(239,68,68,.65);border-radius:14px;padding:8px 10px;font-weight:900">Взял с клиента ${takenVal.toLocaleString('ru-RU')} ₽</div>` : '';
     const counterpartyHtml=d.counterparty ? `<div class="small">Контрагент: ${escapeHtml(d.counterparty)}</div>` : '<div class="small">Контрагент не указан</div>';
     const rightColor=earned===0?'color:#9ca3af;':'';
-    return `<div class="v28-row"><div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:flex-start"><div><b>${escapeHtml(d.orderNo)}</b><div class="small">${escapeHtml(d.carTitle)}</div>${counterpartyHtml}<div class="small">${escapeHtml(d.workTitle)}</div><div class="small">${escapeHtml(d.text||'')}</div>${takenHtml}</div><div style="min-width:92px;text-align:right;font-weight:900;font-size:18px;${rightColor}">${earned===0?'':sign}${amount} ₽</div></div></div>`;
+    return `<div class="v28-row"><div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:flex-start"><div><b>${escapeHtml(d.orderNo)}</b><div class="small">${escapeHtml(d.date||'без даты')} · ${escapeHtml(d.carTitle)}</div>${counterpartyHtml}<div class="small">${escapeHtml(d.workTitle)}</div><div class="small">${escapeHtml(d.text||'')}</div>${takenHtml}</div><div style="min-width:92px;text-align:right;font-weight:900;font-size:18px;${rightColor}">${earned===0?'':sign}${amount} ₽</div></div></div>`;
   }).join('') || '<div class="small">Нет работ за период</div>';
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
@@ -1549,18 +1569,22 @@ function renderReport(){
   const done=getDoneCarsInRange(range.from, range.to);
 
   const total=done.reduce((sum,c)=>sum+(Number(c.price)||0),0);
+  const costsTotal=done.reduce((sum,c)=>sum+carPartsCost(c),0);
+  const profitTotal=total-costsTotal;
   const byMaster={};
   const byMoney={};
 
   done.forEach(c=>{
     const price=Number(c.price)||0;
+    const profit=carProfit(c);
 
     const masterList=String(c.master||'Не указан').split(',').map(x=>x.trim()).filter(Boolean);
     const mastersForCard=masterList.length?masterList:['Не указан'];
     const teamName=mastersForCard.join(' + ');
-    if(!byMaster[teamName]) byMaster[teamName]={count:0,sum:0};
+    if(!byMaster[teamName]) byMaster[teamName]={count:0,sum:0,profit:0};
     byMaster[teamName].count++;
     byMaster[teamName].sum+=price;
+    byMaster[teamName].profit+=profit;
 
     const cash=c.moneyMaster||'Не указан';
     if(!byMoney[cash]) byMoney[cash]={count:0,sum:0};
@@ -1570,12 +1594,20 @@ function renderReport(){
 
   document.getElementById('reportStats').innerHTML=`
     <div class="report-card"><div class="small">${range.title}</div><div class="report-num">${done.length}</div><div class="small">авто</div></div>
-    <div class="report-card"><div class="small">Сумма</div><div class="report-num">${total.toLocaleString('ru-RU')} ₽</div></div>
+    <div class="report-card"><div class="small">Выручка</div><div class="report-num">${total.toLocaleString('ru-RU')} ₽</div></div>
+    <div class="report-card"><div class="small">Затраты</div><div class="report-num">${costsTotal.toLocaleString('ru-RU')} ₽</div></div>
+    <div class="report-card"><div class="small">Прибыль</div><div class="report-num">${profitTotal.toLocaleString('ru-RU')} ₽</div></div>
     <div class="report-card"><div class="small">Средний чек</div><div class="report-num">${done.length?Math.round(total/done.length).toLocaleString('ru-RU'):0} ₽</div></div>
   `;
 
+  const jobsHtml=done.slice().sort((a,b)=>doneSortTime(a)-doneSortTime(b)).map(c=>{
+    const cost=carPartsCost(c);
+    const profit=carProfit(c);
+    return `<div class="report-line"><span><b>${escapeHtml(formatRuDay(c.outAt))}</b> · ${escapeHtml(c.number||'БЕЗ НОМЕРА')} · ${escapeHtml(c.master||'Не указан')}<div class="small">${escapeHtml(c.work||'Работа не указана')}${cost?(' · затраты '+Math.round(cost).toLocaleString('ru-RU')+' ₽'):''}</div></span><b>${Math.round(profit).toLocaleString('ru-RU')} ₽</b></div>`;
+  }).join('') || '<div class="small">Нет данных</div>';
+
   const mastersHtml=Object.entries(byMaster).map(([name,v])=>`
-    <div class="report-line"><span>${name}</span><b>${v.count} работ / ${Math.round(v.sum).toLocaleString('ru-RU')} ₽</b></div>
+    <div class="report-line"><span>${name}</span><b>${v.count} работ / ${Math.round(v.profit).toLocaleString('ru-RU')} ₽</b></div>
   `).join('') || '<div class="small">Нет данных</div>';
 
   const moneyHtml=Object.entries(byMoney).map(([name,v])=>`
@@ -1583,8 +1615,9 @@ function renderReport(){
   `).join('') || '<div class="small">Нет данных</div>';
 
   document.getElementById('reportDetails').innerHTML=isLimitedCrmUser()?`
-    <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Твои работы</h2>${mastersHtml}</div>
+    <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Твои работы</h2>${jobsHtml}</div>
   `:`
+    <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Работы по датам</h2>${jobsHtml}</div>
     <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Кто делал</h2>${mastersHtml}</div>
     <div class="report-card"><h2 style="font-size:22px;margin:0 0 10px">Кто взял деньги</h2>${moneyHtml}</div>
   `;
@@ -1846,6 +1879,7 @@ function skipAutoStep(){
 
 function nextWorkStep(){
   saveAutoDraft();
+  if(blockDuplicatePlate(draftCar.number)) return;
   openWorkStep();
 }
 
@@ -1902,7 +1936,23 @@ function openPriorityStep(){
   document.getElementById('modal').style.display='flex';
 }
 
+function pickEditPriority(p){
+  const el=document.getElementById('editPriority');
+  if(el) el.value=p;
+  document.querySelectorAll('.pri-pick').forEach(btn=>btn.classList.toggle('selected', btn.dataset.pri===p));
+}
+function setCarPriority(id,p){
+  const c=cars.find(x=>x.id===id);
+  if(!c || !canEditCar(c) || c.status==='done') return;
+  c.priority=p||'none';
+  c.updatedAt=new Date().toISOString();
+  save();
+  render();
+  openCarView(id);
+}
+
 function addCar(priority){
+  if(blockDuplicatePlate(draftCar.number||val('number'))) return;
   let c={
     id:Date.now(),
     number:draftCar.number||'БЕЗ НОМЕРА',
@@ -1940,6 +1990,9 @@ function openCarView(id){
     {l:'Принято',v:escapeHtml(c.inAt||'—')},
     c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'—')}:null,
     c.status==='done'?{l:'Сумма при выдаче',v:escapeHtml(c.price||c.agreedPrice||'0')+' ₽'}:null,
+    (c.status==='done' && carPartsCost(c))?{l:'Затраты',v:carPartsCost(c).toLocaleString('ru-RU')+' ₽'}:null,
+    (c.status==='done' && carPartsCost(c))?{l:'Прибыль',v:carProfit(c).toLocaleString('ru-RU')+' ₽'}:null,
+    (c.status!=='done')?{l:'Приоритет',v:c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета'}:null,
     (c.status==='done' && c.master)?{l:'Делал',v:escapeHtml(c.master)}:null,
     c.comment?{l:'Комментарий',v:escapeHtml(c.comment)}:null
   ].filter(Boolean);
@@ -1956,6 +2009,13 @@ function openCarView(id){
         <button onclick="closeModal()">Назад</button>
         ${canEditCar(c)?`<button onclick="openCar(${c.id})">Изменить</button>`:''}
       </div>
+      ${canEditCar(c) && c.status!=='done'?`
+      <div class="modal-foot-row" style="flex-wrap:wrap">
+        <button type="button" class="${c.priority==='high'?'neon':''}" onclick="setCarPriority(${c.id},'high')">Высокий</button>
+        <button type="button" class="${c.priority==='mid'?'neon':''}" onclick="setCarPriority(${c.id},'mid')">Средний</button>
+        <button type="button" class="${c.priority==='low'?'neon':''}" onclick="setCarPriority(${c.id},'low')">Низкий</button>
+        <button type="button" class="${!c.priority||c.priority==='none'?'neon':''}" onclick="setCarPriority(${c.id},'none')">Без приоритета</button>
+      </div>`:''}
       <div class="modal-foot-row">
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${canEditCar(c) && c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
@@ -1999,6 +2059,15 @@ function openCar(id){
       <div><label>Дата выдачи</label><input id="editOutAt" value="${escapeHtml(c.outAt)}" placeholder="Заполнится при выдаче"></div>
       <div><label>Сумма при выдаче</label><input id="price" type="number" placeholder="3500" value="${escapeHtml(c.price||c.agreedPrice||'')}"></div>
       <div><label>Статус</label><input value="${statusLabel(c.status)}" disabled></div>
+      <div class="wide"><label>Приоритет</label>
+        <input type="hidden" id="editPriority" value="${escapeHtml(c.priority||'none')}">
+        <div class="quick-row">
+          <button type="button" class="quick-btn pri-pick ${c.priority==='high'?'selected':''}" data-pri="high" onclick="pickEditPriority('high')">Высокий</button>
+          <button type="button" class="quick-btn pri-pick ${c.priority==='mid'?'selected':''}" data-pri="mid" onclick="pickEditPriority('mid')">Средний</button>
+          <button type="button" class="quick-btn pri-pick ${c.priority==='low'?'selected':''}" data-pri="low" onclick="pickEditPriority('low')">Низкий</button>
+          <button type="button" class="quick-btn pri-pick ${!c.priority||c.priority==='none'?'selected':''}" data-pri="none" onclick="pickEditPriority('none')">Без приоритета</button>
+        </div>
+      </div>
       <div class="wide"><label>Комментарий</label><textarea id="editComment" rows="3" placeholder="Необязательно" ${c.status==='done'?'readonly':''}>${escapeHtml(c.comment)}</textarea></div>
     </div>
     </div>
@@ -2022,6 +2091,8 @@ function openCar(id){
 function saveCard(id){
   let c=cars.find(x=>x.id===id);
   if(!c || !canEditCar(c)) return;
+  const newNumber=val('editNumber')||'БЕЗ НОМЕРА';
+  if(blockDuplicatePlate(newNumber, c.id)) return;
   c.number=val('editNumber')||'БЕЗ НОМЕРА';
   c.brand=val('editBrand')||'Марка не указана';
   c.model=val('editModel');
@@ -2034,6 +2105,7 @@ function saveCard(id){
   c.inAt=val('editInAt')||c.inAt;
   c.outAt=val('editOutAt')||c.outAt;
   c.price=val('price')||c.price;
+  if(document.getElementById('editPriority')) c.priority=val('editPriority')||c.priority||'none';
   c.updatedAt=new Date().toISOString();
   if(c.orderNaryad){
     c.orderNaryad.plateNumber=c.number==='БЕЗ НОМЕРА'?'':c.number;
@@ -2081,7 +2153,28 @@ function deleteDoneCar(id){
 
 function openDoneWizard(id){
   saveCardNoClose(id);
+  doneWizardCarId=id;
+  const c=cars.find(x=>x.id===id);
+  doneCostsDraft=(Array.isArray(c && c.partsCosts)?c.partsCosts:[]).map(x=>({...x}));
+  window._doneMaster='';
+  window._moneyMaster='';
+  window._donePrice=String(c.agreedPrice||c.price||'');
+  doneCostsOpen=false;
+  renderDoneWizard(id);
+}
+
+let doneCostsDraft=[];
+let doneWizardCarId=null;
+let doneCostsOpen=false;
+
+function renderDoneWizard(id){
   let c=cars.find(x=>x.id===id);
+  if(!c) return;
+  const costsSum=doneCostsDraft.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  const price=Number(window._donePrice||c.agreedPrice||c.price||0);
+  const costsHtml=doneCostsDraft.map(x=>`
+    <div class="report-line"><span>${escapeHtml(x.kind==='stock'?(x.productName+' × '+x.qty): (x.comment||'Запчасти'))}</span><b>${Math.round(Number(x.amount)||0).toLocaleString('ru-RU')} ₽ <button type="button" onclick="removeDoneCost(${x.id})" style="margin-left:8px">×</button></b></div>
+  `).join('') || '<div class="small">Затрат пока нет</div>';
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Выдать авто</h2>
@@ -2098,7 +2191,7 @@ function openDoneWizard(id){
       </div>
       <div>
         <label>Итоговая сумма</label>
-        <input id="donePrice" type="number" value="${c.agreedPrice||c.price||''}" placeholder="3500">
+        <input id="donePrice" type="number" value="${c.agreedPrice||c.price||''}" placeholder="3500" oninput="updateDoneProfitHint()">
       </div>
     </div>
 
@@ -2113,11 +2206,100 @@ function openDoneWizard(id){
         <input id="moneyMaster" placeholder="Выбери мастера" readonly>
       </div>
     </div>
+
+    <div class="step-title" style="margin-top:18px">Затраты на запчасти</div>
+    <div class="small" id="doneProfitHint" style="margin-bottom:8px">Прибыль: ${(price-costsSum).toLocaleString('ru-RU')} ₽</div>
+    ${costsHtml}
+    <div class="actions" style="justify-content:flex-start;margin:10px 0">
+      <button type="button" onclick="doneCostsOpen=!doneCostsOpen;rememberDoneWizardFields();renderDoneWizard(${id})">Затраты</button>
+    </div>
+    ${doneCostsOpen?`
+    <div class="form">
+      <div>
+        <label>Сумма вручную</label>
+        <input id="doneCostAmount" type="number" placeholder="500">
+      </div>
+      <div>
+        <label>Комментарий</label>
+        <input id="doneCostComment" placeholder="Запчасти">
+      </div>
+      <div class="wide"><button type="button" onclick="addDoneCostManual()">Добавить сумму</button></div>
+      <div class="wide">
+        <label>Товар со склада</label>
+        <select id="doneCostProduct" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${productOptions()}</select>
+      </div>
+      <div>
+        <label>Количество</label>
+        <select id="doneCostQty" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px">${qtyOptions()}</select>
+      </div>
+      <div class="wide"><button type="button" onclick="addDoneCostStock()">Списать со склада</button></div>
+    </div>`:''}
     </div>
     <div class="two-actions neon-bar modal-foot">
       <div class="modal-foot-row"><button onclick="openCar(${id})">Назад</button><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
+  restoreDoneWizardFields();
+}
+
+function rememberDoneWizardFields(){
+  window._doneMaster=val('doneMaster');
+  window._moneyMaster=val('moneyMaster');
+  window._donePrice=val('donePrice');
+}
+function restoreDoneWizardFields(){
+  if(window._doneMaster) setVal('doneMaster', window._doneMaster);
+  if(window._moneyMaster) setVal('moneyMaster', window._moneyMaster);
+  if(window._donePrice) setVal('donePrice', window._donePrice);
+  if(window._doneMaster){
+    const list=window._doneMaster.split(',').map(x=>x.trim()).filter(Boolean);
+    document.querySelectorAll('.master-work').forEach(btn=>btn.classList.toggle('selected', list.includes(btn.dataset.master)));
+  }
+  if(window._moneyMaster){
+    document.querySelectorAll('.master-money').forEach(btn=>btn.classList.toggle('selected', btn.dataset.master===window._moneyMaster));
+  }
+}
+function updateDoneProfitHint(){
+  const el=document.getElementById('doneProfitHint');
+  if(!el) return;
+  const price=Number(val('donePrice')||0);
+  const costs=doneCostsDraft.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  el.textContent='Прибыль: '+(price-costs).toLocaleString('ru-RU')+' ₽';
+}
+function addDoneCostManual(){
+  rememberDoneWizardFields();
+  const amount=Number(val('doneCostAmount'));
+  const comment=val('doneCostComment')||'Запчасти';
+  if(!(amount>0)){alert('Введи сумму затраты');return;}
+  doneCostsDraft.push({id:Date.now(),kind:'manual',amount,comment});
+  renderDoneWizard(doneWizardCarId);
+}
+function addDoneCostStock(){
+  rememberDoneWizardFields();
+  const productId=Number(val('doneCostProduct'));
+  const qty=Number(val('doneCostQty'))||1;
+  const p=products.find(x=>x.id===productId);
+  if(!p || qty<=0){alert('Выбери товар и количество');return;}
+  if(Number(p.qty||0)<qty && !confirm('Расход больше остатка. Всё равно списать при выдаче?')) return;
+  doneCostsDraft.push({id:Date.now(),kind:'stock',productId:p.id,productName:p.name,qty,price:Number(p.price)||0,amount:(Number(p.price)||0)*qty,comment:p.name});
+  renderDoneWizard(doneWizardCarId);
+}
+function removeDoneCost(cid){
+  rememberDoneWizardFields();
+  doneCostsDraft=doneCostsDraft.filter(x=>x.id!==cid);
+  renderDoneWizard(doneWizardCarId);
+}
+function applyPartsStockOut(c){
+  (c.partsCosts||[]).forEach((x,i)=>{
+    if(x.kind!=='stock' || x.stocked) return;
+    const p=products.find(pr=>String(pr.id)===String(x.productId));
+    if(p){
+      p.qty=Number(p.qty||0)-Number(x.qty||0);
+      p.updatedAt=new Date().toISOString();
+      stockLog.unshift({id:Date.now()+i,type:'out',productId:p.id,productName:p.name,price:Number(p.price)||0,qty:Number(x.qty)||0,person:'Выдача '+(c.number||''),date:new Date().toLocaleString('ru-RU'),carId:c.id});
+    }
+    x.stocked=true;
+  });
 }
 
 function pickMaster(inputId,groupClass,name){
@@ -2146,11 +2328,14 @@ function finishDone(id){
   c.master=val('doneMaster');
   c.moneyMaster=val('moneyMaster');
   c.price=val('donePrice')||c.agreedPrice||'0';
+  c.partsCosts=doneCostsDraft.slice();
+  applyPartsStockOut(c);
   c.outAt=new Date().toLocaleString('ru-RU');
   c.status='done';
   c.statusChangedAt=new Date().toISOString();
   c.updatedAt=c.statusChangedAt;
-  save();
+  doneCostsOpen=false;
+  saveAll();
   closeModal();
   setTab('done');
 }
@@ -2198,6 +2383,7 @@ function saveCardNoClose(id){
   c.inAt=val('editInAt')||c.inAt;
   c.outAt=val('editOutAt')||c.outAt;
   c.price=val('price')||c.price;
+  if(document.getElementById('editPriority')) c.priority=val('editPriority')||c.priority||'none';
   c.updatedAt=new Date().toISOString();
 }
 
@@ -3471,11 +3657,26 @@ function importIcsFile(event){
 
 
 function startNativeOcr(fieldId, type){
+  window._ocrFieldId=fieldId;
   if(window.AndroidOcr && AndroidOcr.openLiveScanner){
-    AndroidOcr.openLiveScanner(fieldId,type||'plate');
+    try{AndroidOcr.openLiveScanner(fieldId,type||'plate');return;}catch(e){}
+  }
+  if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    startCaptureOcr(fieldId);
     return;
   }
   openLivePlateScan(fieldId);
+}
+function startCaptureOcr(fieldId){
+  window._ocrFieldId=fieldId||window._ocrFieldId||'number';
+  const el=document.getElementById('ocrCaptureInput');
+  if(!el) return;
+  el.value='';
+  el.onchange=function(ev){scanPhotoText(ev, window._ocrFieldId||'number','plate');};
+  el.click();
+}
+function liveScanTakePhoto(){
+  startCaptureOcr(liveScan.fieldId||window._ocrFieldId||'number');
 }
 
 let liveScan={stream:null,timer:null,fieldId:'number',busy:false,best:'',last:'',same:0,hist:[]};
@@ -3492,6 +3693,18 @@ function stopLiveScanCamera(){
   const v=document.getElementById('liveScanVideo');
   if(v) v.srcObject=null;
 }
+async function getScanCameraStream(){
+  const tries=[
+    {audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+    {audio:false,video:{facingMode:'environment'}},
+    {audio:false,video:true}
+  ];
+  let last=new Error('camera');
+  for(const spec of tries){
+    try{return await navigator.mediaDevices.getUserMedia(spec);}catch(e){last=e;}
+  }
+  throw last;
+}
 async function openLivePlateScan(fieldId){
   liveScan.fieldId=fieldId;
   liveScan.best='';liveScan.last='';liveScan.same=0;liveScan.hist=[];liveScan.busy=false;
@@ -3506,13 +3719,13 @@ async function openLivePlateScan(fieldId){
     if(hint && j && j.ok) hint.textContent='Связь с распознаванием есть. Наведи номер в полоску';
   }).catch(e=>{
     const hint=document.getElementById('liveScanRaw');
-    if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e);
+    if(hint) hint.textContent='Нет связи с распознаванием: '+String(e.message||e)+'. Можно снять фото.';
   });
   try{
     if(liveScanHasLive()){
       liveScan.stream.getTracks().forEach(t=>t.enabled=true);
     }else{
-      liveScan.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
+      liveScan.stream=await getScanCameraStream();
     }
     const v=document.getElementById('liveScanVideo');
     v.setAttribute('playsinline','');
@@ -3521,8 +3734,9 @@ async function openLivePlateScan(fieldId){
     await v.play();
     liveScanLoop();
   }catch(e){
-    document.getElementById('liveScanFound').textContent='Нет доступа к камере';
-    document.getElementById('liveScanRaw').textContent=String(e.message||e);
+    document.getElementById('liveScanFound').textContent='Камера в браузере недоступна';
+    document.getElementById('liveScanRaw').textContent='Открой фото с камеры телефона — так работает и с мобильного интернета.';
+    setTimeout(()=>startCaptureOcr(fieldId),250);
   }
 }
 
@@ -3550,7 +3764,7 @@ function liveScanLoop(){
       if(hint && !liveScan.best) hint.textContent='Нет связи с OCR: '+String(e.message||e);
     }
     if(document.getElementById('liveScan')?.classList.contains('show')) liveScanLoop();
-  },50);
+  },400);
 }
 
 function liveScanCrop(){
@@ -3702,6 +3916,7 @@ async function scanPhotoText(event, fieldId, type){
     if(plate && input){
       input.value=plate;
       if(status) status.textContent='Готово: '+plate;
+      closeLiveScan();
     }else if(status){
       status.textContent='Не разобрал номер. Сфоткай ближе и ровнее.';
     }
@@ -3733,6 +3948,26 @@ function extractPlate(text){
     if(m2) return m2[0];
   }
   return '';
+}
+
+function plateKey(s){
+  const extracted=extractPlate(s);
+  if(extracted) return extracted;
+  return String(s||'').toUpperCase().replace(/[^АВЕКМНОРСТУХA-Z0-9]/g,'');
+}
+function findOpenDuplicateCar(number, exceptId){
+  const key=plateKey(number);
+  if(!key || key==='БЕЗНОМЕРА' || key==='БЕЗ НОМЕРА') return null;
+  return cars.find(c=>c && c.status!=='done' && c.id!==exceptId && plateKey(c.number)===key) || null;
+}
+function blockDuplicatePlate(number, exceptId){
+  const existing=findOpenDuplicateCar(number, exceptId);
+  if(!existing) return false;
+  const title=[existing.brand,existing.model].filter(Boolean).join(' ');
+  alert('Эта машина уже в работе: '+(existing.number||'')+(title?' · '+title:'')+'\nПринято: '+(existing.inAt||'—')+'\nОткрой существующую карточку, вторую не создавай.');
+  closeModal();
+  openCarView(existing.id);
+  return true;
 }
 
 function extractVin(text){
@@ -3834,17 +4069,19 @@ function saveReportPdf(){
     const range=getReportRange();
     const done=getDoneCarsInRange(range.from, range.to);
     const total=done.reduce((sum,c)=>sum+(Number(c.price)||0),0);
+    const costsTotal=done.reduce((sum,c)=>sum+carPartsCost(c),0);
     const byMaster={};
     const byMoney={};
 
     done.forEach(c=>{
       const price=Number(c.price)||0;
+      const profit=carProfit(c);
       const masterList=String(c.master||'Не указан').split(',').map(x=>x.trim()).filter(Boolean);
       const mastersForCard=masterList.length?masterList:['Не указан'];
       const teamName=mastersForCard.join(' + ');
       if(!byMaster[teamName]) byMaster[teamName]={count:0,sum:0};
       byMaster[teamName].count++;
-      byMaster[teamName].sum+=price;
+      byMaster[teamName].sum+=profit;
       const cash=c.moneyMaster||'Не указан';
       if(!byMoney[cash]) byMoney[cash]={count:0,sum:0};
       byMoney[cash].count++;
@@ -3857,17 +4094,22 @@ function saveReportPdf(){
       createdAt:new Date().toLocaleString('ru-RU'),
       count:done.length,
       total:total,
+      costs:costsTotal,
+      profit:total-costsTotal,
       avg:done.length?Math.round(total/done.length):0,
       byMaster:Object.entries(byMaster).map(([name,v])=>({name,count:v.count,sum:Math.round(v.sum)})),
       byMoney:isLimitedCrmUser()?[]:Object.entries(byMoney).map(([name,v])=>({name,count:v.count,sum:Math.round(v.sum)})),
-      rows:done.map((c,i)=>({
+      rows:done.slice().sort((a,b)=>doneSortTime(a)-doneSortTime(b)).map((c,i)=>({
         n:i+1,
+        date:formatRuDay(c.outAt),
         number:c.number||'',
         brand:c.brand||'',
         work:c.work||'',
         master:c.master||'',
         moneyMaster:c.moneyMaster||'',
         price:Number(c.price)||0,
+        costs:carPartsCost(c),
+        profit:carProfit(c),
         outAt:c.outAt||''
       }))
     };
@@ -3916,22 +4158,23 @@ function buildMainReportPrintHtml(p){
   const money=n=>(Number(n)||0).toLocaleString('ru-RU')+' ₽';
   const masterRows=(p.byMaster||[]).map(m=>`<tr><td>${esc(m.name)}</td><td>${m.count}</td><td>${money(m.sum)}</td></tr>`).join('')||'<tr><td colspan="3">Нет данных</td></tr>';
   const moneyRows=(p.byMoney||[]).map(m=>`<tr><td>${esc(m.name)}</td><td>${m.count}</td><td>${money(m.sum)}</td></tr>`).join('')||'<tr><td colspan="3">Нет данных</td></tr>';
-  const carRows=(p.rows||[]).map(r=>`<tr><td>${r.n}</td><td>${esc(r.number)}</td><td>${esc(r.brand)}</td><td>${esc(r.work)}</td><td>${esc(r.master)}</td><td>${esc(r.moneyMaster)}</td><td>${money(r.price)}</td><td>${esc(r.outAt)}</td></tr>`).join('')||'<tr><td colspan="8">За выбранный период машин нет</td></tr>';
+  const carRows=(p.rows||[]).map(r=>`<tr><td>${esc(r.date||r.outAt||'')}</td><td>${esc(r.number)}</td><td>${esc(r.brand)}</td><td>${esc(r.work)}</td><td>${esc(r.master)}</td><td>${money(r.price)}</td><td>${money(r.costs)}</td><td>${money(r.profit)}</td></tr>`).join('')||'<tr><td colspan="8">За выбранный период машин нет</td></tr>';
   return `
     <div class="asl-report-head"><div class="asl-report-brand">Pandora34</div><div class="asl-report-period">${esc(p.period)}</div></div>
     <h1 class="asl-report-title">${esc(p.title)}</h1>
     <div class="asl-report-created">Создано: ${esc(p.createdAt)}</div>
     <div class="asl-summary">
       <div class="asl-summary-card"><div class="asl-summary-label">Машин выдано</div><div class="asl-summary-num">${p.count}</div></div>
-      <div class="asl-summary-card"><div class="asl-summary-label">Сумма</div><div class="asl-summary-num">${money(p.total)}</div></div>
-      <div class="asl-summary-card"><div class="asl-summary-label">Средний чек</div><div class="asl-summary-num">${money(p.avg)}</div></div>
+      <div class="asl-summary-card"><div class="asl-summary-label">Выручка</div><div class="asl-summary-num">${money(p.total)}</div></div>
+      <div class="asl-summary-card"><div class="asl-summary-label">Затраты</div><div class="asl-summary-num">${money(p.costs)}</div></div>
+      <div class="asl-summary-card"><div class="asl-summary-label">Прибыль</div><div class="asl-summary-num">${money(p.profit)}</div></div>
     </div>
     <div class="asl-section-title">По мастерам</div>
-    <table class="print-table"><thead><tr><th>Мастер</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>${masterRows}</tbody></table>
+    <table class="print-table"><thead><tr><th>Мастер</th><th>Кол-во</th><th>Прибыль</th></tr></thead><tbody>${masterRows}</tbody></table>
     <div class="asl-section-title" style="margin-top:20px">По кассе</div>
     <table class="print-table"><thead><tr><th>Касса</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>${moneyRows}</tbody></table>
     <div class="asl-section-title" style="margin-top:20px">Список машин</div>
-    <table class="print-table"><thead><tr><th>#</th><th>Номер</th><th>Авто</th><th>Работа</th><th>Мастер</th><th>Касса</th><th>Сумма</th><th>Выдано</th></tr></thead><tbody>${carRows}</tbody></table>
+    <table class="print-table"><thead><tr><th>Дата</th><th>Номер</th><th>Авто</th><th>Работа</th><th>Мастер</th><th>Выручка</th><th>Затраты</th><th>Прибыль</th></tr></thead><tbody>${carRows}</tbody></table>
   `;
 }
 
@@ -4189,7 +4432,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v27 · владелец Андрей · ЗП · смежные · выдача fix · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v32 · владелец Андрей · приоритет · затраты · антидубль · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -4979,6 +5222,7 @@ openAutoStep=function(){
           <div class="plate-row">
             <input id="number" placeholder="А123ВС77" value="${escapeHtml(draftCar.number||'')}">
             <button type="button" class="photo-btn plate-cam" onclick="startNativeOcr('number','plate')">Сканер</button>
+            <button type="button" class="photo-btn plate-cam" onclick="startCaptureOcr('number')">Фото</button>
           </div>
           <div id="numberOcrStatus" class="ocr-status"></div>
         </div>
