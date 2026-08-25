@@ -127,6 +127,11 @@
     #aslPayPop,#doneCostsPop{position:fixed;inset:0;z-index:400;background:rgba(15,20,30,.5);display:flex;align-items:center;justify-content:center;padding:20px}
     .asl-pay-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;width:min(380px,100%);display:flex;flex-direction:column;gap:8px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
     .done-costs-btn{width:100%;padding:18px 16px;font-size:20px;font-weight:800;margin:8px 0 4px;border-radius:12px}
+    #doneCostsPop .asl-pay-card{width:min(420px,100%);gap:12px;padding:22px}
+    #doneCostsPop .asl-pay-title{font-size:22px;margin-bottom:10px}
+    #doneCostsPop button{width:100%;min-height:56px;padding:16px 18px;font-size:18px;font-weight:800;border-radius:12px;text-align:center}
+    #doneCostsPop button.neon{min-height:62px;font-size:20px}
+    #doneCostsPop input,#doneCostsPop select{min-height:52px;font-size:17px;padding:14px 12px}
     .asl-pay-card select{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:15px}
     .asl-pay-title{font-weight:800;font-size:17px;margin-bottom:6px;color:var(--text)}
     .asl-pay-card button{width:100%;text-align:center}
@@ -4469,7 +4474,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v35 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v36 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
