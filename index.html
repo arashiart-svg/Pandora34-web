@@ -139,6 +139,10 @@
     .pick-btn b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .aslanova-btn{width:100%;border:0!important;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;background:var(--orange)!important;color:#fff!important;box-shadow:0 8px 20px rgba(244,164,39,.4)!important}
     .aslanova-btn:hover{filter:brightness(1.05)}
+    .cp-row{display:flex;gap:8px;margin:10px 0 4px;width:100%;justify-content:center}
+    .quick-btn.cp-pick{flex:1;min-width:0;min-height:48px;padding:12px 6px!important;font-size:15px!important;font-weight:800;text-align:center;background:var(--sidebar-bg)!important;color:#fff!important;border:1.5px solid rgba(79,199,234,.45)!important;box-shadow:0 6px 14px rgba(16,30,56,.28);border-radius:10px}
+    .quick-btn.cp-pick:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 12px rgba(79,199,234,.4)}
+    .quick-btn.cp-pick.selected{border-color:var(--neon)!important;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--neon),0 8px 18px rgba(79,199,234,.35)!important;filter:brightness(1.08)}
     .two-actions.neon-bar{padding-top:16px;border-top:1px solid var(--border);margin-top:22px}
     .two-actions.neon-bar button{border:1.5px solid rgba(79,199,234,.4);border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;background:var(--sidebar-bg);color:#b7c3dd;box-shadow:none}
     .two-actions.neon-bar button:hover{color:#fff;border-color:var(--neon);box-shadow:0 0 10px rgba(79,199,234,.35)}
@@ -1712,8 +1716,7 @@ function counterpartyPickerHtml(counterparty,editMode){
     <label>Контрагент</label>
     <input type="hidden" id="${id}" value="${escapeAttr(counterparty||'')}">
     <button type="button" id="${dispId}" class="pick-btn${counterparty?'':' empty'}" onclick="openClientPicker('${id}')"><b>${escapeHtml(counterparty||'Выбрать')}</b><span class="arrow">›</span></button>
-    <div class="quick-row">${chips}</div>
-    <div class="hint">Быстрые типы — если человека заводить лень. Из списка — если уже есть в контрагентах.</div>
+    <div class="cp-row">${chips}</div>
   </div>`;
 }
 function setCounterpartyValue(targetId,name){
@@ -4435,8 +4438,7 @@ function showClientGroupPicker(targetId){
   const noGroupCount=clients.filter(c=>!normalizeClient(c).group).length;
   document.getElementById('modalBox').innerHTML=`
     <h2>Группа контрагента</h2>
-    <div class="hint" style="margin-bottom:8px">Быстрые типы без заведения в список</div>
-    <div class="quick-row" style="margin:0 0 14px">${quickCounterparties.map(x=>`<button type="button" class="quick-btn" onclick="pickQuickFromPicker('${targetId}','${escapeAttr(x)}')">${x}</button>`).join('')}</div>
+    <div class="cp-row" style="margin:0 0 14px">${quickCounterparties.map(x=>`<button type="button" class="quick-btn cp-pick" onclick="pickQuickFromPicker('${targetId}','${escapeAttr(x)}')">${x}</button>`).join('')}</div>
     <div class="brand-picker-grid">
       ${grouped.map(x=>`<button type="button" onclick="showClientsInGroup('${targetId}','${escapeAttr(x.name)}')"><b>${escapeHtml(x.name)}</b><div class="small">${x.count} контраг.</div></button>`).join('')}
       ${noGroupCount?`<button type="button" onclick="showClientsInGroup('${targetId}','')"><b>Без группы</b><div class="small">${noGroupCount} контраг.</div></button>`:''}
@@ -4521,7 +4523,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v39 · владелец Андрей · быстрые контрагенты · кнопки выдачи/удаления · отчёт по датам · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v40 · владелец Андрей · быстрые контрагенты · кнопки выдачи/удаления · отчёт по датам · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
