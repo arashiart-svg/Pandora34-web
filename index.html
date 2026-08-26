@@ -144,6 +144,13 @@
     .two-actions.neon-bar button:hover{color:#fff;border-color:var(--neon);box-shadow:0 0 10px rgba(79,199,234,.35)}
     .two-actions.neon-bar button.neon{color:#fff;border-color:var(--neon);box-shadow:0 0 0 1px rgba(79,199,234,.2),0 0 20px var(--neon-glow)}
     .two-actions.neon-bar button.neon:hover{box-shadow:0 0 0 1px rgba(79,199,234,.3),0 0 26px var(--neon-glow)}
+    .two-actions.neon-bar button.danger,.actions button.danger{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;box-shadow:0 6px 16px rgba(240,68,58,.4)!important}
+    .two-actions.neon-bar button.issue,.actions button.issue{background:var(--green)!important;border-color:var(--green)!important;color:#fff!important;box-shadow:0 6px 16px rgba(23,177,107,.4)!important}
+    .two-actions.neon-bar button.pri-high,.quick-btn.pri-pick[data-pri="high"]{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}
+    .two-actions.neon-bar button.pri-mid,.quick-btn.pri-pick[data-pri="mid"]{background:var(--orange)!important;border-color:var(--orange)!important;color:#fff!important}
+    .two-actions.neon-bar button.pri-low,.quick-btn.pri-pick[data-pri="low"]{background:var(--green)!important;border-color:var(--green)!important;color:#fff!important}
+    .two-actions.neon-bar button.pri-none,.quick-btn.pri-pick[data-pri="none"]{background:#94a3b8!important;border-color:#94a3b8!important;color:#fff!important}
+    .two-actions.neon-bar button.pri-high.neon,.two-actions.neon-bar button.pri-mid.neon,.two-actions.neon-bar button.pri-low.neon,.two-actions.neon-bar button.pri-none.neon,.quick-btn.pri-pick.selected{box-shadow:0 0 0 2px #fff,0 0 0 4px currentColor,0 8px 18px rgba(0,0,0,.18)!important;filter:brightness(1.08)}
 
     .view-plate{margin:0 0 12px}
     .view-body{padding:2px 16px;display:flex;flex-direction:column;gap:2px;background:var(--panel);border-radius:10px;border:1px solid var(--border);margin-top:4px}
@@ -724,9 +731,14 @@ function findClientByName(name){
   if(!n) return null;
   return clients.map(normalizeClient).find(c=>c.name.toLowerCase()===n) || null;
 }
+const quickCounterparties=['Перекуп','Клиент','Партнёр'];
+function normCpName(s){return String(s||'').trim().toLowerCase().replaceAll('ё','е');}
+function isQuickCounterparty(value,name){return !!name && normCpName(value)===normCpName(name);}
 function counterpartyGroupName(counterparty){
   const name=String(counterparty||'').trim();
   if(!name) return 'Без контрагента';
+  const quick=quickCounterparties.find(x=>isQuickCounterparty(name,x));
+  if(quick) return quick;
   const c=findClientByName(name);
   return (c && c.group) ? c.group : 'Без группы';
 }
@@ -1695,11 +1707,43 @@ function brandModelPickerHtml(brand,model,editMode){
 function counterpartyPickerHtml(counterparty,editMode){
   const id=editMode?'editCounterparty':'counterparty';
   const dispId=editMode?'editCounterpartyDisplay':'counterpartyDisplay';
-  return `<div>
+  const chips=quickCounterparties.map(x=>`<button type="button" class="quick-btn cp-pick${isQuickCounterparty(counterparty,x)?' selected':''}" data-cp="${escapeAttr(x)}" onclick="pickQuickCounterparty('${id}','${escapeAttr(x)}')">${x}</button>`).join('');
+  return `<div class="wide">
     <label>Контрагент</label>
     <input type="hidden" id="${id}" value="${escapeAttr(counterparty||'')}">
     <button type="button" id="${dispId}" class="pick-btn${counterparty?'':' empty'}" onclick="openClientPicker('${id}')"><b>${escapeHtml(counterparty||'Выбрать')}</b><span class="arrow">›</span></button>
+    <div class="quick-row">${chips}</div>
+    <div class="hint">Быстрые типы — если человека заводить лень. Из списка — если уже есть в контрагентах.</div>
   </div>`;
+}
+function setCounterpartyValue(targetId,name){
+  const next=String(name||'').trim();
+  const input=document.getElementById(targetId);
+  if(input){input.value=next;input.setAttribute('value',next);}
+  const isEdit=targetId==='editCounterparty';
+  const dispBtn=document.getElementById(isEdit?'editCounterpartyDisplay':'counterpartyDisplay');
+  if(dispBtn){
+    const b=dispBtn.querySelector('b');
+    if(b) b.textContent=next||'Выбрать';
+    dispBtn.classList.toggle('empty',!next);
+  }
+  updateCounterpartyButtons(targetId);
+}
+function pickQuickCounterparty(targetId,name){
+  const input=document.getElementById(targetId);
+  const cur=input?String(input.value||'').trim():'';
+  setCounterpartyValue(targetId, isQuickCounterparty(cur,name)?'':name);
+}
+function pickQuickFromPicker(targetId,name){
+  restorePreviousModal();
+  setCounterpartyValue(targetId,name);
+}
+function updateCounterpartyButtons(targetId){
+  const input=document.getElementById(targetId);
+  const cur=input?String(input.value||'').trim():'';
+  document.querySelectorAll('.cp-pick').forEach(btn=>{
+    btn.classList.toggle('selected', isQuickCounterparty(cur, btn.getAttribute('data-cp')||''));
+  });
 }
 
 function editComboHtml(id,label,value,placeholder){
@@ -1922,7 +1966,7 @@ function openWorkStep(){
     </div>
     <div class="two-actions neon-bar modal-foot">
       <div class="modal-foot-row"><button onclick="openAutoStep()">Назад</button><button onclick="closeModal()">Отмена</button></div>
-      <div class="modal-foot-row"><button class="neon" onclick="openPriorityStep()">Сохранить</button><button onclick="quickDoneFromAdd()">Выдать</button></div>
+      <div class="modal-foot-row"><button class="neon" onclick="openPriorityStep()">Сохранить</button><button class="issue" onclick="quickDoneFromAdd()">Выдать</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2034,16 +2078,16 @@ function openCarView(id){
       </div>
       ${canEditCar(c) && c.status!=='done'?`
       <div class="modal-foot-row" style="flex-wrap:wrap">
-        <button type="button" class="${c.priority==='high'?'neon':''}" onclick="setCarPriority(${c.id},'high')">Высокий</button>
-        <button type="button" class="${c.priority==='mid'?'neon':''}" onclick="setCarPriority(${c.id},'mid')">Средний</button>
-        <button type="button" class="${c.priority==='low'?'neon':''}" onclick="setCarPriority(${c.id},'low')">Низкий</button>
-        <button type="button" class="${!c.priority||c.priority==='none'?'neon':''}" onclick="setCarPriority(${c.id},'none')">Без приоритета</button>
+        <button type="button" class="pri-high ${c.priority==='high'?'neon':''}" onclick="setCarPriority(${c.id},'high')">Высокий</button>
+        <button type="button" class="pri-mid ${c.priority==='mid'?'neon':''}" onclick="setCarPriority(${c.id},'mid')">Средний</button>
+        <button type="button" class="pri-low ${c.priority==='low'?'neon':''}" onclick="setCarPriority(${c.id},'low')">Низкий</button>
+        <button type="button" class="pri-none ${!c.priority||c.priority==='none'?'neon':''}" onclick="setCarPriority(${c.id},'none')">Без приоритета</button>
       </div>`:''}
       <div class="modal-foot-row">
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${canEditCar(c) && c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${canEditCar(c) && c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
-        ${canEditCar(c) && c.status!=='done'?`<button class="neon" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
+        ${canEditCar(c) && c.status!=='done'?`<button class="issue" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
       ${canDeleteCars() && canEditCar(c)?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
     </div>`;
@@ -2103,7 +2147,7 @@ function openCar(id){
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
-        ${c.status!=='done'?`<button onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
+        ${c.status!=='done'?`<button class="issue" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
       ${canDeleteCars()?(c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`):''}
     </div>`;
@@ -2236,7 +2280,7 @@ function renderDoneWizard(id){
     <button type="button" class="danger done-costs-btn" onclick="openDoneCostsPicker()">Затраты</button>
     </div>
     <div class="two-actions neon-bar modal-foot">
-      <div class="modal-foot-row"><button onclick="openCar(${id})">Назад</button><button class="neon" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
+      <div class="modal-foot-row"><button onclick="openCar(${id})">Назад</button><button class="issue" onclick="finishDone(${id})">Подтвердить выдачу</button></div>
     </div>`;
   document.getElementById('modal').style.display='flex';
   restoreDoneWizardFields();
@@ -4391,6 +4435,8 @@ function showClientGroupPicker(targetId){
   const noGroupCount=clients.filter(c=>!normalizeClient(c).group).length;
   document.getElementById('modalBox').innerHTML=`
     <h2>Группа контрагента</h2>
+    <div class="hint" style="margin-bottom:8px">Быстрые типы без заведения в список</div>
+    <div class="quick-row" style="margin:0 0 14px">${quickCounterparties.map(x=>`<button type="button" class="quick-btn" onclick="pickQuickFromPicker('${targetId}','${escapeAttr(x)}')">${x}</button>`).join('')}</div>
     <div class="brand-picker-grid">
       ${grouped.map(x=>`<button type="button" onclick="showClientsInGroup('${targetId}','${escapeAttr(x.name)}')"><b>${escapeHtml(x.name)}</b><div class="small">${x.count} контраг.</div></button>`).join('')}
       ${noGroupCount?`<button type="button" onclick="showClientsInGroup('${targetId}','')"><b>Без группы</b><div class="small">${noGroupCount} контраг.</div></button>`:''}
@@ -4443,6 +4489,7 @@ function applyClientToForm(targetId, client){
     if(b) b.textContent=c.name;
     dispBtn.classList.remove('empty');
   }
+  updateCounterpartyButtons(targetId);
 }
 
 function pickClient(targetId,index){
@@ -4474,7 +4521,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v37 · владелец Андрей · отчёт по датам · сканер /ocr · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v39 · владелец Андрей · быстрые контрагенты · кнопки выдачи/удаления · отчёт по датам · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5314,7 +5361,7 @@ function openAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;docum
   <div class="wide"><label>Кто делал</label><div class="quick-row">${aslanovaMasterButtons('aslanovaDoneMaster','aslanova-done-master')}</div><input id="aslanovaDoneMaster" type="hidden" value="${escapeHtml(c.master||aslanovaSettings.defaultMaster||'Андрей')}"></div>
   <div class="wide"><label>Дата работы</label>${aslanovaDateBtnHtml('aslanovaDoneDate',aslanovaTodayInput())}</div>
   <div class="wide"><label>Кто взял деньги</label><input value="Андрей" readonly></div></div>
-  <div class="actions"><button onclick="aslanovaOldOpenCar(${id})">Обычная выдача</button><button onclick="finishAslanovaDone(${id})">Подтвердить выдачу</button></div>`;document.getElementById('modal').style.display='flex';pickAslanovaDoneType(c.aslanovaType||'local');pickMaster('aslanovaDoneMaster','aslanova-done-master',c.master||aslanovaSettings.defaultMaster||'Андрей');}
+  <div class="actions"><button onclick="aslanovaOldOpenCar(${id})">Обычная выдача</button><button class="issue" onclick="finishAslanovaDone(${id})">Подтвердить выдачу</button></div>`;document.getElementById('modal').style.display='flex';pickAslanovaDoneType(c.aslanovaType||'local');pickMaster('aslanovaDoneMaster','aslanova-done-master',c.master||aslanovaSettings.defaultMaster||'Андрей');}
 function pickAslanovaDoneType(t){document.getElementById('aslanovaDoneType').value=t;const l=document.getElementById('aslDoneTypeLocal'),r=document.getElementById('aslDoneTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
 function finishAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;const t=aslanovaStampsFromInput(val('aslanovaDoneDate'));const paid=val('aslanovaDonePaid')==='1';c.work='Прошивка';c.counterparty='Асланова';c.isAslanova=true;c.aslanovaType=val('aslanovaDoneType')||c.aslanovaType||'local';c.aslanovaAmount=val('aslanovaDonePrice')||c.aslanovaAmount||c.agreedPrice||'0';c.paidByClient=paid;c.aslanovaKickback=paid?(Number(val('aslanovaDoneKick'))||0):0;c.aslanovaClientPaid=paid?(Number(val('aslanovaDoneClient'))||Number(c.aslanovaAmount)||0):0;c.master=val('aslanovaDoneMaster')||c.master||'Андрей';c.moneyMaster='Андрей';c.price=c.aslanovaAmount;c.inAt=t.stamp;c.outAt=t.stamp;c.status='done';c.statusChangedAt=t.iso;c.doneAt=t.iso;c.updatedAt=t.iso;save();closeModal();setTab('done');}
 const aslanovaOldCalcSalaryRows=calcSalaryRows;
