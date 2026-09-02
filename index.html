@@ -1463,6 +1463,8 @@ function calcSalaryRows(done){
   done.forEach(c=>{
     const price=parseMoney(c.price||c.agreedPrice);
     if(price<=0) return;
+    const costs=carPartsCost(c);
+    const net=Math.max(0, price-costs);
 
     const orderNo=c.number||'БЕЗ НОМЕРА';
     const carTitle=[c.brand,c.model].filter(Boolean).join(' ') || 'Авто без марки';
@@ -1470,6 +1472,9 @@ function calcSalaryRows(done){
     const counterparty=String(c.counterparty||'').trim();
     const collector=String(c.moneyMaster||'').trim();
     const team=[...new Set(String(c.master||'').split(',').map(x=>x.trim()).filter(Boolean))];
+    const dateLabel=formatRuDay(c.outAt||c.inAt);
+    const dateTs=parseRuDate(c.outAt||c.inAt)?.getTime()||0;
+    const costText=costs?`${price.toLocaleString('ru-RU')} ₽ − затраты ${Math.round(costs).toLocaleString('ru-RU')} ₽ = ${net.toLocaleString('ru-RU')} ₽`:`${price.toLocaleString('ru-RU')} ₽`;
 
     let paidTotal=0;
     const workDetailByMaster={};
@@ -1477,40 +1482,35 @@ function calcSalaryRows(done){
     team.forEach(name=>{
       if(isOwnerMaster(name)) return;
       const pct=masterPercent(name);
-      const amount=Math.round(price*pct/100);
+      const amount=Math.round(net*pct/100);
       if(amount<=0) return;
       paidTotal+=amount;
       const r=ensure(name);
       r.count++;
-      r.workSum+=price;
+      r.workSum+=net;
       r.base+=amount;
-      const dateLabel=formatRuDay(c.outAt||c.inAt);
-      const dateTs=parseRuDate(c.outAt||c.inAt)?.getTime()||0;
-      const detail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:pct,amount,taken:0,date:dateLabel,dateTs,text:`${price.toLocaleString('ru-RU')} ₽ × ${pct}%`};
+      const detail={type:'work',orderNo,carTitle,workTitle,counterparty,price:net,percent:pct,amount,taken:0,date:dateLabel,dateTs,text:`${costText} × ${pct}%`};
       r.details.push(detail);
       workDetailByMaster[name]=detail;
     });
 
-    const costs=carPartsCost(c);
-    const ownerBase=Math.max(0, price-paidTotal-costs);
+    const ownerBase=Math.max(0, net-paidTotal);
     const owner=ensure(OWNER_MASTER);
     owner.count++;
-    owner.workSum+=price;
+    owner.workSum+=net;
     owner.base+=ownerBase;
-    const dateLabel=formatRuDay(c.outAt||c.inAt);
-    const dateTs=parseRuDate(c.outAt||c.inAt)?.getTime()||0;
-    const ownerDetail={type:'work',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:ownerBase,taken:0,date:dateLabel,dateTs,text:team.length&&team.some(n=>!isOwnerMaster(n))?(costs?'остаток после мастеров и затрат':'остаток после мастеров'):(costs?'работа владельца минус затраты':'работа владельца')};
+    const ownerDetail={type:'work',orderNo,carTitle,workTitle,counterparty,price:net,percent:null,amount:ownerBase,taken:0,date:dateLabel,dateTs,text:team.length&&team.some(n=>!isOwnerMaster(n))?(costs?'остаток после мастеров и затрат: '+costText:'остаток после мастеров'):(costs?costText:'работа владельца')};
     owner.details.push(ownerDetail);
     workDetailByMaster[OWNER_MASTER]=ownerDetail;
 
     if(collector){
       const r=ensure(collector);
-      r.collected+=price;
+      r.collected+=net;
       const existing=workDetailByMaster[collector];
       if(existing){
-        existing.taken=(Number(existing.taken)||0)+price;
+        existing.taken=(Number(existing.taken)||0)+net;
       }else{
-        r.details.push({type:'collected_only',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:0,taken:price,date:dateLabel,dateTs,text:'деньги уже взял с клиента'});
+        r.details.push({type:'collected_only',orderNo,carTitle,workTitle,counterparty,price:net,percent:null,amount:0,taken:net,date:dateLabel,dateTs,text:costs?'деньги уже взял с клиента (после затрат)':'деньги уже взял с клиента'});
       }
     }
   });
@@ -4634,7 +4634,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v41 · владелец Андрей · откат в затратах · прибыль минус затраты · сортировка выдачи и марок · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v42 · владелец Андрей · ЗП минус затраты · откат · сортировка · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5485,7 +5485,46 @@ function openAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;docum
 function pickAslanovaDoneType(t){document.getElementById('aslanovaDoneType').value=t;const l=document.getElementById('aslDoneTypeLocal'),r=document.getElementById('aslDoneTypeRemote');if(l)l.classList.toggle('selected',t==='local');if(r)r.classList.toggle('selected',t==='remote');}
 function finishAslanovaDone(id){const c=cars.find(x=>x.id===id);if(!c)return;const t=aslanovaStampsFromInput(val('aslanovaDoneDate'));const paid=val('aslanovaDonePaid')==='1';c.work='Прошивка';c.counterparty='Асланова';c.isAslanova=true;c.aslanovaType=val('aslanovaDoneType')||c.aslanovaType||'local';c.aslanovaAmount=val('aslanovaDonePrice')||c.aslanovaAmount||c.agreedPrice||'0';c.paidByClient=paid;c.aslanovaKickback=paid?(Number(val('aslanovaDoneKick'))||0):0;c.aslanovaClientPaid=paid?(Number(val('aslanovaDoneClient'))||Number(c.aslanovaAmount)||0):0;c.master=val('aslanovaDoneMaster')||c.master||'Андрей';c.moneyMaster='Андрей';c.price=c.aslanovaAmount;c.inAt=t.stamp;c.outAt=t.stamp;c.status='done';c.statusChangedAt=t.iso;c.doneAt=t.iso;c.updatedAt=t.iso;save();closeModal();setTab('done');}
 const aslanovaOldCalcSalaryRows=calcSalaryRows;
-calcSalaryRows=function(done){const normal=done.filter(c=>!c.isAslanova);const rows=aslanovaOldCalcSalaryRows(normal);const ensure=(name)=>{if(!rows[name])rows[name]={count:0,workSum:0,base:0,linkedIn:0,linkedOut:0,collected:0,details:[]};return rows[name];};done.filter(c=>c.isAslanova).forEach(c=>{const price=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;if(price<=0)return;const orderNo=c.number||'БЕЗ НОМЕРА';const carTitle=[c.brand,c.model].filter(Boolean).join(' ')||'Авто без марки';const workTitle='Прошивка ('+aslanovaTypeLabel(c.aslanovaType)+')';const counterparty='Асланова';const master=String(c.master||'Андрей').trim()||'Андрей';if(isOwnerMaster(master)){const r=ensure(OWNER_MASTER);r.count++;r.workSum+=price;r.base+=price;r.collected+=price;r.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:100,amount:price,taken:price,text:'Асланова · работа владельца'});}else{const pct=masterPercent(master);const amount=Math.round(price*pct/100);const m=ensure(master);m.count++;m.workSum+=price;m.base+=amount;m.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:pct,amount,taken:0,text:`Асланова · ${price.toLocaleString('ru-RU')} ₽ × ${pct}%`});const o=ensure(OWNER_MASTER);o.count++;o.workSum+=price;o.base+=Math.max(0,price-amount);o.collected+=price;o.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price,percent:null,amount:Math.max(0,price-amount),taken:price,text:'Асланова · деньги получил Андрей'});}});return rows;};
+calcSalaryRows=function(done){
+  const normal=done.filter(c=>!c.isAslanova);
+  const rows=aslanovaOldCalcSalaryRows(normal);
+  const ensure=(name)=>{if(!rows[name])rows[name]={count:0,workSum:0,base:0,linkedIn:0,linkedOut:0,collected:0,details:[]};return rows[name];};
+  done.filter(c=>c.isAslanova).forEach(c=>{
+    const price=parseMoney(c.price||c.aslanovaAmount||c.agreedPrice);
+    if(price<=0) return;
+    const costs=carPartsCost(c);
+    const net=Math.max(0, price-costs);
+    const orderNo=c.number||'БЕЗ НОМЕРА';
+    const carTitle=[c.brand,c.model].filter(Boolean).join(' ')||'Авто без марки';
+    const workTitle='Прошивка ('+aslanovaTypeLabel(c.aslanovaType)+')';
+    const counterparty='Асланова';
+    const master=String(c.master||'Андрей').trim()||'Андрей';
+    const costText=costs?`${price.toLocaleString('ru-RU')} ₽ − затраты ${Math.round(costs).toLocaleString('ru-RU')} ₽`:`${price.toLocaleString('ru-RU')} ₽`;
+    if(isOwnerMaster(master)){
+      const r=ensure(OWNER_MASTER);
+      r.count++;
+      r.workSum+=net;
+      r.base+=net;
+      r.collected+=net;
+      r.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price:net,percent:100,amount:net,taken:net,text:'Асланова · работа владельца · '+costText});
+    }else{
+      const pct=masterPercent(master);
+      const amount=Math.round(net*pct/100);
+      const m=ensure(master);
+      m.count++;
+      m.workSum+=net;
+      m.base+=amount;
+      m.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price:net,percent:pct,amount,taken:0,text:`Асланова · ${costText} × ${pct}%`});
+      const o=ensure(OWNER_MASTER);
+      o.count++;
+      o.workSum+=net;
+      o.base+=Math.max(0,net-amount);
+      o.collected+=net;
+      o.details.push({type:'aslanova',orderNo,carTitle,workTitle,counterparty,price:net,percent:null,amount:Math.max(0,net-amount),taken:net,text:'Асланова · деньги получил Андрей · '+costText});
+    }
+  });
+  return rows;
+};
 const aslanovaOldRenderReport=renderReport;
 renderReport=function(){aslanovaOldRenderReport();};
 function openAslanovaReport(){const range=getReportRange();const done=getDoneCarsInRange(range.from,range.to).filter(c=>c.isAslanova).sort((a,b)=>new Date(b.statusChangedAt||b.doneAt||b.updatedAt||0)-new Date(a.statusChangedAt||a.doneAt||a.updatedAt||0));const total=done.reduce((s,c)=>s+(Number(c.price||c.aslanovaAmount||c.agreedPrice)||0),0);const local=done.filter(c=>c.aslanovaType!=='remote'),remote=done.filter(c=>c.aslanovaType==='remote');const byMaster={};done.forEach(c=>{const m=c.master||'Не указан';if(!byMaster[m])byMaster[m]={count:0,sum:0};byMaster[m].count++;byMaster[m].sum+=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;});const masters=Object.entries(byMaster).map(([n,v])=>`<div class="report-line"><span>${escapeHtml(n)}</span><b>${v.count} авто / ${Math.round(v.sum).toLocaleString('ru-RU')} ₽</b></div>`).join('')||'<div class="small">Нет машин за выбранный период</div>';const rows=done.map(c=>{const sum=Number(c.price||c.aslanovaAmount||c.agreedPrice)||0;const car=[c.brand,c.model].filter(Boolean).join(' ');return `<div class="report-line" style="align-items:flex-start"><span><b>${escapeHtml(c.number||'БЕЗ НОМЕРА')}</b><br><span class="small">${escapeHtml(car||'Авто')} · ${escapeHtml(aslanovaTypeLabel(c.aslanovaType))} · мастер: ${escapeHtml(c.master||'Не указан')}</span></span><b>${sum.toLocaleString('ru-RU')} ₽</b></div>`;}).join('')||'<div class="small">Нет машин Аслановой за период</div>';document.getElementById('modalBox').className='box';document.getElementById('modalBox').innerHTML=`<h2>Отчёт Асланова</h2><div class="small" style="margin-bottom:12px">${escapeHtml(range.title||'Выбранный период')}</div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:14px"><div class="report-card"><div class="small">Всего машин</div><div class="report-num">${done.length}</div></div><div class="report-card"><div class="small">Оборот</div><div class="report-num">${total.toLocaleString('ru-RU')} ₽</div></div><div class="report-card"><div class="small">Лично / удалённо</div><div class="report-num" style="font-size:24px">${local.length} / ${remote.length}</div></div></div><div class="report-card" style="margin-bottom:14px"><h3 style="margin:0 0 8px">По мастерам</h3>${masters}</div><div class="report-card"><h3 style="margin:0 0 8px">Машины</h3>${rows}</div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;document.getElementById('modal').style.display='flex';};
