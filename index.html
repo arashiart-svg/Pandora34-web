@@ -643,7 +643,8 @@ let carBrands=JSON.parse(storeGet('car_brands_demo','["Audi","BMW","Changan","Ch
 let carModels=JSON.parse(storeGet('car_models_demo','{}'));
 function normalizeBrandModels(){
   if(!Array.isArray(carBrands)) carBrands=Object.keys(carModels||{});
-  carBrands=[...new Set(carBrands.map(x=>String(x||'').trim()).filter(Boolean))];
+  carBrands=[...new Set(carBrands.map(x=>String(x||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ru',{sensitivity:'base'}));
   carBrands.forEach(b=>{if(!Array.isArray(carModels[b])) carModels[b]=[];});
 }
 normalizeBrandModels();
@@ -1069,11 +1070,27 @@ function parseRuDate(s){
   const iso=Date.parse(t);
   return isNaN(iso)?null:new Date(iso);
 }
+function parseMoney(v){
+  const n=Number(String(v??'').replace(/\s/g,'').replace(',','.'));
+  return Number.isFinite(n)?n:0;
+}
+function costLineLabel(x){
+  if(!x) return 'Затрата';
+  if(x.kind==='stock') return (x.productName||'Склад')+(x.qty?(' × '+x.qty):'');
+  if(x.kind==='kickback') return x.comment||'Откат';
+  return x.comment||'Запчасти';
+}
 function carPartsCost(c){
-  return (Array.isArray(c && c.partsCosts)?c.partsCosts:[]).reduce((s,x)=>s+(Number(x.amount)||0),0);
+  if(!c) return 0;
+  const list=Array.isArray(c.partsCosts)?c.partsCosts:[];
+  const listed=list.reduce((s,x)=>s+parseMoney(x&&x.amount),0);
+  const hasKick=list.some(x=>x&&x.kind==='kickback');
+  const extraKick=(!hasKick && parseMoney(c.aslanovaKickback)>0)?parseMoney(c.aslanovaKickback):0;
+  if(listed>0 || extraKick>0) return listed+extraKick;
+  return parseMoney(c.costsTotal);
 }
 function carProfit(c){
-  return (Number(c && c.price)||0) - carPartsCost(c);
+  return parseMoney(c && (c.price||c.agreedPrice)) - carPartsCost(c);
 }
 function formatRuDay(s){
   const d=parseRuDate(s);
@@ -1090,9 +1107,18 @@ function isDoneVisibleInWork(c){
 }
 
 function doneSortTime(c){
-  const d=parseRuDate(c.outAt);
-  if(d) return d.getTime();
-  return Number(c.doneAt || c.updatedAt || c.id || 0) || 0;
+  const iso=Date.parse((c&&(c.doneAt||c.statusChangedAt||c.updatedAt))||0)||0;
+  const d=parseRuDate(c&&c.outAt);
+  if(d){
+    const hasTime=d.getHours()||d.getMinutes()||d.getSeconds();
+    if(hasTime) return d.getTime();
+    if(iso){
+      const x=new Date(iso);
+      if(x.getFullYear()===d.getFullYear() && x.getMonth()===d.getMonth() && x.getDate()===d.getDate()) return iso;
+    }
+    return d.getTime();
+  }
+  return iso || Number(c&&c.id)||0;
 }
 
 function plateBadgeHtml(raw){
@@ -1156,11 +1182,13 @@ function render(){
       (c.status!=='done' && c.agreedPrice)?{l:'Согласовано',v:c.agreedPrice+' ₽',cls:'money'}:null,
       (c.status==='done')?{l:'Выдано',v:c.outAt}:null,
       (c.status==='done' && c.master)?{l:'Делал',v:c.master}:null,
-      (c.status==='done' && c.moneyMaster)?{l:'Деньги',v:c.moneyMaster}:null
+      (c.status==='done' && c.moneyMaster)?{l:'Деньги',v:c.moneyMaster}:null,
+      (c.status==='done' && carPartsCost(c))?{l:'Затраты',v:carPartsCost(c).toLocaleString('ru-RU')+' ₽'}:null,
+      (c.status==='done')?{l:'Прибыль',v:Math.round(carProfit(c)).toLocaleString('ru-RU')+' ₽',cls:'money'}:null
     ].filter(Boolean);
     const rowsHtml=rows.map(r=>`<div class="car-row${r.cls?' '+r.cls:''}"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
     const orderBtn=c.orderNaryad?`<button onclick="event.stopPropagation();openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:'';
-    const badge=c.status==='done'?`<div class="badge">${c.price} ₽</div>`:'';
+    const badge=c.status==='done'?`<div class="badge">${Math.round(carProfit(c)).toLocaleString('ru-RU')} ₽</div>`:'';
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}${c.urgent && c.status!=='done'?' urgent':''}" onclick="openCarView(${c.id})">
@@ -1410,7 +1438,7 @@ function renderAnalysis(done){
 
   done.forEach(c=>{
     const works=splitWorks(c.work);
-    const price=Number(c.price)||0;
+    const price=parseMoney(c.price||c.agreedPrice);
     const part=works.length ? price/works.length : price;
     works.forEach(w=>{ workMoney[w]=(workMoney[w]||0)+part; });
     const group=counterpartyGroupName(c.counterparty);
@@ -1433,7 +1461,7 @@ function calcSalaryRows(done){
   };
 
   done.forEach(c=>{
-    const price=Number(c.price)||0;
+    const price=parseMoney(c.price||c.agreedPrice);
     if(price<=0) return;
 
     const orderNo=c.number||'БЕЗ НОМЕРА';
@@ -1611,14 +1639,14 @@ function renderReport(){
 
   const done=getDoneCarsInRange(range.from, range.to);
 
-  const total=done.reduce((sum,c)=>sum+(Number(c.price)||0),0);
+  const total=done.reduce((sum,c)=>sum+parseMoney(c.price||c.agreedPrice),0);
   const costsTotal=done.reduce((sum,c)=>sum+carPartsCost(c),0);
   const profitTotal=total-costsTotal;
   const byMaster={};
   const byMoney={};
 
   done.forEach(c=>{
-    const price=Number(c.price)||0;
+    const price=parseMoney(c.price||c.agreedPrice);
     const profit=carProfit(c);
 
     const masterList=String(c.master||'Не указан').split(',').map(x=>x.trim()).filter(Boolean);
@@ -1824,7 +1852,7 @@ function openBrandPicker(targetId){
   document.getElementById('modalBox').innerHTML=`
     <h2>Выбор марки авто</h2>
     <div class="brand-picker-grid">
-      ${carBrands.map(x=>`<button type="button" onclick="pickBrand('${targetId}','${x.replace(/'/g,"\\'")}')">${x}</button>`).join('')}
+      ${carBrands.slice().sort((a,b)=>a.localeCompare(b,'ru',{sensitivity:'base'})).map(x=>`<button type="button" onclick="pickBrand('${targetId}','${x.replace(/'/g,"\\'")}')">${x}</button>`).join('')}
     </div>
     <div class="actions">
       <button onclick="restorePreviousModal()">Назад</button>
@@ -1862,7 +1890,7 @@ function pickBrand(targetId,value){
 function manualBrand(targetId){
   const value=prompt('Введите марку авто');
   if(value){
-    if(!carBrands.includes(value)){carBrands.push(value);carModels[value]=carModels[value]||[];saveAll();}
+    if(!carBrands.includes(value)){carBrands.push(value);carModels[value]=carModels[value]||[];normalizeBrandModels();saveAll();}
     restorePreviousModal();
     const input=document.getElementById(targetId);
     if(input) input.value=value;
@@ -2060,8 +2088,8 @@ function openCarView(id){
     {l:'Принято',v:escapeHtml(c.inAt||'—')},
     c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'—')}:null,
     c.status==='done'?{l:'Сумма при выдаче',v:escapeHtml(c.price||c.agreedPrice||'0')+' ₽'}:null,
-    (c.status==='done' && carPartsCost(c))?{l:'Затраты',v:carPartsCost(c).toLocaleString('ru-RU')+' ₽'}:null,
-    (c.status==='done' && carPartsCost(c))?{l:'Прибыль',v:carProfit(c).toLocaleString('ru-RU')+' ₽'}:null,
+    (c.status==='done')?{l:'Затраты',v:carPartsCost(c).toLocaleString('ru-RU')+' ₽'}:null,
+    (c.status==='done')?{l:'Прибыль',v:Math.round(carProfit(c)).toLocaleString('ru-RU')+' ₽'}:null,
     (c.status!=='done')?{l:'Приоритет',v:c.priority==='high'?'Высокий':c.priority==='mid'?'Средний':c.priority==='low'?'Низкий':'Без приоритета'}:null,
     (c.status==='done' && c.master)?{l:'Делал',v:escapeHtml(c.master)}:null,
     c.comment?{l:'Комментарий',v:escapeHtml(c.comment)}:null
@@ -2090,6 +2118,7 @@ function openCarView(id){
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${canEditCar(c) && c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${canEditCar(c) && c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+        ${canEditCar(c) && c.status==='done'?`<button type="button" class="danger" onclick="openIssuedCostsEditor(${c.id})">Затраты</button>`:''}
         ${canEditCar(c) && c.status!=='done'?`<button class="issue" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
       ${canDeleteCars() && canEditCar(c)?`<button class="danger" onclick="deleteCar(${c.id})">Удалить</button>`:''}
@@ -2150,6 +2179,7 @@ function openCar(id){
         ${c.orderNaryad?`<button onclick="openSavedOrderNaryad(${c.id})">Заказ-наряд</button>`:''}
         ${c.status==='ready'?`<button onclick="revertToWork(${c.id})">Вернуть в работу</button>`:''}
         ${c.status==='work'?`<button onclick="markReady(${c.id})">Готово</button>`:''}
+        ${c.status==='done'?`<button type="button" class="danger" onclick="openIssuedCostsEditor(${c.id})">Затраты</button>`:''}
         ${c.status!=='done'?`<button class="issue" onclick="openDoneWizard(${c.id})">Выдать</button>`:''}
       </div>
       ${canDeleteCars()?(c.status==='done'?`<button class="danger" onclick="deleteDoneCar(${c.id})">Удалить выданную</button>`:`<button class="danger" onclick="deleteCar(${c.id})">Удалить карточку</button>`):''}
@@ -2224,8 +2254,9 @@ function deleteDoneCar(id){
 function openDoneWizard(id){
   saveCardNoClose(id);
   doneWizardCarId=id;
+  window._issuedCostsEdit=false;
   const c=cars.find(x=>x.id===id);
-  doneCostsDraft=(Array.isArray(c && c.partsCosts)?c.partsCosts:[]).map(x=>({...x}));
+  doneCostsDraft=(Array.isArray(c && c.partsCosts)?c.partsCosts:[]).map(x=>({...x,amount:parseMoney(x.amount)}));
   window._doneMaster='';
   window._moneyMaster='';
   window._donePrice=String(c.agreedPrice||c.price||'');
@@ -2240,10 +2271,10 @@ let doneCostsOpen=false;
 function renderDoneWizard(id){
   let c=cars.find(x=>x.id===id);
   if(!c) return;
-  const costsSum=doneCostsDraft.reduce((s,x)=>s+(Number(x.amount)||0),0);
-  const price=Number(window._donePrice||c.agreedPrice||c.price||0);
+  const costsSum=doneCostsDraft.reduce((s,x)=>s+parseMoney(x.amount),0);
+  const price=parseMoney(window._donePrice||c.agreedPrice||c.price||0);
   const costsHtml=doneCostsDraft.map(x=>`
-    <div class="report-line"><span>${escapeHtml(x.kind==='stock'?(x.productName+' × '+x.qty): (x.comment||'Запчасти'))}</span><b>${Math.round(Number(x.amount)||0).toLocaleString('ru-RU')} ₽ <button type="button" onclick="removeDoneCost(${x.id})" style="margin-left:8px">×</button></b></div>
+    <div class="report-line"><span>${escapeHtml(costLineLabel(x))}</span><b>${Math.round(parseMoney(x.amount)).toLocaleString('ru-RU')} ₽ <button type="button" onclick="removeDoneCost(${x.id})" style="margin-left:8px">×</button></b></div>
   `).join('') || '<div class="small">Затрат пока нет</div>';
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
@@ -2277,7 +2308,7 @@ function renderDoneWizard(id){
       </div>
     </div>
 
-    <div class="step-title" style="margin-top:18px">Затраты на запчасти</div>
+    <div class="step-title" style="margin-top:18px">Затраты</div>
     <div class="small" id="doneProfitHint" style="margin-bottom:8px">Прибыль: ${(price-costsSum).toLocaleString('ru-RU')} ₽</div>
     ${costsHtml}
     <button type="button" class="danger done-costs-btn" onclick="openDoneCostsPicker()">Затраты</button>
@@ -2287,12 +2318,13 @@ function renderDoneWizard(id){
     </div>`;
   document.getElementById('modal').style.display='flex';
   restoreDoneWizardFields();
+  updateDoneProfitHint();
 }
 
 function rememberDoneWizardFields(){
-  window._doneMaster=val('doneMaster');
-  window._moneyMaster=val('moneyMaster');
-  window._donePrice=val('donePrice');
+  if(document.getElementById('doneMaster')) window._doneMaster=val('doneMaster');
+  if(document.getElementById('moneyMaster')) window._moneyMaster=val('moneyMaster');
+  if(document.getElementById('donePrice')) window._donePrice=val('donePrice');
 }
 function restoreDoneWizardFields(){
   if(window._doneMaster) setVal('doneMaster', window._doneMaster);
@@ -2309,18 +2341,31 @@ function restoreDoneWizardFields(){
 function updateDoneProfitHint(){
   const el=document.getElementById('doneProfitHint');
   if(!el) return;
-  const price=Number(val('donePrice')||0);
-  const costs=doneCostsDraft.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  const price=parseMoney(val('donePrice')||window._donePrice||0);
+  const costs=doneCostsDraft.reduce((s,x)=>s+parseMoney(x.amount),0);
   el.textContent='Прибыль: '+(price-costs).toLocaleString('ru-RU')+' ₽';
+}
+function refreshCostsUi(){
+  if(window._issuedCostsEdit) renderIssuedCostsEditor(doneWizardCarId);
+  else renderDoneWizard(doneWizardCarId);
 }
 function addDoneCostManual(){
   rememberDoneWizardFields();
-  const amount=Number(val('doneCostAmount'));
+  const amount=parseMoney(val('doneCostAmount'));
   const comment=val('doneCostComment')||'Запчасти';
   if(!(amount>0)){alert('Введи сумму затраты');return;}
   doneCostsDraft.push({id:Date.now(),kind:'manual',amount,comment});
   closeDoneCostsPop();
-  renderDoneWizard(doneWizardCarId);
+  refreshCostsUi();
+}
+function addDoneCostKickback(){
+  rememberDoneWizardFields();
+  const amount=parseMoney(val('doneCostAmount'));
+  const comment=val('doneCostComment')||'Откат';
+  if(!(amount>0)){alert('Введи сумму отката');return;}
+  doneCostsDraft.push({id:Date.now(),kind:'kickback',amount,comment});
+  closeDoneCostsPop();
+  refreshCostsUi();
 }
 function addDoneCostStock(){
   rememberDoneWizardFields();
@@ -2329,14 +2374,14 @@ function addDoneCostStock(){
   const p=products.find(x=>x.id===productId);
   if(!p || qty<=0){alert('Выбери товар и количество');return;}
   if(Number(p.qty||0)<qty && !confirm('Расход больше остатка. Всё равно списать при выдаче?')) return;
-  doneCostsDraft.push({id:Date.now(),kind:'stock',productId:p.id,productName:p.name,qty,price:Number(p.price)||0,amount:(Number(p.price)||0)*qty,comment:p.name});
+  doneCostsDraft.push({id:Date.now(),kind:'stock',productId:p.id,productName:p.name,qty,price:parseMoney(p.price),amount:parseMoney(p.price)*qty,comment:p.name});
   closeDoneCostsPop();
-  renderDoneWizard(doneWizardCarId);
+  refreshCostsUi();
 }
 function removeDoneCost(cid){
   rememberDoneWizardFields();
   doneCostsDraft=doneCostsDraft.filter(x=>x.id!==cid);
-  renderDoneWizard(doneWizardCarId);
+  refreshCostsUi();
 }
 function closeDoneCostsPop(){const p=document.getElementById('doneCostsPop'); if(p) p.remove();}
 function doneCostsPopCard(){
@@ -2354,6 +2399,7 @@ function openDoneCostsPicker(){
   card.innerHTML=`<div class="asl-pay-title">Затраты</div>
     <button class="quick-btn" type="button" onclick="showDoneCostManual()">Вручную</button>
     <button class="quick-btn" type="button" onclick="showDoneCostStock()">Со склада</button>
+    <button class="quick-btn" type="button" onclick="showDoneCostKickback()">Откат</button>
     <button class="quick-btn" type="button" onclick="closeDoneCostsPop()">Отмена</button>`;
 }
 function showDoneCostManual(){
@@ -2361,10 +2407,21 @@ function showDoneCostManual(){
   if(!card) return;
   card.innerHTML=`<div class="asl-pay-title">Сумма вручную</div>
     <label>Сумма</label>
-    <input id="doneCostAmount" type="number" placeholder="500" inputmode="numeric">
+    <input id="doneCostAmount" type="number" placeholder="500" inputmode="decimal">
     <label>Комментарий</label>
     <input id="doneCostComment" placeholder="Запчасти">
     <button class="done-costs-add" type="button" onclick="addDoneCostManual()">Добавить</button>
+    <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
+}
+function showDoneCostKickback(){
+  const card=document.querySelector('#doneCostsPop .asl-pay-card');
+  if(!card) return;
+  card.innerHTML=`<div class="asl-pay-title">Откат</div>
+    <label>Сумма отката</label>
+    <input id="doneCostAmount" type="number" placeholder="500" inputmode="decimal">
+    <label>Комментарий</label>
+    <input id="doneCostComment" value="Откат" placeholder="Откат">
+    <button class="done-costs-add" type="button" onclick="addDoneCostKickback()">Добавить</button>
     <button class="quick-btn" type="button" onclick="openDoneCostsPicker()">Назад</button>`;
 }
 function showDoneCostStock(){
@@ -2412,18 +2469,68 @@ function toggleMaster(inputId,groupClass,name){
   });
 }
 
+function persistCarCosts(c){
+  if(!c) return;
+  c.partsCosts=doneCostsDraft.map(x=>({...x,amount:parseMoney(x.amount)}));
+  c.costsTotal=carPartsCost({partsCosts:c.partsCosts,aslanovaKickback:c.aslanovaKickback});
+  c.updatedAt=new Date().toISOString();
+}
+function openIssuedCostsEditor(id){
+  const c=cars.find(x=>x.id===id);
+  if(!c || !canEditCar(c)) return;
+  doneWizardCarId=id;
+  window._issuedCostsEdit=true;
+  doneCostsDraft=(Array.isArray(c.partsCosts)?c.partsCosts:[]).map(x=>({...x,amount:parseMoney(x.amount)}));
+  window._donePrice=String(c.price||c.agreedPrice||'');
+  renderIssuedCostsEditor(id);
+}
+function renderIssuedCostsEditor(id){
+  const c=cars.find(x=>x.id===id);
+  if(!c) return;
+  const costsSum=doneCostsDraft.reduce((s,x)=>s+parseMoney(x.amount),0);
+  const price=parseMoney(window._donePrice||c.price||c.agreedPrice||0);
+  const costsHtml=doneCostsDraft.map(x=>`
+    <div class="report-line"><span>${escapeHtml(costLineLabel(x))}</span><b>${Math.round(parseMoney(x.amount)).toLocaleString('ru-RU')} ₽ <button type="button" onclick="removeDoneCost(${x.id})" style="margin-left:8px">×</button></b></div>
+  `).join('') || '<div class="small">Затрат пока нет</div>';
+  document.getElementById('modalBox').className='box compact';
+  document.getElementById('modalBox').innerHTML=`
+    <h2>Затраты</h2>
+    <div class="modal-body">
+    <div class="small" id="doneProfitHint" style="margin-bottom:8px">Прибыль: ${(price-costsSum).toLocaleString('ru-RU')} ₽</div>
+    ${costsHtml}
+    <button type="button" class="danger done-costs-btn" onclick="openDoneCostsPicker()">Затраты / откат</button>
+    </div>
+    <div class="two-actions neon-bar modal-foot">
+      <div class="modal-foot-row"><button onclick="openCarView(${id})">Назад</button><button class="neon" onclick="saveIssuedCosts(${id})">Сохранить</button></div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+}
+function saveIssuedCosts(id){
+  const c=cars.find(x=>x.id===id);
+  if(!c) return;
+  persistCarCosts(c);
+  applyPartsStockOut(c);
+  window._issuedCostsEdit=false;
+  saveAll();
+  closeModal();
+  openCarView(id);
+}
 function finishDone(id){
   let c=cars.find(x=>x.id===id);
+  if(!c) return;
   c.master=val('doneMaster');
   c.moneyMaster=val('moneyMaster');
-  c.price=val('donePrice')||c.agreedPrice||'0';
-  c.partsCosts=doneCostsDraft.slice();
+  c.price=String(parseMoney(val('donePrice')||c.agreedPrice||'0'));
+  persistCarCosts(c);
   applyPartsStockOut(c);
-  c.outAt=new Date().toLocaleString('ru-RU');
+  const now=new Date();
+  c.outAt=now.toLocaleString('ru-RU');
+  c.doneAt=now.toISOString();
   c.status='done';
-  c.statusChangedAt=new Date().toISOString();
-  c.updatedAt=c.statusChangedAt;
+  c.statusChangedAt=c.doneAt;
+  c.updatedAt=c.doneAt;
   doneCostsOpen=false;
+  window._issuedCostsEdit=false;
   saveAll();
   closeModal();
   setTab('done');
@@ -3203,6 +3310,7 @@ function renderBrandModelSettings(){
 function saveBrandName(i){
   const old=carBrands[i]; const name=val(`brand_${i}`)||old;
   if(name!==old){carModels[name]=carModels[old]||[];delete carModels[old];carBrands[i]=name;cars.forEach(c=>{if(c.brand===old)c.brand=name;});}
+  normalizeBrandModels();
   saveAll();renderBrandModelSettings();
 }
 function deleteBrand(i){if(!confirm('Удалить марку и её модели?'))return;const b=carBrands[i];carBrands.splice(i,1);delete carModels[b];saveAll();renderBrandModelSettings();}
@@ -4069,7 +4177,8 @@ function extractVin(text){
 let archiveMode='month';
 
 function getCardArchiveDate(c){
-  return parseRuDate(c.outAt) || parseRuDate(c.inAt) || new Date();
+  if(c && c.status==='done') return new Date(doneSortTime(c));
+  return parseRuDate(c && c.outAt) || parseRuDate(c && c.inAt) || new Date(0);
 }
 
 function getArchiveRange(){
@@ -4137,10 +4246,12 @@ function renderArchive(){
       {l:'Работа',v:escapeHtml(c.work||'Работа не указана')},
       {l:'Статус',v:statusLabel(c.status)},
       {l:'Принято',v:escapeHtml(c.inAt||'')},
-      c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'')}:null
+      c.status==='done'?{l:'Выдано',v:escapeHtml(c.outAt||'')}:null,
+      (c.status==='done' && carPartsCost(c))?{l:'Затраты',v:carPartsCost(c).toLocaleString('ru-RU')+' ₽'}:null,
+      (c.status==='done')?{l:'Прибыль',v:Math.round(carProfit(c)).toLocaleString('ru-RU')+' ₽'}:null
     ].filter(Boolean);
     const rowsHtml=rows.map(r=>`<div class="car-row"><span class="car-label">${r.l}</span><span class="car-value">${r.v}</span></div>`).join('');
-    const badge=c.status==='done'?`<div class="badge">${escapeHtml(c.price||0)} ₽</div>`:'';
+    const badge=c.status==='done'?`<div class="badge">${Math.round(carProfit(c)).toLocaleString('ru-RU')} ₽</div>`:'';
     const priCls=c.status==='done'?'done':priorityClass(c);
     const priLabel=c.status==='done'?'Выдано':(c.priority==='high'?'Высокий приоритет':c.priority==='mid'?'Средний приоритет':c.priority==='low'?'Низкий приоритет':'Без приоритета');
     return `<div class="car ${priCls}" onclick="openCarView(${c.id})">
@@ -4157,13 +4268,13 @@ function saveReportPdf(){
   try{
     const range=getReportRange();
     const done=getDoneCarsInRange(range.from, range.to);
-    const total=done.reduce((sum,c)=>sum+(Number(c.price)||0),0);
+    const total=done.reduce((sum,c)=>sum+parseMoney(c.price||c.agreedPrice),0);
     const costsTotal=done.reduce((sum,c)=>sum+carPartsCost(c),0);
     const byMaster={};
     const byMoney={};
 
     done.forEach(c=>{
-      const price=Number(c.price)||0;
+      const price=parseMoney(c.price||c.agreedPrice);
       const profit=carProfit(c);
       const masterList=String(c.master||'Не указан').split(',').map(x=>x.trim()).filter(Boolean);
       const mastersForCard=masterList.length?masterList:['Не указан'];
@@ -4196,7 +4307,7 @@ function saveReportPdf(){
         work:c.work||'',
         master:c.master||'',
         moneyMaster:c.moneyMaster||'',
-        price:Number(c.price)||0,
+        price:parseMoney(c.price||c.agreedPrice),
         costs:carPartsCost(c),
         profit:carProfit(c),
         outAt:c.outAt||''
@@ -4523,7 +4634,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v40 · владелец Андрей · быстрые контрагенты · кнопки выдачи/удаления · отчёт по датам · затраты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v41 · владелец Андрей · откат в затратах · прибыль минус затраты · сортировка выдачи и марок · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5063,11 +5174,18 @@ function mergeCarRecord(old,item){
   const b={...(item||{})};
   const ta=Date.parse(a.updatedAt||a._updatedAt||a.savedAt||a.statusChangedAt||0)||0;
   const tb=Date.parse(b.updatedAt||b._updatedAt||b.savedAt||b.statusChangedAt||0)||0;
-  if(a.status==='done' && b.status!=='done') return {...b,...a,status:'done'};
-  if(b.status==='done' && a.status!=='done') return {...a,...b,status:'done'};
-  if(ta||tb) return ta>=tb?{...b,...a}:{...a,...b};
-  const out={...a,...b};
-  Object.entries(a).forEach(([k,v])=>{if((out[k]===undefined||out[k]===null||out[k]==='') && v!==undefined && v!==null && v!=='') out[k]=v;});
+  let out;
+  if(a.status==='done' && b.status!=='done') out={...b,...a,status:'done'};
+  else if(b.status==='done' && a.status!=='done') out={...a,...b,status:'done'};
+  else if(ta||tb) out=ta>=tb?{...b,...a}:{...a,...b};
+  else {
+    out={...a,...b};
+    Object.entries(a).forEach(([k,v])=>{if((out[k]===undefined||out[k]===null||out[k]==='') && v!==undefined && v!==null && v!=='') out[k]=v;});
+  }
+  const costA=carPartsCost(a), costB=carPartsCost(b), costOut=carPartsCost(out);
+  if(costA>=costOut && costA>=costB){out.partsCosts=a.partsCosts; out.costsTotal=costA;}
+  else if(costB>=costOut){out.partsCosts=b.partsCosts; out.costsTotal=costB;}
+  else out.costsTotal=costOut;
   return out;
 }
 function mergeObjectArrays(localArr,remoteArr,type){
