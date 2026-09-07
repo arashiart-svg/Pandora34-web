@@ -323,26 +323,43 @@ def result_texts(result) -> list[str]:
     return [t for t, _, _ in items]
 
 
-def prep_doc_image(img_bgr: np.ndarray) -> np.ndarray:
+def resize_doc(img_bgr: np.ndarray) -> np.ndarray:
     h, w = img_bgr.shape[:2]
     side = max(h, w)
     if side > 2000:
         scale = 2000 / side
-        img_bgr = cv2.resize(img_bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-    elif side < 1100:
+        return cv2.resize(img_bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+    if side < 1100:
         scale = 1400 / max(side, 1)
-        img_bgr = cv2.resize(img_bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
+        return cv2.resize(img_bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
+    return img_bgr
+
+
+def apply_clahe(img_bgr: np.ndarray) -> np.ndarray:
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     gray = clahe.apply(gray)
     return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
 
-def ocr_doc_texts(img_bgr: np.ndarray) -> list[str]:
-    img_bgr = prep_doc_image(img_bgr)
+def run_doc_ocr(img_bgr: np.ndarray) -> list[str]:
     engine = get_doc_engine()
     result = engine(img_bgr, use_det=True, use_cls=False, use_rec=True)
     return result_texts(result)
+
+
+def ocr_doc_texts(img_bgr: np.ndarray, side: str = "") -> list[str]:
+    base = resize_doc(img_bgr)
+    if (side or "").strip().lower() == "back":
+        color_texts = run_doc_ocr(base)
+        if extract_name(color_texts, " ".join(color_texts)):
+            return color_texts
+        clahe_texts = run_doc_ocr(apply_clahe(base))
+        if extract_name(clahe_texts, " ".join(clahe_texts)):
+            return clahe_texts
+        seen = set(color_texts)
+        return color_texts + [t for t in clahe_texts if t not in seen]
+    return run_doc_ocr(apply_clahe(base))
 
 
 def _latin_alnum(text: str) -> str:
@@ -462,22 +479,55 @@ def extract_brand_model(texts: list[str], blob: str) -> tuple[str, str]:
     return brand, model
 
 
+FIO_PATRONYM_RE = re.compile(
+    r"\b([А-ЯЁ]{2,})\s+([А-ЯЁ]{2,})\s+([А-ЯЁ]{2,}(?:ВИЧ|ВНА|ИЧНА|ОВНА|ЕВНА|ЬЕВИЧ))\b"
+)
+
+
+def _nice_fio(parts: list[str]) -> str:
+    return " ".join(p.title() for p in parts if p)
+
+
 def extract_name(texts: list[str], blob: str) -> str:
-    near = blob
-    idx = max(near.upper().find("СОБСТВЕННИК"), near.upper().find("ВЛАДЕЛЕЦ"))
-    window = near[idx : idx + 240] if idx >= 0 else " ".join(texts)
-    window = re.sub(r"\s*/\s*[A-Z][A-Z\- ]*", " ", window)
-    words = [w for w in FIO_WORD_RE.findall(window.upper().replace("Ё", "Е")) if w not in SKIP_WORDS]
+    blob_up = re.sub(r"\s+", " ", (blob or "").upper().replace("Ё", "Е"))
+    for m in FIO_PATRONYM_RE.finditer(blob_up):
+        parts = [m.group(1), m.group(2), m.group(3)]
+        if any(p in SKIP_WORDS or p in ADDR_LABELS or p in FIO_STOP for p in parts):
+            continue
+        return _nice_fio(parts)
+    line_words = []
+    for line in texts:
+        words = [w.upper().replace("Ё", "Е") for w in FIO_WORD_RE.findall(line.upper().replace("Ё", "Е"))]
+        words = [w for w in words if w not in SKIP_WORDS and w not in ADDR_LABELS and w not in FIO_STOP]
+        if len(words) >= 3:
+            joined = " ".join(words)
+            m = FIO_PATRONYM_RE.search(joined)
+            if m:
+                return _nice_fio([m.group(1), m.group(2), m.group(3)])
+            return _nice_fio(words[:3])
+        if len(words) == 1:
+            line_words.append(words[0])
+    if len(line_words) >= 3:
+        joined = " ".join(line_words)
+        m = FIO_PATRONYM_RE.search(joined)
+        if m:
+            return _nice_fio([m.group(1), m.group(2), m.group(3)])
+        return _nice_fio(line_words[:3])
+    idx = max(blob_up.find("СОБСТВЕННИК"), blob_up.find("ВЛАДЕЛЕЦ"))
+    window = blob_up[idx : idx + 280] if idx >= 0 else blob_up
+    words = [w for w in FIO_WORD_RE.findall(window) if w not in SKIP_WORDS]
     picked: list[str] = []
     for w in words:
         if w in FIO_STOP or w in ADDR_LABELS:
-            break
+            if picked:
+                break
+            continue
         if w in BRAND_ALIASES or any(w == k for k, _ in LADA_MODELS):
             continue
-        picked.append(w.title())
+        picked.append(w)
         if len(picked) == 3:
             break
-    return " ".join(picked)
+    return _nice_fio(picked)
 
 
 def _value_after_label(texts: list[str], labels: tuple[str, ...]) -> str:
@@ -593,5 +643,5 @@ async def sts(
         img = decode_image(data)
     except Exception as exc:
         raise HTTPException(400, "bad_image") from exc
-    texts = ocr_doc_texts(img)
+    texts = ocr_doc_texts(img, side or "")
     return JSONResponse(parse_sts(texts, side or ""))

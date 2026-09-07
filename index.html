@@ -4261,8 +4261,12 @@ async function onStsPhoto(ev, side){
       return;
     }
     stsScan={step:0};
-    const bits=[document.getElementById('ordPlate')?.value, document.getElementById('ordClient')?.value].filter(Boolean);
-    setStsStatus('Проверь поля. Телефон и пробег сам'+(bits.length?(' · '+bits.join(' · ')):''));
+    if(!data.name && !data.address){
+      setStsStatus('Оборот не разобрал ФИО. Ровнее, без вспышки'+(data.raw?(' · '+String(data.raw).slice(0,90)):'') );
+      return;
+    }
+    const bits=[document.getElementById('ordClient')?.value, document.getElementById('ordClientAddress')?.value].filter(Boolean);
+    setStsStatus('Оборот ок. Проверь ФИО и адрес'+(bits.length?(' · '+bits.join(' · ')):''));
   }catch(e){
     setStsStatus('Не дошло: '+(e.message||e));
   }
@@ -4804,7 +4808,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v48 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v49 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5071,10 +5075,13 @@ function openOrderOrgPicker(){
 }
 
 function openOrderBlank(keepDraft=false){
-  const sourceCar=(cars.find(c=>c.status==='work')||cars[0]||{});
+  if(!keepDraft){
+    currentOrderPayload=null;
+    stsScan={step:0};
+  }
   const first=(keepDraft&&currentOrderPayload)
     ? {brand:currentOrderPayload.carBrand,model:currentOrderPayload.carModel,number:currentOrderPayload.plateNumber,ownerPhone:currentOrderPayload.clientPhone,work:currentOrderPayload.work1,price:currentOrderPayload.price1,agreedPrice:currentOrderPayload.price1,clientName:currentOrderPayload.clientName,clientAddress:currentOrderPayload.clientAddress,vin:currentOrderPayload.vin,mileage:currentOrderPayload.mileage}
-    : {brand:sourceCar.brand||'',model:sourceCar.model||'',number:'',ownerPhone:sourceCar.ownerPhone||'+7',clientName:sourceCar.clientName||'',clientAddress:'',vin:sourceCar.vin||'',mileage:sourceCar.mileage||'',work:'',price:'',agreedPrice:''};
+    : {brand:'',model:'',number:'',ownerPhone:'+7',clientName:'',clientAddress:'',vin:'',mileage:'',work:'',price:'',agreedPrice:''};
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Заказ-наряд</h2>
