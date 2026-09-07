@@ -358,13 +358,13 @@
     #pwaInstall button{margin:0;padding:10px 14px;font-size:13px}
   .order-edit-table th{background:var(--panel);color:var(--text);padding:8px;text-align:left;border-bottom:1px solid var(--border-strong)}.order-edit-table td{border-bottom:1px solid var(--border);padding:6px;color:var(--text)}.order-edit-table input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}.mini{padding:6px 10px;border-radius:8px;background:var(--sidebar-bg)!important;color:#fff!important;border:1.5px solid var(--neon)!important;box-shadow:0 0 10px rgba(79,199,234,.3)!important;cursor:pointer}
 
-.order-preview-wrap{background:#fff;color:#111;border-radius:12px;overflow:auto;max-height:70vh;padding:10px}
-.order-doc{width:100%;max-width:100%;box-sizing:border-box;padding:8px 4px 20px;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff}
-.order-doc *{color:#111;box-sizing:border-box}
-.order-doc .od-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid #111;padding-bottom:12px}
-.order-doc .od-brand-row{display:flex;align-items:center;gap:12px;min-width:0}
-.order-doc .od-logo{width:72px;height:72px;object-fit:contain;flex-shrink:0;border-radius:50%}
-.order-doc .od-brand{font-size:28px;font-weight:900;line-height:1}
+.order-preview-wrap{background:#fff;color:#000;border-radius:12px;overflow:auto;max-height:70vh;padding:12px}
+.order-doc{width:100%;max-width:100%;box-sizing:border-box;padding:10px 6px 24px;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
+.order-doc *{color:#000;box-sizing:border-box}
+.order-doc .od-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid #000;padding-bottom:14px}
+.order-doc .od-brand-row{display:flex;align-items:center;gap:16px;min-width:0}
+.order-doc .od-logo{width:104px;height:104px;object-fit:contain;flex-shrink:0;border-radius:50%}
+.order-doc .od-brand{font-size:32px;font-weight:900;line-height:1}
 .order-doc .od-sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-top:6px}
 .order-doc .od-title{font-size:20px;font-weight:900;text-align:right}
 .order-doc .od-meta{font-size:14px;margin-top:8px;display:grid;grid-template-columns:48px 1fr;gap:6px;align-items:end}
@@ -380,6 +380,16 @@
 .order-doc .od-signs{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:36px;font-size:13px}
 .order-doc .od-sign{border-bottom:1px solid #111;height:28px}
 .order-doc .od-agree{font-size:11px;line-height:1.35;margin-top:8px}
+.order-sheet{width:210mm!important;max-width:210mm!important;min-height:297mm;height:297mm;padding:16mm 18mm 18mm!important;display:flex;flex-direction:column}
+.order-sheet .od-logo{width:120px;height:120px}
+.order-sheet .od-brand{font-size:36px}
+.order-sheet .od-title{font-size:24px}
+.order-sheet .od-cols{font-size:15px;gap:26px;margin-top:22px}
+.order-sheet .od-field{min-height:28px;padding:6px 4px;margin-bottom:14px}
+.order-sheet table{font-size:15px}
+.order-sheet th,.order-sheet td{padding:10px}
+.order-sheet .od-signs{margin-top:auto;padding-top:40px;gap:48px}
+.order-sheet .od-sign{height:36px}
 @media (max-width:640px){
   .order-doc .od-cols,.order-doc .od-signs,.order-doc .od-head{grid-template-columns:1fr;display:grid}
   .order-doc .od-title{text-align:left}
@@ -4658,7 +4668,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v44 · владелец Андрей · заказ-наряд PDF без колонтитулов · лого · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v45 · владелец Андрей · заказ-наряд A4 · крупное лого · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5038,78 +5048,100 @@ function jpegToA4Pdf(jpegU8,imgW,imgH){
   return pdfU8join(parts);
 }
 function canvasToJpegU8(canvas){
-  const dataUrl=canvas.toDataURL('image/jpeg',0.93);
+  const dataUrl=canvas.toDataURL('image/jpeg',1);
   const bin=atob(dataUrl.split(',')[1]);
   const u8=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   return u8;
 }
+function loadHtml2Canvas(){
+  if(window.html2canvas) return Promise.resolve();
+  const urls=[
+    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+  ];
+  return new Promise(function(resolve,reject){
+    let i=0;
+    function tryNext(){
+      if(i>=urls.length) return reject(new Error('html2canvas'));
+      const s=document.createElement('script');
+      s.src=urls[i++];
+      s.onload=function(){resolve();};
+      s.onerror=function(){s.remove();tryNext();};
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
 async function drawOrderNaryadCanvas(d){
-  const W=1240, H=1754, pad=70;
+  const S=2.5, W=Math.round(794*S), H=Math.round(1123*S);
+  const p=function(n){return n*S;};
   const canvas=document.createElement('canvas');
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#111'; ctx.strokeStyle='#111'; ctx.textBaseline='top';
+  ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.textBaseline='top';
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  const pad=p(56);
   const logo=await loadOrderLogoImg();
-  const logoS=120;
+  const logoS=p(120);
   if(logo) ctx.drawImage(logo, pad, pad, logoS, logoS);
-  const tx=pad+(logo?logoS+16:0);
-  ctx.font='900 40px Arial,Helvetica,sans-serif';
-  ctx.fillText('Pandora34', tx, pad+16);
-  ctx.font='800 13px Arial,Helvetica,sans-serif';
-  ctx.fillText('ФИРМЕННЫЙ УСТАНОВОЧНЫЙ ЦЕНТР', tx, pad+66);
-  ctx.font='900 30px Arial,Helvetica,sans-serif';
+  const tx=pad+(logo?logoS+p(18):0);
+  ctx.font='900 '+p(36)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText('Pandora34', tx, pad+p(18));
+  ctx.font='800 '+p(13)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText('ФИРМЕННЫЙ УСТАНОВОЧНЫЙ ЦЕНТР', tx, pad+p(64));
   ctx.textAlign='right';
-  ctx.fillText('Заказ-наряд', W-pad, pad+8);
-  ctx.font='16px Arial,Helvetica,sans-serif';
+  ctx.font='900 '+p(26)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText('Заказ-наряд', W-pad, pad+p(8));
+  ctx.font=p(16)+'px Arial,Helvetica,sans-serif';
   ctx.textAlign='left';
-  const metaX=W-pad-280;
-  ctx.fillText('№', metaX, pad+52);
-  ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(metaX+28, pad+70); ctx.lineTo(W-pad, pad+70); ctx.stroke();
+  const metaX=W-pad-p(250);
+  ctx.fillText('№', metaX, pad+p(52));
+  ctx.lineWidth=Math.max(1,p(1));
+  ctx.beginPath(); ctx.moveTo(metaX+p(28), pad+p(72)); ctx.lineTo(W-pad, pad+p(72)); ctx.stroke();
   ctx.textAlign='center';
-  ctx.fillText(String(d.orderNumber||''), (metaX+28+W-pad)/2, pad+50);
+  ctx.fillText(String(d.orderNumber||''), (metaX+p(28)+W-pad)/2, pad+p(50));
   ctx.textAlign='left';
-  ctx.fillText('Дата', metaX, pad+82);
-  ctx.beginPath(); ctx.moveTo(metaX+48, pad+100); ctx.lineTo(W-pad, pad+100); ctx.stroke();
+  ctx.fillText('Дата', metaX, pad+p(86));
+  ctx.beginPath(); ctx.moveTo(metaX+p(48), pad+p(106)); ctx.lineTo(W-pad, pad+p(106)); ctx.stroke();
   ctx.textAlign='center';
-  ctx.fillText(String(d.date||''), (metaX+48+W-pad)/2, pad+80);
+  ctx.fillText(String(d.date||''), (metaX+p(48)+W-pad)/2, pad+p(84));
   ctx.textAlign='left';
-  let y=pad+logoS+24;
-  ctx.lineWidth=3;
+  let y=pad+logoS+p(22);
+  ctx.lineWidth=p(3);
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
-  y+=16;
-  ctx.font='13px Arial,Helvetica,sans-serif';
-  ctx.lineWidth=1;
+  y+=p(16);
+  ctx.font=p(14)+'px Arial,Helvetica,sans-serif';
+  ctx.lineWidth=Math.max(1,p(1));
   ctx.fillText('Исполнитель: '+(d.orgName||'—')+(d.orgInn?('  ·  ИНН: '+d.orgInn):''), pad, y);
-  y+=20;
+  y+=p(22);
   const org2=(d.orgAddress?('Адрес: '+d.orgAddress):'')+(d.orgPhone?((d.orgAddress?'  ·  ':'')+'Тел.: '+d.orgPhone):'');
-  if(org2){ ctx.fillText(org2, pad, y); y+=20; }
+  if(org2){ ctx.fillText(org2, pad, y); y+=p(22); }
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
-  y+=28;
-  const colW=(W-pad*2-40)/2;
-  const left=pad, right=pad+colW+40;
+  y+=p(28);
+  const colW=(W-pad*2-p(40))/2;
+  const left=pad, right=pad+colW+p(40);
   function field(x,lab,val,yy){
-    ctx.font='800 12px Arial,Helvetica,sans-serif';
+    ctx.font='800 '+p(12)+'px Arial,Helvetica,sans-serif';
     ctx.fillText(lab, x, yy);
-    yy+=18;
-    ctx.font='16px Arial,Helvetica,sans-serif';
+    yy+=p(20);
+    ctx.font=p(16)+'px Arial,Helvetica,sans-serif';
     const lines=orderWrapLines(ctx, val, colW);
     lines.forEach(function(ln,i){
-      ctx.fillText(ln, x, yy+i*20);
-      ctx.beginPath(); ctx.moveTo(x, yy+i*20+18); ctx.lineTo(x+colW, yy+i*20+18); ctx.stroke();
+      ctx.fillText(ln, x, yy+i*p(22));
+      ctx.beginPath(); ctx.moveTo(x, yy+i*p(22)+p(20)); ctx.lineTo(x+colW, yy+i*p(22)+p(20)); ctx.stroke();
     });
-    return yy+lines.length*20+10;
+    return yy+lines.length*p(22)+p(12);
   }
-  ctx.font='900 15px Arial,Helvetica,sans-serif';
+  ctx.font='900 '+p(15)+'px Arial,Helvetica,sans-serif';
   ctx.fillText('КЛИЕНТ', left, y);
   ctx.fillText('АВТОМОБИЛЬ', right, y);
-  ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(left,y+20); ctx.lineTo(left+colW,y+20); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(right,y+20); ctx.lineTo(right+colW,y+20); ctx.stroke();
-  ctx.lineWidth=1;
-  let yL=y+32, yR=y+32;
+  ctx.lineWidth=p(2);
+  ctx.beginPath(); ctx.moveTo(left,y+p(22)); ctx.lineTo(left+colW,y+p(22)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(right,y+p(22)); ctx.lineTo(right+colW,y+p(22)); ctx.stroke();
+  ctx.lineWidth=Math.max(1,p(1));
+  let yL=y+p(36), yR=y+p(36);
   yL=field(left,'ФИО', d.clientName||'', yL);
   yL=field(left,'Телефон', d.clientPhone||'', yL);
   yL=field(left,'Адрес', d.clientAddress||'', yL);
@@ -5118,65 +5150,64 @@ async function drawOrderNaryadCanvas(d){
   yR=field(right,'Госномер', d.plateNumber||'', yR);
   yR=field(right,'VIN', d.vin||'', yR);
   yR=field(right,'Пробег', d.mileage||'', yR);
-  y=Math.max(yL,yR)+10;
-  ctx.font='900 15px Arial,Helvetica,sans-serif';
+  y=Math.max(yL,yR)+p(16);
+  ctx.font='900 '+p(15)+'px Arial,Helvetica,sans-serif';
   ctx.fillText('ВЫПОЛНЕННЫЕ РАБОТЫ', pad, y);
-  ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(pad,y+20); ctx.lineTo(W-pad,y+20); ctx.stroke();
-  y+=32;
+  ctx.lineWidth=p(2);
+  ctx.beginPath(); ctx.moveTo(pad,y+p(22)); ctx.lineTo(W-pad,y+p(22)); ctx.stroke();
+  y+=p(36);
   const works=normalizeOrderWorks(d).filter(function(w){return w.name||w.price;});
   const rows=works.length?works:[{name:'',price:0}];
   const tableW=W-pad*2;
-  const c1=50, c3=160, c2=tableW-c1-c3;
-  ctx.fillStyle='#111';
-  ctx.fillRect(pad,y,tableW,36);
+  const c1=p(50), c3=p(170), c2=tableW-c1-c3;
+  ctx.fillStyle='#000';
+  ctx.fillRect(pad,y,tableW,p(40));
   ctx.fillStyle='#fff';
-  ctx.font='800 14px Arial,Helvetica,sans-serif';
-  ctx.fillText('№', pad+16, y+10);
-  ctx.fillText('Работа', pad+c1+8, y+10);
+  ctx.font='800 '+p(14)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText('№', pad+p(16), y+p(12));
+  ctx.fillText('Работа', pad+c1+p(8), y+p(12));
   ctx.textAlign='right';
-  ctx.fillText('Стоимость', pad+tableW-10, y+10);
+  ctx.fillText('Стоимость', pad+tableW-p(12), y+p(12));
   ctx.textAlign='left';
-  ctx.fillStyle='#111';
-  y+=36;
+  ctx.fillStyle='#000';
+  y+=p(40);
   rows.forEach(function(w,i){
-    ctx.font='15px Arial,Helvetica,sans-serif';
-    ctx.fillText(String(i+1), pad+16, y+10);
-    const wlines=orderWrapLines(ctx, w.name||'', c2-16);
-    wlines.forEach(function(ln,j){ctx.fillText(ln, pad+c1+8, y+10+j*20);});
+    ctx.font=p(16)+'px Arial,Helvetica,sans-serif';
+    ctx.fillText(String(i+1), pad+p(16), y+p(14));
+    const wlines=orderWrapLines(ctx, w.name||'', c2-p(16));
+    wlines.forEach(function(ln,j){ctx.fillText(ln, pad+c1+p(8), y+p(14)+j*p(22));});
     ctx.textAlign='right';
-    ctx.fillText(Number(w.price||0).toLocaleString('ru-RU')+' ₽', pad+tableW-10, y+10);
+    ctx.fillText(Number(w.price||0).toLocaleString('ru-RU')+' ₽', pad+tableW-p(12), y+p(14));
     ctx.textAlign='left';
-    const rh=Math.max(36, wlines.length*20+16);
+    const rh=Math.max(p(42), wlines.length*p(22)+p(20));
     ctx.beginPath(); ctx.moveTo(pad,y+rh); ctx.lineTo(pad+tableW,y+rh); ctx.stroke();
     y+=rh;
   });
-  ctx.fillStyle='#f4f4f4';
-  ctx.fillRect(pad,y,tableW,44);
-  ctx.fillStyle='#111';
-  ctx.font='900 16px Arial,Helvetica,sans-serif';
+  ctx.fillStyle='#f2f2f2';
+  ctx.fillRect(pad,y,tableW,p(48));
+  ctx.fillStyle='#000';
+  ctx.font='900 '+p(16)+'px Arial,Helvetica,sans-serif';
   ctx.textAlign='right';
-  ctx.fillText('Итоговая стоимость', pad+tableW-c3-12, y+12);
-  ctx.font='900 22px Arial,Helvetica,sans-serif';
-  ctx.fillText(Number(d.total||0).toLocaleString('ru-RU')+' ₽', pad+tableW-10, y+10);
+  ctx.fillText('Итоговая стоимость', pad+tableW-c3-p(12), y+p(14));
+  ctx.font='900 '+p(22)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText(Number(d.total||0).toLocaleString('ru-RU')+' ₽', pad+tableW-p(12), y+p(12));
   ctx.textAlign='left';
-  ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(pad,y+44); ctx.lineTo(pad+tableW,y+44); ctx.stroke();
-  const signY=H-pad-210;
+  ctx.lineWidth=p(3);
+  ctx.beginPath(); ctx.moveTo(pad,y+p(48)); ctx.lineTo(pad+tableW,y+p(48)); ctx.stroke();
+  const signY=H-pad-p(200);
   const signW=colW;
-  ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(left, signY+28); ctx.lineTo(left+signW, signY+28); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(right, signY+28); ctx.lineTo(right+signW, signY+28); ctx.stroke();
-  ctx.font='900 14px Arial,Helvetica,sans-serif';
-  ctx.fillText('Клиент / расшифровка', left, signY+36);
-  ctx.fillText('Исполнитель / расшифровка', right, signY+36);
-  ctx.font='11px Arial,Helvetica,sans-serif';
+  ctx.lineWidth=Math.max(1,p(1));
+  ctx.beginPath(); ctx.moveTo(left, signY+p(32)); ctx.lineTo(left+signW, signY+p(32)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(right, signY+p(32)); ctx.lineTo(right+signW, signY+p(32)); ctx.stroke();
+  ctx.font='900 '+p(14)+'px Arial,Helvetica,sans-serif';
+  ctx.fillText('Клиент / расшифровка', left, signY+p(42));
+  ctx.fillText('Исполнитель / расшифровка', right, signY+p(42));
+  ctx.font=p(12)+'px Arial,Helvetica,sans-serif';
   const agree='С объемом и качеством выполненных работ согласен. Претензий не имею. Работы и материалы согласованы. Даю согласие на обработку персональных данных (ФИО, телефон, сведения об авто) для исполнения заказ-наряда.';
-  orderWrapLines(ctx, agree, signW).forEach(function(ln,i){ctx.fillText(ln, left, signY+60+i*15);});
+  orderWrapLines(ctx, agree, signW).forEach(function(ln,i){ctx.fillText(ln, left, signY+p(68)+i*p(16));});
   return canvas;
 }
-async function downloadOrderNaryadPdf(d){
-  const canvas=await drawOrderNaryadCanvas(d);
+function savePdfBlob(canvas,d){
   const pdf=jpegToA4Pdf(canvasToJpegU8(canvas), canvas.width, canvas.height);
   const blob=new Blob([pdf],{type:'application/pdf'});
   const a=document.createElement('a');
@@ -5186,6 +5217,32 @@ async function downloadOrderNaryadPdf(d){
   a.click();
   a.remove();
   setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+}
+async function downloadOrderNaryadPdf(d){
+  const host=document.createElement('div');
+  host.style.cssText='position:fixed;left:0;top:0;width:210mm;background:#fff;z-index:-1;pointer-events:none;';
+  host.innerHTML=orderHtml(d,true);
+  document.body.appendChild(host);
+  const page=host.querySelector('.order-doc');
+  const logoImg=page.querySelector('.od-logo');
+  if(logoImg && !logoImg.complete){
+    await new Promise(function(r){logoImg.onload=function(){r();};logoImg.onerror=function(){r();};});
+  }
+  try{
+    await loadHtml2Canvas();
+    const canvas=await window.html2canvas(page,{
+      scale:2.5,
+      backgroundColor:'#ffffff',
+      useCORS:true,
+      logging:false
+    });
+    savePdfBlob(canvas,d);
+  }catch(e){
+    const canvas=await drawOrderNaryadCanvas(d);
+    savePdfBlob(canvas,d);
+  }finally{
+    host.remove();
+  }
 }
 function saveOrderNaryadPdf(){
   const payload=document.getElementById('ordNum')?orderPayload():currentOrderPayload;
@@ -5274,9 +5331,9 @@ function orderHtmlWorkRows(d){
     <td style="text-align:right;width:120px">${Number(w.price||0).toLocaleString('ru-RU')} ₽</td>
   </tr>`).join('');
 }
-function orderHtml(d){
+function orderHtml(d,sheet){
   const auto=[d.carBrand,d.carModel].filter(Boolean).join(' ');
-  return `<div class="order-doc">
+  return `<div class="order-doc${sheet?' order-sheet':''}">
     <div class="od-head">
       <div class="od-brand-row">
         <img class="od-logo" src="${ORDER_LOGO}" alt="Pandora34">
