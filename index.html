@@ -461,7 +461,8 @@
   <canvas id="liveScanCanvas" style="display:none"></canvas>
 </div>
 <input type="file" id="ocrCaptureInput" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
-<input type="file" id="stsCaptureInput" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
+<input type="file" id="stsCaptureFace" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
+<input type="file" id="stsCaptureBack" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
 <div class="app">
   <aside class="side" id="sideNav">
     <div class="side-top">
@@ -4180,13 +4181,14 @@ function setStsStatus(text){
   const el=document.getElementById('ordStsStatus');
   if(el) el.textContent=text||'';
 }
-function startStsScan(){
-  stsScan={step:1};
-  setStsStatus('Сфоткай лицевую сторону СТС: номер, VIN, марка');
-  const el=document.getElementById('stsCaptureInput');
+function startStsScan(side){
+  const isBack=side==='back';
+  stsScan={step:isBack?2:1};
+  setStsStatus(isBack?'Сфоткай оборот СТС: ФИО и адрес':'Сфоткай лицевую сторону СТС: номер, VIN, марка');
+  const el=document.getElementById(isBack?'stsCaptureBack':'stsCaptureFace');
   if(!el) return;
   el.value='';
-  el.onchange=onStsPhoto;
+  el.onchange=ev=>onStsPhoto(ev, isBack?'back':'face');
   el.click();
 }
 function matchOrderBrand(name){
@@ -4244,22 +4246,21 @@ async function postStsPhoto(file, side){
   if(!r.ok) throw new Error(j.detail||j.error||('http '+r.status));
   return j;
 }
-async function onStsPhoto(ev){
+async function onStsPhoto(ev, side){
   const file=ev.target.files&&ev.target.files[0];
   ev.target.value='';
   if(!file) return;
-  setStsStatus(stsScan.step===1?'Читаю лицевую...':'Читаю оборот...');
+  const isBack=side==='back';
+  setStsStatus(isBack?'Читаю оборот...':'Читаю лицевую...');
   try{
-    const side=stsScan.step===1?'face':'back';
-    const data=await postStsPhoto(file, side);
-    fillOrderFromSts(data, side);
-    if(stsScan.step===1){
-      stsScan.step=2;
-      setStsStatus('Лицевая ок. Теперь оборот: ФИО и адрес');
-      const el=document.getElementById('stsCaptureInput');
-      if(el){el.onchange=onStsPhoto;el.click();}
+    const data=await postStsPhoto(file, isBack?'back':'face');
+    fillOrderFromSts(data, isBack?'back':'face');
+    if(!isBack){
+      stsScan={step:2};
+      setStsStatus('Лицевая ок. Теперь нажми «Оборот СТС» и сфоткай ФИО');
       return;
     }
+    stsScan={step:0};
     const bits=[document.getElementById('ordPlate')?.value, document.getElementById('ordClient')?.value].filter(Boolean);
     setStsStatus('Проверь поля. Телефон и пробег сам'+(bits.length?(' · '+bits.join(' · ')):''));
   }catch(e){
@@ -4803,7 +4804,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v47 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v48 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -5078,7 +5079,8 @@ function openOrderBlank(keepDraft=false){
   document.getElementById('modalBox').innerHTML=`
     <h2>Заказ-наряд</h2>
     <div class="actions" style="justify-content:flex-start;margin:0 0 12px">
-      <button type="button" onclick="startStsScan()">С фото СТС</button>
+      <button type="button" onclick="startStsScan('face')">Лицевая СТС</button>
+      <button type="button" onclick="startStsScan('back')">Оборот СТС</button>
     </div>
     <div id="ordStsStatus" class="ocr-status"></div>
     <div class="form">
