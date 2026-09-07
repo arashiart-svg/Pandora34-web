@@ -4104,6 +4104,23 @@ function receiveOcrText(fieldId, type, text){
   }
 }
 
+async function ocrPrepareStsImage(file){
+  try{
+    const bmp=await createImageBitmap(file);
+    const max=2200;
+    let w=bmp.width,h=bmp.height;
+    const side=Math.max(w,h);
+    if(side>max){const s=max/side;w=Math.round(w*s);h=Math.round(h*s);}
+    const c=document.createElement('canvas');
+    c.width=w;c.height=h;
+    const ctx=c.getContext('2d');
+    ctx.filter='contrast(1.08)';
+    ctx.drawImage(bmp,0,0,w,h);
+    return await new Promise(r=>c.toBlob(b=>r(b||file),'image/jpeg',0.92));
+  }catch(e){
+    return file;
+  }
+}
 async function ocrPrepareImage(file){
   try{
     const bmp=await createImageBitmap(file);
@@ -4189,30 +4206,34 @@ function matchOrderModel(brand,name){
     || list.find(m=>String(m).toLowerCase().includes(low)||low.includes(String(m).toLowerCase()))
     || n;
 }
-function fillOrderFromSts(d){
+function fillOrderFromSts(d, side){
   if(!d) return;
   const set=(id,v)=>{const el=document.getElementById(id); if(el&&v) el.value=v;};
-  if(d.plate) set('ordPlate', d.plate);
-  if(d.vin) set('ordVin', d.vin);
-  if(d.brand){
-    const brand=matchOrderBrand(d.brand);
-    set('ordBrand', brand);
-    if(d.model) set('ordModel', matchOrderModel(brand, d.model));
-  }else if(d.model){
-    set('ordModel', d.model);
+  if(side!=='back'){
+    if(d.plate) set('ordPlate', d.plate);
+    if(d.vin) set('ordVin', d.vin);
+    if(d.brand){
+      const brand=matchOrderBrand(d.brand);
+      set('ordBrand', brand);
+      if(d.model) set('ordModel', matchOrderModel(brand, d.model));
+    }else if(d.model){
+      set('ordModel', d.model);
+    }
   }
-  if(d.name) set('ordClient', d.name);
-  if(d.address) set('ordClientAddress', d.address);
+  if(side!=='face'){
+    if(d.name) set('ordClient', d.name);
+    if(d.address) set('ordClientAddress', d.address);
+  }
 }
-async function postStsPhoto(file){
-  const blob=await ocrPrepareImage(file);
+async function postStsPhoto(file, side){
+  const blob=await ocrPrepareStsImage(file);
   const dataUrl=await new Promise((resolve,reject)=>{
     const fr=new FileReader();
     fr.onload=()=>resolve(String(fr.result||''));
     fr.onerror=()=>reject(fr.error||new Error('file'));
     fr.readAsDataURL(blob);
   });
-  const r=await fetch('/ocr/sts?token='+encodeURIComponent(SYNC_TOKEN),{
+  const r=await fetch('/ocr/sts?token='+encodeURIComponent(SYNC_TOKEN)+'&side='+encodeURIComponent(side||''),{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     credentials:'omit',
@@ -4229,8 +4250,9 @@ async function onStsPhoto(ev){
   if(!file) return;
   setStsStatus(stsScan.step===1?'Читаю лицевую...':'Читаю оборот...');
   try{
-    const data=await postStsPhoto(file);
-    fillOrderFromSts(data);
+    const side=stsScan.step===1?'face':'back';
+    const data=await postStsPhoto(file, side);
+    fillOrderFromSts(data, side);
     if(stsScan.step===1){
       stsScan.step=2;
       setStsStatus('Лицевая ок. Теперь оборот: ФИО и адрес');
@@ -4781,7 +4803,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v46 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v47 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
