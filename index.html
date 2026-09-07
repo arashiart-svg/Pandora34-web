@@ -461,6 +461,7 @@
   <canvas id="liveScanCanvas" style="display:none"></canvas>
 </div>
 <input type="file" id="ocrCaptureInput" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
+<input type="file" id="stsCaptureInput" accept="image/*" capture="environment" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0">
 <div class="app">
   <aside class="side" id="sideNav">
     <div class="side-top">
@@ -4157,6 +4158,93 @@ async function scanPhotoText(event, fieldId, type){
   event.target.value='';
 }
 
+let stsScan={step:0};
+function setStsStatus(text){
+  const el=document.getElementById('ordStsStatus');
+  if(el) el.textContent=text||'';
+}
+function startStsScan(){
+  stsScan={step:1};
+  setStsStatus('Сфоткай лицевую сторону СТС: номер, VIN, марка');
+  const el=document.getElementById('stsCaptureInput');
+  if(!el) return;
+  el.value='';
+  el.onchange=onStsPhoto;
+  el.click();
+}
+function matchOrderBrand(name){
+  const n=String(name||'').trim();
+  if(!n) return '';
+  const low=n.toLowerCase();
+  return (carBrands||[]).find(b=>String(b).toLowerCase()===low)
+    || (carBrands||[]).find(b=>String(b).toLowerCase().includes(low)||low.includes(String(b).toLowerCase()))
+    || n;
+}
+function matchOrderModel(brand,name){
+  const n=String(name||'').trim();
+  if(!n) return '';
+  const list=(carModels&&carModels[brand])||[];
+  const low=n.toLowerCase();
+  return list.find(m=>String(m).toLowerCase()===low)
+    || list.find(m=>String(m).toLowerCase().includes(low)||low.includes(String(m).toLowerCase()))
+    || n;
+}
+function fillOrderFromSts(d){
+  if(!d) return;
+  const set=(id,v)=>{const el=document.getElementById(id); if(el&&v) el.value=v;};
+  if(d.plate) set('ordPlate', d.plate);
+  if(d.vin) set('ordVin', d.vin);
+  if(d.brand){
+    const brand=matchOrderBrand(d.brand);
+    set('ordBrand', brand);
+    if(d.model) set('ordModel', matchOrderModel(brand, d.model));
+  }else if(d.model){
+    set('ordModel', d.model);
+  }
+  if(d.name) set('ordClient', d.name);
+  if(d.address) set('ordClientAddress', d.address);
+}
+async function postStsPhoto(file){
+  const blob=await ocrPrepareImage(file);
+  const dataUrl=await new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onload=()=>resolve(String(fr.result||''));
+    fr.onerror=()=>reject(fr.error||new Error('file'));
+    fr.readAsDataURL(blob);
+  });
+  const r=await fetch('/ocr/sts?token='+encodeURIComponent(SYNC_TOKEN),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'omit',
+    cache:'no-store',
+    body:JSON.stringify({image:dataUrl})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.detail||j.error||('http '+r.status));
+  return j;
+}
+async function onStsPhoto(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  ev.target.value='';
+  if(!file) return;
+  setStsStatus(stsScan.step===1?'Читаю лицевую...':'Читаю оборот...');
+  try{
+    const data=await postStsPhoto(file);
+    fillOrderFromSts(data);
+    if(stsScan.step===1){
+      stsScan.step=2;
+      setStsStatus('Лицевая ок. Теперь оборот: ФИО и адрес');
+      const el=document.getElementById('stsCaptureInput');
+      if(el){el.onchange=onStsPhoto;el.click();}
+      return;
+    }
+    const bits=[document.getElementById('ordPlate')?.value, document.getElementById('ordClient')?.value].filter(Boolean);
+    setStsStatus('Проверь поля. Телефон и пробег сам'+(bits.length?(' · '+bits.join(' · ')):''));
+  }catch(e){
+    setStsStatus('Не дошло: '+(e.message||e));
+  }
+}
+
 function extractPlate(text){
   let s=String(text||'').toUpperCase();
   const map={'A':'А','B':'В','C':'С','E':'Е','H':'Н','K':'К','M':'М','O':'О','P':'Р','T':'Т','X':'Х','Y':'У'};
@@ -4414,8 +4502,32 @@ function buildMainReportPrintHtml(p){
 
 
 
-function phoneManualPrefix(el){if(el && !el.value) el.value='+7';}
-function phoneFixPaste(el){if(!el)return; el.value=String(el.value||'').replace(/^\+7\s*\+7/, '+7');}
+function normalizeRuPhone(raw){
+  let d=String(raw||'').replace(/\D/g,'');
+  if(!d) return '+7';
+  while(d.startsWith('77') && d.length>11) d=d.slice(1);
+  if(d.startsWith('78') && d.length>=12) d=d.slice(1);
+  if(d.startsWith('8')) d='7'+d.slice(1);
+  if(!d.startsWith('7')) d='7'+d;
+  if(d.length>11) d=d.slice(0,11);
+  return '+'+d;
+}
+function isPhoneInput(el){
+  if(!el || el.tagName!=='INPUT' || el.readOnly || el.disabled) return false;
+  if(el.type==='tel' || el.inputMode==='tel') return true;
+  return /phone|Phone/.test(el.id||'');
+}
+function phoneManualPrefix(el){if(el && !String(el.value||'').replace(/\D/g,'')) el.value='+7';}
+function phoneFixPaste(el){if(el) el.value=normalizeRuPhone(el.value);}
+document.addEventListener('focusin',function(e){if(isPhoneInput(e.target)) phoneManualPrefix(e.target);});
+document.addEventListener('input',function(e){if(isPhoneInput(e.target)) e.target.value=normalizeRuPhone(e.target.value);});
+document.addEventListener('paste',function(e){
+  if(!isPhoneInput(e.target)) return;
+  e.preventDefault();
+  const t=(e.clipboardData||window.clipboardData).getData('text')||'';
+  const pd=t.replace(/\D/g,'');
+  e.target.value=normalizeRuPhone(pd.length>=10?t:(e.target.value+t));
+},true);
 
 function openAddClient(){
   document.getElementById('modalBox').className='box compact';
@@ -4620,8 +4732,9 @@ function applyClientToForm(targetId, client){
 
   const phoneInput=document.getElementById(isEdit?'editOwnerPhone':'ownerPhone');
   if(phoneInput && c.phone){
-    phoneInput.value=c.phone;
-    phoneInput.setAttribute('value', c.phone);
+    const phone=normalizeRuPhone(c.phone);
+    phoneInput.value=phone;
+    phoneInput.setAttribute('value', phone);
   }
 
   const nameInput=document.getElementById(isEdit?'editOwnerName':'ownerName');
@@ -4668,7 +4781,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v45 · владелец Андрей · заказ-наряд A4 · крупное лого · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v46 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
@@ -4942,6 +5055,10 @@ function openOrderBlank(keepDraft=false){
   document.getElementById('modalBox').className='box compact';
   document.getElementById('modalBox').innerHTML=`
     <h2>Заказ-наряд</h2>
+    <div class="actions" style="justify-content:flex-start;margin:0 0 12px">
+      <button type="button" onclick="startStsScan()">С фото СТС</button>
+    </div>
+    <div id="ordStsStatus" class="ocr-status"></div>
     <div class="form">
       <div><label>№ заказ-наряда</label><input id="ordNum" inputmode="numeric" autocomplete="off" value="${keepDraft&&currentOrderPayload?escapeHtml(currentOrderPayload.orderNumber):getNextOrderNumber()}"></div>
       <div><label>Дата</label><input id="ordDate" autocomplete="off" value="${keepDraft&&currentOrderPayload?escapeHtml(currentOrderPayload.date):new Date().toLocaleDateString('ru-RU')}"></div>
