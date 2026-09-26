@@ -192,6 +192,12 @@
     .report-controls select{color:#fff!important}
     .report-controls button:hover{color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 12px rgba(79,199,234,.35)}
     .report-controls button.active{background:var(--sidebar-active-bg)!important;color:#fff!important;border-color:var(--neon)!important;box-shadow:0 0 0 1px rgba(79,199,234,.15),0 0 16px var(--neon-glow)}
+    .report-controls button.stock-in-btn{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 6px 16px rgba(23,177,107,.4)!important}
+    .report-controls button.stock-in-btn:hover{filter:brightness(1.06);color:#fff!important;border-color:var(--green)!important;box-shadow:0 8px 18px rgba(23,177,107,.5)!important}
+    .report-controls button.stock-out-btn{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important;box-shadow:0 6px 16px rgba(240,68,58,.4)!important}
+    .report-controls button.stock-out-btn:hover{filter:brightness(1.06);color:#fff!important;border-color:var(--red)!important;box-shadow:0 8px 18px rgba(240,68,58,.5)!important}
+    .stock-in{color:var(--green)}
+    .stock-out{color:var(--red)}
     .report-print{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 4px 14px rgba(23,177,107,.35)!important}
     .report-print:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(23,177,107,.45)!important;color:#fff!important}
     .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
@@ -516,18 +522,14 @@
       </div>
 
       <div class="report-controls">
-        <button onclick="openStockIn()">Приход</button>
-        <button onclick="openStockOut()">Расход</button>
-        <button onclick="toggleProductCards()">Карточки</button>
-        <button onclick="toggleStockJournal()">Журнал</button>
-        <button onclick="toggleStockAnalysis()">Анализ по месяцам</button>
+        <button class="stock-in-btn" onclick="openStockIn()">+ Приход</button>
+        <button class="stock-out-btn" onclick="openStockOut()">− Расход</button>
+        <button onclick="openProductCards()">Карточки</button>
+        <button onclick="openStockJournal()">Журнал</button>
+        <button onclick="openStockAnalysis()">Анализ</button>
       </div>
 
       <div class="grid" id="stockGrid"></div>
-      <div style="height:18px"></div>
-      <div id="productCardsBlock" class="report-card" style="display:none"></div>
-      <div id="stockAnalysisBlock" class="report-card" style="display:none;margin-top:18px"></div>
-      <div id="stockJournal" class="report-card" style="display:none;margin-top:18px"></div>
     </section>
 
     
@@ -2657,14 +2659,19 @@ document.addEventListener('click',e=>{
 });
 
 
+function stockNameSort(a,b){
+  return String(a.name||'').localeCompare(String(b.name||''),'ru',{sensitivity:'base'});
+}
+function catalogProducts(){
+  return products.filter(p=>!p._deleted).slice().sort(stockNameSort);
+}
 function renderStock(){
   const grid=document.getElementById('stockGrid');
   if(!grid) return;
 
-  const visibleProducts=products.filter(p=>!p._deleted);
+  const visibleProducts=catalogProducts().filter(p=>Number(p.qty||0)>0);
   if(!visibleProducts.length){
     grid.innerHTML='<div class="placeholder">На складе пока пусто. Добавь товар через приход</div>';
-    renderStockJournal();
     return;
   }
 
@@ -2677,10 +2684,6 @@ function renderStock(){
       <div class="actions" style="justify-content:flex-start;margin-top:10px"><button onclick="deleteProduct(${p.id})">Удалить</button></div>
     </div>
   `).join('');
-
-  renderStockJournal();
-  if(document.getElementById('productCardsBlock')?.style.display!=='none') renderProductCards();
-  if(document.getElementById('stockAnalysisBlock')?.style.display!=='none') renderStockAnalysis();
 }
 
 
@@ -2689,8 +2692,9 @@ function qtyOptions(){
 }
 
 function productOptions(){
-  if(!products.length) return '<option value="">Нет товаров</option>';
-  return products.filter(p=>!p._deleted).map(p=>`<option value="${p.id}">${escapeHtml(p.name)} — ${Number(p.price||0).toLocaleString('ru-RU')} ₽, остаток ${Number(p.qty||0).toLocaleString('ru-RU')}</option>`).join('');
+  const list=catalogProducts();
+  if(!list.length) return '<option value="">Нет товаров</option>';
+  return list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} — ${Number(p.price||0).toLocaleString('ru-RU')} ₽, остаток ${Number(p.qty||0).toLocaleString('ru-RU')}</option>`).join('');
 }
 
 function supplierButtons(targetId,groupClass){
@@ -2719,7 +2723,7 @@ function openAddProduct(){
       </div>
     </div>
     <div class="actions">
-      <button onclick="closeModal()">Отмена</button>
+      <button onclick="openProductCards()">Назад</button>
       <button onclick="saveProduct()">Сохранить</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
@@ -2743,6 +2747,7 @@ function saveProduct(){
   saveAll();
   closeModal();
   renderStock();
+  openProductCards();
 }
 
 
@@ -2756,6 +2761,7 @@ function deleteProduct(id){
   storeSet('deleted_product_keys_demo',JSON.stringify(deletedProductKeys));
   saveAll();
   renderStock();
+  if(document.getElementById('productCardsBlock')) openProductCards();
 }
 
 function openStockIn(){
@@ -2785,7 +2791,7 @@ function openStockIn(){
     </div>
     <div class="actions">
       <button onclick="closeModal()">Отмена</button>
-      <button onclick="saveStockMove('in')">Сохранить приход</button>
+      <button class="issue" onclick="saveStockMove('in')">+ Приход</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2817,7 +2823,7 @@ function openStockOut(){
     </div>
     <div class="actions">
       <button onclick="closeModal()">Отмена</button>
-      <button onclick="saveStockMove('out')">Сохранить расход</button>
+      <button class="danger" onclick="saveStockMove('out')">− Расход</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
 }
@@ -2858,9 +2864,10 @@ function saveStockMove(type){
   renderStock();
 }
 
-function toggleStockJournal(){
-  const j=document.getElementById('stockJournal');
-  j.style.display=j.style.display==='none'?'block':'none';
+function openStockJournal(){
+  document.getElementById('modalBox').className='box';
+  document.getElementById('modalBox').innerHTML=`<div id="stockJournal"></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;
+  document.getElementById('modal').style.display='flex';
   renderStockJournal();
 }
 
@@ -2877,7 +2884,7 @@ function renderStockJournal(){
     <h2 style="font-size:22px;margin:0 0 10px">Журнал склада</h2>
     ${stockLog.map(x=>`
       <div class="stock-journal-row">
-        <div><b>${x.type==='in'?'Приход':'Расход'}:</b> ${escapeHtml(x.productName)}</div>
+        <div>${x.type==='in'?'<b class="stock-in">+ Приход</b>':'<b class="stock-out">− Расход</b>'}: ${escapeHtml(x.productName)}</div>
         <div class="small">Кол-во: ${x.qty} · Цена: ${Number(x.price||0).toLocaleString('ru-RU')} ₽</div>
         <div class="small">${x.type==='in'?'Поставщик':'Расчёт'}: ${escapeHtml(x.person)}</div>
         <div class="small">Дата: ${x.date}</div>
@@ -2886,17 +2893,17 @@ function renderStockJournal(){
   `;
 }
 
-
-
-function toggleProductCards(){
-  const box=document.getElementById('productCardsBlock');
-  box.style.display=box.style.display==='none'?'block':'none';
+function openProductCards(){
+  document.getElementById('modalBox').className='box';
+  document.getElementById('modalBox').innerHTML=`<div id="productCardsBlock"></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;
+  document.getElementById('modal').style.display='flex';
   renderProductCards();
 }
 
 function renderProductCards(){
   const box=document.getElementById('productCardsBlock');
   if(!box) return;
+  const list=catalogProducts();
 
   box.innerHTML=`
     <h2 style="font-size:22px;margin:0 0 10px">Карточки товара</h2>
@@ -2904,14 +2911,14 @@ function renderProductCards(){
       <button onclick="openAddProduct()">Добавить карточку</button>
     </div>
     ${
-      products.length
-      ? products.map(p=>`
+      list.length
+      ? list.map(p=>`
         <div class="stock-journal-row">
           <div><b>${escapeHtml(p.name)}</b></div>
           <div class="small">Цена: ${Number(p.price||0).toLocaleString('ru-RU')} ₽ · Остаток: ${Number(p.qty||0).toLocaleString('ru-RU')}</div>
           <div class="actions" style="justify-content:flex-start;margin-top:8px">
             <button onclick="openEditProduct(${p.id})">Редактировать</button>
-       <button onclick="deleteProduct(${p.id})">Удалить</button>
+            <button onclick="deleteProduct(${p.id})">Удалить</button>
           </div>
         </div>
       `).join('')
@@ -2921,13 +2928,6 @@ function renderProductCards(){
 }
 
 
-function deleteProduct(id){
-  if(!confirm('Удалить карточку товара?')) return;
-  products=products.filter(x=>x.id!==id);
-  saveAll();
-  renderStock();
-  renderProductCards();
-}
 function openEditProduct(id){
   const p=products.find(x=>x.id===id);
   if(!p) return;
@@ -2945,7 +2945,7 @@ function openEditProduct(id){
       </div>
     </div>
     <div class="actions">
-      <button onclick="closeModal()">Отмена</button>
+      <button onclick="openProductCards()">Назад</button>
       <button onclick="saveProductEdit(${id})">Сохранить</button>
     </div>`;
   document.getElementById('modal').style.display='flex';
@@ -2959,12 +2959,13 @@ function saveProductEdit(id){
   saveAll();
   closeModal();
   renderStock();
-  renderProductCards();
+  openProductCards();
 }
 
-function toggleStockAnalysis(){
-  const box=document.getElementById('stockAnalysisBlock');
-  box.style.display=box.style.display==='none'?'block':'none';
+function openStockAnalysis(){
+  document.getElementById('modalBox').className='box';
+  document.getElementById('modalBox').innerHTML=`<div id="stockAnalysisBlock"></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;
+  document.getElementById('modal').style.display='flex';
   renderStockAnalysis();
 }
 
@@ -2993,7 +2994,6 @@ function renderStockAnalysis(){
   const inSum=rows.filter(x=>x.type==='in').reduce((s,x)=>s+(Number(x.price)||0)*(Number(x.qty)||0),0);
   const outSum=rows.filter(x=>x.type==='out').reduce((s,x)=>s+(Number(x.price)||0)*(Number(x.qty)||0),0);
 
-  const [y,m]=selected.split('-').map(Number);
   box.innerHTML=`
     <h2 style="font-size:22px;margin:0 0 10px">Анализ склада по месяцам</h2>
     <select id="stockMonthSelect" onchange="renderStockAnalysis()" style="width:100%;max-width:360px;padding:12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);font-size:14px;margin-bottom:14px">
@@ -3003,8 +3003,8 @@ function renderStockAnalysis(){
       }).join('')}
     </select>
     <div class="grid">
-      <div class="report-card"><div class="small">Приход</div><div class="report-num">${inSum.toLocaleString('ru-RU')} ₽</div></div>
-      <div class="report-card"><div class="small">Расход</div><div class="report-num">${outSum.toLocaleString('ru-RU')} ₽</div></div>
+      <div class="report-card"><div class="small stock-in">+ Приход</div><div class="report-num stock-in">${inSum.toLocaleString('ru-RU')} ₽</div></div>
+      <div class="report-card"><div class="small stock-out">− Расход</div><div class="report-num stock-out">${outSum.toLocaleString('ru-RU')} ₽</div></div>
       <div class="report-card"><div class="small">Оборот</div><div class="report-num">${(inSum+outSum).toLocaleString('ru-RU')} ₽</div></div>
     </div>
   `;
@@ -4808,7 +4808,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v49 · владелец Андрей · заказ-наряд с фото СТС · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v50 · владелец Андрей · склад: алфавит, без нулей, окна · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
