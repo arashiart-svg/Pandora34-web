@@ -2717,17 +2717,32 @@ function stockDebtTotal(){
   return Math.round((accrued-paid)*100)/100;
 }
 function unpaidStockRows(){
-  const outs=stockLog.filter(isStockDebtOut).slice().reverse();
-  let left=stockLog.filter(x=>x.type==='pay').reduce((s,x)=>s+stockLineSum(x),0);
-  const open=[];
-  outs.forEach(x=>{
-    const sum=stockLineSum(x);
-    if(left>=sum-0.001){left-=sum;return;}
-    const owed=Math.round((sum-Math.max(0,left))*100)/100;
-    left=0;
-    if(owed>0) open.push({item:x,owed,full:sum});
+  const events=stockLog.map((x,i)=>({x,i})).filter(({x})=>x.type==='pay' || isStockDebtOut(x));
+  events.sort((a,b)=>{
+    const da=parseRuDate(a.x.date), db=parseRuDate(b.x.date);
+    const ta=da?da.getTime():0, tb=db?db.getTime():0;
+    if(ta!==tb) return ta-tb;
+    return a.i-b.i;
   });
-  return open.reverse();
+  const open=[];
+  events.forEach(({x})=>{
+    if(x.type==='pay'){
+      let money=stockLineSum(x);
+      while(money>0.001 && open.length){
+        if(money>=open[0].left-0.001){
+          money-=open[0].left;
+          open.shift();
+        }else{
+          open[0].left=Math.round((open[0].left-money)*100)/100;
+          money=0;
+        }
+      }
+      return;
+    }
+    const sum=stockLineSum(x);
+    if(sum>0) open.push({item:x,left:sum,full:sum});
+  });
+  return open.map(r=>({item:r.item,owed:r.left,full:r.full})).reverse();
 }
 
 function supplierButtons(targetId,groupClass){
@@ -4918,7 +4933,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v52 · владелец Андрей · склад: только неоплаченный товар · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v53 · владелец Андрей · задолженность по дате оплаты · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
