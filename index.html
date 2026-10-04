@@ -2716,6 +2716,19 @@ function stockDebtTotal(){
   const paid=stockLog.filter(x=>x.type==='pay').reduce((s,x)=>s+stockLineSum(x),0);
   return Math.round((accrued-paid)*100)/100;
 }
+function unpaidStockRows(){
+  const outs=stockLog.filter(isStockDebtOut).slice().reverse();
+  let left=stockLog.filter(x=>x.type==='pay').reduce((s,x)=>s+stockLineSum(x),0);
+  const open=[];
+  outs.forEach(x=>{
+    const sum=stockLineSum(x);
+    if(left>=sum-0.001){left-=sum;return;}
+    const owed=Math.round((sum-Math.max(0,left))*100)/100;
+    left=0;
+    if(owed>0) open.push({item:x,owed,full:sum});
+  });
+  return open.reverse();
+}
 
 function supplierButtons(targetId,groupClass){
   return suppliers.map(x=>`<button class="quick-btn ${groupClass}" type="button" data-supplier="${x}" onclick="pickSupplier('${targetId}','${groupClass}','${x}')">${x}</button>`).join('');
@@ -2923,23 +2936,24 @@ function renderStockDebt(){
   const box=document.getElementById('stockDebtBlock');
   if(!box) return;
   const debt=stockDebtTotal();
-  const rows=stockLog.filter(x=>x.type==='pay' || isStockDebtOut(x));
+  const rows=unpaidStockRows();
+  const had=stockLog.some(isStockDebtOut);
   box.innerHTML=`
     <h2 style="font-size:22px;margin:0 0 10px">Задолженность</h2>
     <div class="report-card" style="margin-bottom:14px">
       <div class="small">К оплате поставщикам</div>
-      <div class="report-num stock-out">${debt.toLocaleString('ru-RU')} ₽</div>
+      <div class="report-num stock-out">${Math.max(0,debt).toLocaleString('ru-RU')} ₽</div>
     </div>
     <div class="actions" style="justify-content:flex-start;margin:0 0 14px">
       <button class="issue" type="button" onclick="openStockPay()">Оплата</button>
     </div>
     ${rows.length?rows.map(x=>`
       <div class="stock-journal-row">
-        <div>${x.type==='pay'?'<b class="stock-pay">Оплата</b> '+escapeHtml(x.person||''):'<b class="stock-out">Списание</b> '+escapeHtml(x.productName||'')}</div>
-        <div class="small">${stockLineSum(x).toLocaleString('ru-RU')} ₽${x.type==='pay'?'':' · '+escapeHtml(x.person||'')}</div>
-        <div class="small">${x.date||''}</div>
+        <div><b class="stock-out">${escapeHtml(x.item.productName||'Товар')}</b></div>
+        <div class="small stock-out">${x.owed.toLocaleString('ru-RU')} ₽${x.owed<x.full-0.001?(' из '+x.full.toLocaleString('ru-RU')+' ₽'):''}</div>
+        <div class="small">${escapeHtml(x.item.person||'')} · ${x.item.date||''}</div>
       </div>
-    `).join(''):'<div class="small">Списаний в работы пока нет</div>'}
+    `).join(''):'<div class="small">'+(had?'Всё оплачено':'Списаний в работы пока нет')+'</div>'}
   `;
 }
 function openStockPay(){
@@ -4904,7 +4918,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v51 · владелец Андрей · склад: задолженность поставщику · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v52 · владелец Андрей · склад: только неоплаченный товар · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
