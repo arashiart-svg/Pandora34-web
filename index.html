@@ -198,6 +198,7 @@
     .report-controls button.stock-out-btn:hover{filter:brightness(1.06);color:#fff!important;border-color:var(--red)!important;box-shadow:0 8px 18px rgba(240,68,58,.5)!important}
     .stock-in{color:var(--green)}
     .stock-out{color:var(--red)}
+    .stock-pay{color:var(--orange)}
     .report-print{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 4px 14px rgba(23,177,107,.35)!important}
     .report-print:hover{filter:brightness(1.05);box-shadow:0 6px 18px rgba(23,177,107,.45)!important;color:#fff!important}
     .report-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:9px 0;color:var(--text);font-size:14px}
@@ -527,6 +528,7 @@
         <button onclick="openProductCards()">Карточки</button>
         <button onclick="openStockJournal()">Журнал</button>
         <button onclick="openStockAnalysis()">Анализ</button>
+        <button onclick="openStockDebt()">Задолженность</button>
       </div>
 
       <div class="grid" id="stockGrid"></div>
@@ -2410,8 +2412,8 @@ function addDoneCostStock(){
   const productId=Number(val('doneCostProduct'));
   const qty=Number(val('doneCostQty'))||1;
   const p=products.find(x=>x.id===productId);
-  if(!p || qty<=0){alert('Выбери товар и количество');return;}
-  if(Number(p.qty||0)<qty && !confirm('Расход больше остатка. Всё равно списать при выдаче?')) return;
+  if(!p || qty<=0 || Number(p.qty||0)<=0){alert('Выбери товар, который есть на складе');return;}
+  if(Number(p.qty||0)<qty){alert('На складе только '+Number(p.qty||0));return;}
   doneCostsDraft.push({id:Date.now(),kind:'stock',productId:p.id,productName:p.name,qty,price:parseMoney(p.price),amount:parseMoney(p.price)*qty,comment:p.name});
   closeDoneCostsPop();
   refreshCostsUi();
@@ -2467,7 +2469,7 @@ function showDoneCostStock(){
   if(!card) return;
   card.innerHTML=`<div class="asl-pay-title">Со склада</div>
     <label>Товар</label>
-    <select id="doneCostProduct">${productOptions()}</select>
+    <select id="doneCostProduct">${productOptionsInStock()}</select>
     <label>Количество</label>
     <select id="doneCostQty">${qtyOptions()}</select>
     <button class="done-costs-add" type="button" onclick="addDoneCostStock()">Добавить</button>
@@ -2480,7 +2482,7 @@ function applyPartsStockOut(c){
     if(p){
       p.qty=Number(p.qty||0)-Number(x.qty||0);
       p.updatedAt=new Date().toISOString();
-      stockLog.unshift({id:Date.now()+i,type:'out',productId:p.id,productName:p.name,price:Number(p.price)||0,qty:Number(x.qty)||0,person:'Выдача '+(c.number||''),date:new Date().toLocaleString('ru-RU'),carId:c.id});
+      stockLog.unshift({id:Date.now()+i,type:'out',payable:true,productId:p.id,productName:p.name,price:Number(p.price)||0,qty:Number(x.qty)||0,person:'Выдача '+(c.number||''),date:new Date().toLocaleString('ru-RU'),carId:c.id});
     }
     x.stocked=true;
   });
@@ -2696,6 +2698,24 @@ function productOptions(){
   if(!list.length) return '<option value="">Нет товаров</option>';
   return list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} — ${Number(p.price||0).toLocaleString('ru-RU')} ₽, остаток ${Number(p.qty||0).toLocaleString('ru-RU')}</option>`).join('');
 }
+function productOptionsInStock(){
+  const list=catalogProducts().filter(p=>Number(p.qty||0)>0);
+  if(!list.length) return '<option value="">Нет товара в наличии</option>';
+  return list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} — ${Number(p.price||0).toLocaleString('ru-RU')} ₽, остаток ${Number(p.qty||0).toLocaleString('ru-RU')}</option>`).join('');
+}
+function stockLineSum(x){
+  if(!x) return 0;
+  if(x.type==='pay') return Number(x.amount)||Number(x.price)||0;
+  return (Number(x.price)||0)*(Number(x.qty)||0);
+}
+function isStockDebtOut(x){
+  return !!(x && x.type==='out' && (x.payable || x.carId));
+}
+function stockDebtTotal(){
+  const accrued=stockLog.filter(isStockDebtOut).reduce((s,x)=>s+stockLineSum(x),0);
+  const paid=stockLog.filter(x=>x.type==='pay').reduce((s,x)=>s+stockLineSum(x),0);
+  return Math.round((accrued-paid)*100)/100;
+}
 
 function supplierButtons(targetId,groupClass){
   return suppliers.map(x=>`<button class="quick-btn ${groupClass}" type="button" data-supplier="${x}" onclick="pickSupplier('${targetId}','${groupClass}','${x}')">${x}</button>`).join('');
@@ -2884,13 +2904,89 @@ function renderStockJournal(){
     <h2 style="font-size:22px;margin:0 0 10px">Журнал склада</h2>
     ${stockLog.map(x=>`
       <div class="stock-journal-row">
-        <div>${x.type==='in'?'<b class="stock-in">+ Приход</b>':'<b class="stock-out">− Расход</b>'}: ${escapeHtml(x.productName)}</div>
-        <div class="small">Кол-во: ${x.qty} · Цена: ${Number(x.price||0).toLocaleString('ru-RU')} ₽</div>
-        <div class="small">${x.type==='in'?'Поставщик':'Расчёт'}: ${escapeHtml(x.person)}</div>
+        <div>${x.type==='pay'?'<b class="stock-pay">Оплата</b>: '+escapeHtml(x.person||'поставщик'):(x.type==='in'?'<b class="stock-in">+ Приход</b>: '+escapeHtml(x.productName):'<b class="stock-out">− Расход</b>: '+escapeHtml(x.productName||''))}</div>
+        <div class="small">${x.type==='pay'?('Сумма: '+stockLineSum(x).toLocaleString('ru-RU')+' ₽'):('Кол-во: '+x.qty+' · Цена: '+Number(x.price||0).toLocaleString('ru-RU')+' ₽')}</div>
+        <div class="small">${x.type==='in'||x.type==='pay'?'Поставщик':'Расчёт'}: ${escapeHtml(x.person||'')}</div>
         <div class="small">Дата: ${x.date}</div>
       </div>
     `).join('')}
   `;
+}
+
+function openStockDebt(){
+  document.getElementById('modalBox').className='box';
+  document.getElementById('modalBox').innerHTML=`<div id="stockDebtBlock"></div><div class="actions"><button onclick="closeModal()">Закрыть</button></div>`;
+  document.getElementById('modal').style.display='flex';
+  renderStockDebt();
+}
+function renderStockDebt(){
+  const box=document.getElementById('stockDebtBlock');
+  if(!box) return;
+  const debt=stockDebtTotal();
+  const rows=stockLog.filter(x=>x.type==='pay' || isStockDebtOut(x));
+  box.innerHTML=`
+    <h2 style="font-size:22px;margin:0 0 10px">Задолженность</h2>
+    <div class="report-card" style="margin-bottom:14px">
+      <div class="small">К оплате поставщикам</div>
+      <div class="report-num stock-out">${debt.toLocaleString('ru-RU')} ₽</div>
+    </div>
+    <div class="actions" style="justify-content:flex-start;margin:0 0 14px">
+      <button class="issue" type="button" onclick="openStockPay()">Оплата</button>
+    </div>
+    ${rows.length?rows.map(x=>`
+      <div class="stock-journal-row">
+        <div>${x.type==='pay'?'<b class="stock-pay">Оплата</b> '+escapeHtml(x.person||''):'<b class="stock-out">Списание</b> '+escapeHtml(x.productName||'')}</div>
+        <div class="small">${stockLineSum(x).toLocaleString('ru-RU')} ₽${x.type==='pay'?'':' · '+escapeHtml(x.person||'')}</div>
+        <div class="small">${x.date||''}</div>
+      </div>
+    `).join(''):'<div class="small">Списаний в работы пока нет</div>'}
+  `;
+}
+function openStockPay(){
+  const debt=stockDebtTotal();
+  if(!(debt>0)){alert('Задолженности нет');return;}
+  document.getElementById('modalBox').className='box compact';
+  document.getElementById('modalBox').innerHTML=`
+    <h2>Оплата поставщику</h2>
+    <div class="small" style="margin-bottom:10px">К оплате: <b class="stock-out">${debt.toLocaleString('ru-RU')} ₽</b></div>
+    <div class="form">
+      <div class="wide">
+        <label>Сумма</label>
+        <input id="stockPayAmount" type="number" inputmode="decimal" value="${debt}">
+      </div>
+      <div class="wide">
+        <label>Поставщик</label>
+        <input id="stockPayPerson" placeholder="Выбери ниже" readonly>
+      </div>
+      <div class="wide">
+        <div class="quick-row">${supplierButtons('stockPayPerson','supplier-pay')}</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" onclick="openStockDebt()">Назад</button>
+      <button class="issue" type="button" onclick="saveStockPay()">Оплатить</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+}
+function saveStockPay(){
+  const person=val('stockPayPerson');
+  const amount=Number(val('stockPayAmount'))||0;
+  const debt=stockDebtTotal();
+  if(!person){alert('Выбери поставщика');return;}
+  if(!(amount>0)){alert('Введи сумму');return;}
+  if(amount>debt+0.001){alert('Сумма больше задолженности: '+debt.toLocaleString('ru-RU')+' ₽');return;}
+  stockLog.unshift({
+    id:Date.now(),
+    type:'pay',
+    productName:'Оплата поставщику',
+    person,
+    amount,
+    price:amount,
+    qty:1,
+    date:new Date().toLocaleString('ru-RU')
+  });
+  saveAll();
+  openStockDebt();
 }
 
 function openProductCards(){
@@ -4808,7 +4904,7 @@ function manualClient(targetId){
 }
 
 function backupPayload(){return {app:'Pandora34',version:'v28',createdAt:new Date().toLocaleString('ru-RU'),cars,products,stockLog,masters,suppliers,carBrands,carModels,appointments,clients,clientGroups,organizations,deletedCarKeys,googleCalendarIcsUrl:getGoogleCalendarIcsUrl(),googleCalendarLastSync:googleCalendarLastSync||''};}
-function renderBackupStatus(){const text='Версия: v50 · владелец Андрей · склад: алфавит, без нулей, окна · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
+function renderBackupStatus(){const text='Версия: v51 · владелец Андрей · склад: задолженность поставщику · карточек авто: '+cars.length+' · товаров: '+products.length+' · записей: '+appointments.length+' · автокопия: '+getLastAutoBackupText();['backupStatus','backupStatusSettings'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=text;});}
 function shareBackupNow(){forceAutoBackup();const json=JSON.stringify(backupPayload(),null,2);if(window.AndroidBackup&&AndroidBackup.shareBackup){AndroidBackup.shareBackup(json);renderBackupStatus();return;}const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Pandora34_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);renderBackupStatus();}
 function shareAutoBackupNow(){forceAutoBackup();if(window.AndroidBackup&&AndroidBackup.shareAutoBackup){AndroidBackup.shareAutoBackup();renderBackupStatus();}else{shareBackupNow();}}
 function openBackupFile(){if(window.AndroidBackup&&AndroidBackup.openBackupFile){AndroidBackup.openBackupFile();return;}const inp=document.getElementById('backupFileInput');if(!inp){alert('Не найден выбор файла');return;}inp.value='';inp.click();}
