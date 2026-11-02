@@ -1,6 +1,135 @@
+version: "3.9"
+
 services:
-  smm-bot:
-    build: .
-    container_name: pandora34-smm-bot
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+    extra_hosts:
+      - "calendar.google.com:142.251.110.101"
+      - "www.google.com:142.251.110.101"
+    expose:
+      - "4000"
+    ports:
+      # Прямая публикация по IP:8080 больше не нужна для основного трафика (используем nginx+HTTPS,
+      # см. сервис nginx ниже), но оставляем как запасной путь для диагностики.
+      - "8080:4000"
+
+  ocr:
+    build:
+      context: ./packages/ocr
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
+    environment:
+      SYNC_TOKEN: ${SYNC_TOKEN}
+    expose:
+      - "8090"
+
+  bot-client:
+    build:
+      context: .
+      dockerfile: packages/bot-client/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    environment:
+      API_BASE_URL: http://api:4000
+
+  bot-staff:
+    build:
+      context: .
+      dockerfile: packages/bot-staff/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    environment:
+      API_BASE_URL: http://api:4000
+
+  bot-avito:
+    build:
+      context: .
+      dockerfile: packages/bot-avito/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    environment:
+      API_BASE_URL: http://api:4000
+    expose:
+      - "4100"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - ocr
+      # bot-avito пока не реализован (нет packages/bot-avito) — вернуть в depends_on и
+      # в location /avito/ (nginx/templates/default.conf.template), когда появится бот.
+    env_file: .env
+    environment:
+      NGINX_ENVSUBST_FILTER: DOMAIN
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./web:/usr/share/nginx/web:ro
+      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
+      - certbot_www:/var/www/certbot:rw
+      - certbot_conf:/etc/letsencrypt:rw
+
+  certbot:
+    image: certbot/certbot:latest
+    # Временный обход нестабильного DNS на хосте: жёстко прописываем IP ACME API Let's Encrypt.
+    # Можно убрать, когда DNS у хостера станет стабильным.
+    extra_hosts:
+      - "acme-v02.api.letsencrypt.org:172.65.32.248"
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+      - ./certbot-hooks:/hooks:ro
+    # certbot renew сам помнит способ проверки (DNS-01 через DuckDNS-хуки) для каждого
+    # сертификата из /etc/letsencrypt/renewal/*.conf, поэтому здесь без --webroot.
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done"
+
+volumes:
+  pgdata:
+  redisdata:
+  certbot_www:
+  certbot_conf:

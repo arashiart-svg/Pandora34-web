@@ -19,8 +19,6 @@ server {
     ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    add_header Permissions-Policy "camera=(self), microphone=()" always;
-
     client_max_body_size 20m;
 
     location = /sync/live {
@@ -148,11 +146,9 @@ server {
         return 302 /enter.html;
     }
 
-    # Веб-версия CRM. Вход через /enter.html + cookie на год (телефон умеет запомнить форму).
-    # API (/health, /auth, /sync) без этой двери — туда ходит приложение со своим токеном.
+    # Веб-версия CRM. auth_request на /auth/web-check здесь нельзя:
+    # текущий API этот маршрут не отдаёт, nginx отвечает 500.
     location / {
-        auth_request /__web_check;
-        error_page 401 = @gotologin;
         root /usr/share/nginx/web;
         index index.html;
         try_files $uri /index.html;
