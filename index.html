@@ -615,7 +615,7 @@
     </section>
 
     <section id="cfsSection" style="display:none">
-      <div class="top"><div><div class="title">CFS</div><div class="date">Загрузчик фильтра и само окно J2534.</div></div></div>
+      <div class="top"><div><div class="title">CFS</div><div class="date">Загрузчик, прошивка и окно J2534.</div></div></div>
       <div class="report-card">
         <div id="cfsInfo" class="small" style="margin-bottom:14px">Загрузка…</div>
         <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;align-items:center">
@@ -623,6 +623,10 @@
           <input id="cfsNote" placeholder="Заметка, необязательно" maxlength="200" style="min-width:200px;max-width:360px;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
           <button class="primary" onclick="uploadCfsBoot()">Выложить boot.bin</button>
         </div>
+      </div>
+      <div class="report-card" style="margin-top:14px">
+        <h2 style="font-size:20px;margin:0 0 8px">Прошивка</h2>
+        <div id="cfsImageInfo" class="small">Загрузка…</div>
       </div>
       <div class="report-card" style="margin-top:14px">
         <h2 style="font-size:20px;margin:0 0 8px">Окно J2534</h2>
@@ -5720,6 +5724,7 @@ async function renderCfs(){
   if(!box) return;
   box.textContent='Загрузка…';
   renderCfsApp();
+  renderCfsImage();
   try{
     const r=await fetch(API_BASE_URL+'/firmware/boot/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
     if(r.status===401){box.textContent='Сервер не пустил.';return;}
@@ -5737,6 +5742,22 @@ async function renderCfs(){
       n.textContent=String(j.note);
       box.appendChild(n);
     }
+  }catch(e){
+    box.textContent='Сервер не ответил.';
+  }
+}
+async function renderCfsImage(){
+  const box=document.getElementById('cfsImageInfo');
+  if(!box) return;
+  box.textContent='Загрузка…';
+  try{
+    const r=await fetch(API_BASE_URL+'/firmware/image/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    if(r.status===401){box.textContent='Сервер не пустил.';return;}
+    if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
+    const j=await r.json();
+    if(!j||!j.present){box.textContent='Прошивки на сервере ещё нет. Собери её в Студии.';return;}
+    const ver=j.version?('Прошивка '+j.version):'Прошивка без подписи';
+    box.textContent=ver+' · '+j.size+' байт · '+cfsWhen(j.uploadedAt);
   }catch(e){
     box.textContent='Сервер не ответил.';
   }

@@ -62,6 +62,62 @@ function appMetaPath(): string {
   return path.join(env.firmwareDir, "app.json");
 }
 
+const IMAGE_OFF = 0x2000;
+const IMAGE_MAX = 0xE800;
+
+function imagePath(): string {
+  return path.join(env.firmwareDir, "firmware.bin");
+}
+
+function imageMetaPath(): string {
+  return path.join(env.firmwareDir, "image.json");
+}
+
+type ImageMeta = {
+  present: true;
+  version: string;
+  size: number;
+  uploadedAt: string;
+  sha256: string;
+  sp: string;
+  pc: string;
+};
+
+function imageVersion(buf: Buffer): string {
+  const at = buf.indexOf("CFVW");
+  if (at < 0) return "";
+  let end = at + 4;
+  const stop = Math.min(buf.length, at + 24);
+  while (end < stop && buf[end] !== 0 && buf[end] !== 10) end++;
+  return buf.subarray(at + 4, end).toString("ascii").replace(/[^0-9.A-Za-z]/g, "");
+}
+
+function inspectImage(buf: Buffer): { sp: number; pc: number; version: string } | null {
+  if (buf.length <= IMAGE_OFF + 8 || buf.length > IMAGE_MAX) return null;
+  const sp = buf.readUInt32LE(0);
+  const pc = buf.readUInt32LE(4);
+  if (sp < 0x20000000 || sp > 0x20010000 || (pc & 1) === 0) return null;
+  const bootAddr = pc & ~1;
+  if (bootAddr < BOOT_BASE || bootAddr >= BOOT_BASE + IMAGE_OFF) return null;
+  const asp = buf.readUInt32LE(IMAGE_OFF);
+  const apc = buf.readUInt32LE(IMAGE_OFF + 4);
+  if (asp < 0x20000000 || asp > 0x20010000 || (apc & 1) === 0) return null;
+  const appAddr = apc & ~1;
+  if (appAddr < BOOT_BASE + IMAGE_OFF || appAddr >= BOOT_BASE + IMAGE_MAX) return null;
+  return { sp, pc: bootAddr, version: imageVersion(buf) };
+}
+
+async function readImageMeta(): Promise<ImageMeta | null> {
+  try {
+    const raw = await fs.readFile(imageMetaPath(), "utf8");
+    const parsed = JSON.parse(raw) as ImageMeta;
+    if (!parsed || parsed.present !== true) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function inspectBoot(buf: Buffer): { sp: number; pc: number } | null {
   if (buf.length < 8 || buf.length > BOOT_MAX) return null;
   const sp = buf.readUInt32LE(0);
@@ -233,6 +289,52 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const meta: AppMeta = { present: true, version, uploadedAt: new Date().toISOString(), files };
     await fs.mkdir(env.firmwareDir, { recursive: true });
     await fs.writeFile(appMetaPath(), JSON.stringify(meta));
+    return meta;
+  });
+
+  app.get("/firmware/image/info", { preHandler: requireDeviceToken }, async () => {
+    const meta = await readImageMeta();
+    if (!meta) return { present: false };
+    try {
+      await fs.access(imagePath());
+    } catch {
+      return { present: false };
+    }
+    return meta;
+  });
+
+  app.get("/firmware/image", { preHandler: requireDeviceToken }, async (_request, reply) => {
+    const meta = await readImageMeta();
+    if (!meta) return reply.code(404).send({ error: "no_image" });
+    try {
+      const buf = await fs.readFile(imagePath());
+      reply.header("Cache-Control", "no-store");
+      reply.header("Content-Disposition", 'attachment; filename="firmware.bin"');
+      return reply.type("application/octet-stream").send(buf);
+    } catch {
+      return reply.code(404).send({ error: "no_image" });
+    }
+  });
+
+  app.post("/firmware/image", { preHandler: requireDeviceToken }, async (request, reply) => {
+    const body = request.body;
+    if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: "bad_body" });
+    const img = inspectImage(body);
+    if (!img) return reply.code(400).send({ error: "not_image" });
+    const meta: ImageMeta = {
+      present: true,
+      version: img.version,
+      size: body.length,
+      uploadedAt: new Date().toISOString(),
+      sha256: createHash("sha256").update(body).digest("hex"),
+      sp: hexAddr(img.sp),
+      pc: hexAddr(img.pc),
+    };
+    await fs.mkdir(env.firmwareDir, { recursive: true });
+    const tmp = imagePath() + ".tmp";
+    await fs.writeFile(tmp, body);
+    await fs.rename(tmp, imagePath());
+    await fs.writeFile(imageMetaPath(), JSON.stringify(meta));
     return meta;
   });
 }
