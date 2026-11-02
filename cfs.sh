@@ -10,7 +10,6 @@ cat > packages/api/src/routes/firmware.ts << 'END'
 import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
-import { inflateRawSync } from "zlib";
 import { FastifyInstance } from "fastify";
 import { requireDeviceToken } from "../auth/middleware";
 import { env } from "../env";
@@ -55,8 +54,8 @@ const APP_ALLOW = new Set([
 ]);
 const APP_NEED = ["main.py", "app_version.py", "app_update.py", "j2534_passthru.py", "j2534_worker.py"];
 
-function appPath(): string {
-  return path.join(env.firmwareDir, "app.zip");
+function appDir(): string {
+  return path.join(env.firmwareDir, "appfiles");
 }
 
 function appMetaPath(): string {
@@ -86,53 +85,18 @@ function bootVersion(buf: Buffer): string {
   return buf.subarray(at + 4, end).toString("ascii").replace(/[^0-9.]/g, "");
 }
 
-type ZipEntry = { name: string; data: Buffer };
-
-function readZip(buf: Buffer): ZipEntry[] | null {
-  const out: ZipEntry[] = [];
-  let off = 0;
-  while (off + 30 <= buf.length) {
-    if (buf.readUInt32LE(off) !== 0x04034b50) break;
-    const flags = buf.readUInt16LE(off + 6);
-    const method = buf.readUInt16LE(off + 8);
-    const compSize = buf.readUInt32LE(off + 18);
-    const nameLen = buf.readUInt16LE(off + 26);
-    const extraLen = buf.readUInt16LE(off + 28);
-    const nameStart = off + 30;
-    if (nameStart + nameLen + extraLen + compSize > buf.length) return null;
-    const name = buf.subarray(nameStart, nameStart + nameLen).toString("utf8").replace(/\\/g, "/");
-    const dataStart = nameStart + nameLen + extraLen;
-    const comp = buf.subarray(dataStart, dataStart + compSize);
-    if (flags & 0x1) return null;
-    let data: Buffer;
-    try {
-      if (method === 0) data = Buffer.from(comp);
-      else if (method === 8) data = inflateRawSync(comp);
-      else return null;
-    } catch {
-      return null;
-    }
-    out.push({ name, data });
-    off = dataStart + compSize;
-  }
-  return out.length ? out : null;
-}
-
-function appVersionOf(entries: ZipEntry[]): string {
-  const file = entries.find((e) => e.name === "app_version.py");
-  if (!file) return "";
-  const text = file.data.toString("utf8");
+function versionOf(text: string): string {
   const m = text.match(/APP_VERSION\s*=\s*"(\d+(?:\.\d+)*)"/);
   return m ? m[1] : "";
 }
 
+type AppFileInfo = { size: number; sha256: string };
+
 type AppMeta = {
   present: true;
   version: string;
-  size: number;
   uploadedAt: string;
-  sha256: string;
-  files: string[];
+  files: Record<string, AppFileInfo>;
 };
 
 async function readAppMeta(): Promise<AppMeta | null> {
@@ -214,52 +178,60 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const meta = await readAppMeta();
     if (!meta) return { present: false };
     try {
-      await fs.access(appPath());
+      await fs.access(appDir());
     } catch {
       return { present: false };
     }
     return meta;
   });
 
-  app.get("/firmware/app", { preHandler: requireDeviceToken }, async (_request, reply) => {
+  app.get("/firmware/app/file/:name", { preHandler: requireDeviceToken }, async (request, reply) => {
+    const name = (request.params as { name?: string }).name || "";
+    if (!APP_ALLOW.has(name)) return reply.code(404).send({ error: "no_file" });
     const meta = await readAppMeta();
-    if (!meta) return reply.code(404).send({ error: "no_app" });
+    if (!meta || !meta.files[name]) return reply.code(404).send({ error: "no_file" });
     try {
-      const buf = await fs.readFile(appPath());
+      const buf = await fs.readFile(path.join(appDir(), name));
       reply.header("Cache-Control", "no-store");
-      reply.header("Content-Disposition", 'attachment; filename="j2534_app.zip"');
-      return reply.type("application/zip").send(buf);
+      return reply.type("application/octet-stream").send(buf);
     } catch {
-      return reply.code(404).send({ error: "no_app" });
+      return reply.code(404).send({ error: "no_file" });
     }
   });
 
   app.post("/firmware/app", { preHandler: requireDeviceToken }, async (request, reply) => {
-    const body = request.body;
-    if (!Buffer.isBuffer(body) || body.length < 32 || body.length > APP_MAX) {
-      return reply.code(400).send({ error: "bad_body" });
-    }
-    const entries = readZip(body);
-    if (!entries) return reply.code(400).send({ error: "bad_zip" });
-    const names = entries.map((e) => e.name);
-    if (names.some((n) => n.endsWith("/") || n.includes("..") || n.includes("/") || !APP_ALLOW.has(n))) {
+    const body = request.body as { files?: Record<string, string> };
+    const incoming = body && body.files;
+    if (!incoming || typeof incoming !== "object") return reply.code(400).send({ error: "bad_body" });
+    const names = Object.keys(incoming);
+    if (names.some((n) => !APP_ALLOW.has(n) || n.includes("/") || n.includes(".."))) {
       return reply.code(400).send({ error: "bad_files" });
     }
     if (APP_NEED.some((n) => !names.includes(n))) return reply.code(400).send({ error: "bad_files" });
-    const version = appVersionOf(entries);
+    const decoded = new Map<string, Buffer>();
+    let total = 0;
+    for (const name of names) {
+      const raw = incoming[name];
+      if (typeof raw !== "string") return reply.code(400).send({ error: "bad_body" });
+      const buf = Buffer.from(raw, "base64");
+      total += buf.length;
+      if (total > APP_MAX) return reply.code(400).send({ error: "bad_body" });
+      decoded.set(name, buf);
+    }
+    const version = versionOf(decoded.get("app_version.py")?.toString("utf8") || "");
     if (!version) return reply.code(400).send({ error: "no_version" });
-    const meta: AppMeta = {
-      present: true,
-      version,
-      size: body.length,
-      uploadedAt: new Date().toISOString(),
-      sha256: createHash("sha256").update(body).digest("hex"),
-      files: names,
-    };
+    const files: Record<string, AppFileInfo> = {};
+    const tmp = appDir() + ".tmp";
+    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.mkdir(tmp, { recursive: true });
+    for (const [name, buf] of decoded) {
+      await fs.writeFile(path.join(tmp, name), buf);
+      files[name] = { size: buf.length, sha256: createHash("sha256").update(buf).digest("hex") };
+    }
+    await fs.rm(appDir(), { recursive: true, force: true });
+    await fs.rename(tmp, appDir());
+    const meta: AppMeta = { present: true, version, uploadedAt: new Date().toISOString(), files };
     await fs.mkdir(env.firmwareDir, { recursive: true });
-    const tmp = appPath() + ".tmp";
-    await fs.writeFile(tmp, body);
-    await fs.rename(tmp, appPath());
     await fs.writeFile(appMetaPath(), JSON.stringify(meta));
     return meta;
   });

@@ -626,11 +626,7 @@
       </div>
       <div class="report-card" style="margin-top:14px">
         <h2 style="font-size:20px;margin:0 0 8px">Окно J2534</h2>
-        <div id="cfsAppInfo" class="small" style="margin-bottom:14px">Загрузка…</div>
-        <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;align-items:center">
-          <input id="cfsAppFile" type="file" accept=".zip,application/zip" style="max-width:280px">
-          <button class="primary" onclick="uploadCfsApp()">Выложить окно</button>
-        </div>
+        <div id="cfsAppInfo" class="small">Загрузка…</div>
       </div>
     </section>
 
@@ -5754,36 +5750,11 @@ async function renderCfsApp(){
     if(r.status===401){box.textContent='Сервер не пустил.';return;}
     if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
     const j=await r.json();
-    if(!j||!j.present){box.textContent='Окна на сервере нет. Выложи архив j2534_app.zip.';return;}
-    box.textContent='Окно '+j.version+' · '+j.size+' байт · '+cfsWhen(j.uploadedAt)+' · sha '+String(j.sha256||'').slice(0,12);
+    if(!j||!j.present){box.textContent='Окна на сервере ещё нет.';return;}
+    box.textContent='Окно '+j.version+' · '+cfsWhen(j.uploadedAt);
   }catch(e){
     box.textContent='Сервер не ответил.';
   }
-}
-async function uploadCfsApp(){
-  const input=document.getElementById('cfsAppFile');
-  const file=input&&input.files&&input.files[0];
-  if(!file){alert('Выбери j2534_app.zip');return;}
-  if(file.size>8*1024*1024){alert('Архив больше 8 МБ.');return;}
-  const buf=await file.arrayBuffer();
-  const r=await fetch(API_BASE_URL+'/firmware/app',{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN,'Content-Type':'application/octet-stream'},
-    body:buf,
-    cache:'no-store'
-  });
-  if(r.status===400){
-    const j=await r.json().catch(()=>null);
-    const code=j&&j.error;
-    if(code==='no_version') alert('В архиве нет версии окна.');
-    else if(code==='bad_files') alert('В архиве не те файлы. Нужен j2534_app.zip.');
-    else alert('Сервер не принял архив.');
-    return;
-  }
-  if(r.status===401){alert('Сервер не пустил.');return;}
-  if(!r.ok){alert('Не вышло ('+r.status+').');return;}
-  if(input) input.value='';
-  renderCfsApp();
 }
 async function uploadCfsBoot(){
   const input=document.getElementById('cfsFile');
