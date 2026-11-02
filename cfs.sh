@@ -3,6 +3,7 @@ set -euo pipefail
 cd /opt/pandora34-server
 mkdir -p /tmp/cfs-bak packages/api/src/routes
 cp -a packages/api/src/server.ts packages/api/src/env.ts docker-compose.yml nginx/templates/default.conf.template /tmp/cfs-bak/ 2>/dev/null || true
+sed -i 's/\r$//' packages/api/src/server.ts packages/api/src/env.ts docker-compose.yml nginx/templates/default.conf.template
 
 echo "пишу firmware.ts"
 cat > packages/api/src/routes/firmware.ts << 'END'
@@ -153,21 +154,19 @@ grep -q 'application/octet-stream' "$S"
 echo "правлю env.ts"
 E=packages/api/src/env.ts
 if ! grep -q firmwareDir "$E"; then
-  n=$(grep -c '^};$' "$E" || true)
-  [ "$n" = 1 ] || { echo "env.ts: не нашёл закрытие объекта"; exit 1; }
-  awk '{
-    if ($0 ~ /^};$/) {
-      if (prev != "" && prev !~ /,$/) prev = prev ","
-      if (prev != "") print prev
-      print "  firmwareDir: (process.env.FIRMWARE_DIR ?? \"\").trim() || \"firmware\","
-      print
-      prev=""
-      next
+  awk '{ line[NR]=$0 }
+  END {
+    last=0
+    for (i=1;i<=NR;i++) if (line[i] ~ /^[[:space:]]*}[;]?[[:space:]]*$/) last=i
+    if (!last) exit 2
+    j=last-1
+    while (j>0 && line[j] ~ /^[[:space:]]*$/) j--
+    if (j>0 && line[j] !~ /,$/) line[j]=line[j] ","
+    for (i=1;i<=NR;i++) {
+      if (i==last) print "  firmwareDir: (process.env.FIRMWARE_DIR ?? \"\").trim() || \"firmware\","
+      print line[i]
     }
-    if (NR > 1) print prev
-    prev=$0
-  }
-  END { if (prev != "") print prev }' "$E" > /tmp/cfs-env.ts
+  }' "$E" > /tmp/cfs-env.ts || { echo "env.ts: не нашёл закрытие объекта"; echo "---- хвост env.ts ----"; tail -n 20 "$E"; exit 1; }
   mv /tmp/cfs-env.ts "$E"
 fi
 grep -q firmwareDir "$E"
