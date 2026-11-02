@@ -10,6 +10,7 @@ cat > packages/api/src/routes/firmware.ts << 'END'
 import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { inflateRawSync } from "zlib";
 import { FastifyInstance } from "fastify";
 import { requireDeviceToken } from "../auth/middleware";
 import { env } from "../env";
@@ -26,6 +27,7 @@ type BootMeta = {
   sp: string;
   pc: string;
   note: string;
+  version: string;
 };
 
 function bootPath(): string {
@@ -34,6 +36,31 @@ function bootPath(): string {
 
 function metaPath(): string {
   return path.join(env.firmwareDir, "boot.json");
+}
+
+const APP_MAX = 8 * 1024 * 1024;
+const APP_ALLOW = new Set([
+  "main.py",
+  "app_version.py",
+  "cfs_server.py",
+  "uart_boot.py",
+  "j2534_passthru.py",
+  "j2534_worker.py",
+  "control.py",
+  "engine.py",
+  "app_update.py",
+  "help_pins.jpg",
+  "requirements.txt",
+  "run.bat",
+]);
+const APP_NEED = ["main.py", "app_version.py", "app_update.py", "j2534_passthru.py", "j2534_worker.py"];
+
+function appPath(): string {
+  return path.join(env.firmwareDir, "app.zip");
+}
+
+function appMetaPath(): string {
+  return path.join(env.firmwareDir, "app.json");
 }
 
 function inspectBoot(buf: Buffer): { sp: number; pc: number } | null {
@@ -48,6 +75,75 @@ function inspectBoot(buf: Buffer): { sp: number; pc: number } | null {
 
 function hexAddr(n: number): string {
   return "0x" + n.toString(16).toUpperCase().padStart(8, "0");
+}
+
+function bootVersion(buf: Buffer): string {
+  const at = buf.indexOf("CFBW");
+  if (at < 0) return "";
+  let end = at + 4;
+  const stop = Math.min(buf.length, at + 20);
+  while (end < stop && buf[end] !== 0 && buf[end] !== 10) end++;
+  return buf.subarray(at + 4, end).toString("ascii").replace(/[^0-9.]/g, "");
+}
+
+type ZipEntry = { name: string; data: Buffer };
+
+function readZip(buf: Buffer): ZipEntry[] | null {
+  const out: ZipEntry[] = [];
+  let off = 0;
+  while (off + 30 <= buf.length) {
+    if (buf.readUInt32LE(off) !== 0x04034b50) break;
+    const flags = buf.readUInt16LE(off + 6);
+    const method = buf.readUInt16LE(off + 8);
+    const compSize = buf.readUInt32LE(off + 18);
+    const nameLen = buf.readUInt16LE(off + 26);
+    const extraLen = buf.readUInt16LE(off + 28);
+    const nameStart = off + 30;
+    if (nameStart + nameLen + extraLen + compSize > buf.length) return null;
+    const name = buf.subarray(nameStart, nameStart + nameLen).toString("utf8").replace(/\\/g, "/");
+    const dataStart = nameStart + nameLen + extraLen;
+    const comp = buf.subarray(dataStart, dataStart + compSize);
+    if (flags & 0x1) return null;
+    let data: Buffer;
+    try {
+      if (method === 0) data = Buffer.from(comp);
+      else if (method === 8) data = inflateRawSync(comp);
+      else return null;
+    } catch {
+      return null;
+    }
+    out.push({ name, data });
+    off = dataStart + compSize;
+  }
+  return out.length ? out : null;
+}
+
+function appVersionOf(entries: ZipEntry[]): string {
+  const file = entries.find((e) => e.name === "app_version.py");
+  if (!file) return "";
+  const text = file.data.toString("utf8");
+  const m = text.match(/APP_VERSION\s*=\s*"(\d+(?:\.\d+)*)"/);
+  return m ? m[1] : "";
+}
+
+type AppMeta = {
+  present: true;
+  version: string;
+  size: number;
+  uploadedAt: string;
+  sha256: string;
+  files: string[];
+};
+
+async function readAppMeta(): Promise<AppMeta | null> {
+  try {
+    const raw = await fs.readFile(appMetaPath(), "utf8");
+    const parsed = JSON.parse(raw) as AppMeta;
+    if (!parsed || parsed.present !== true || !parsed.version) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 async function readMeta(): Promise<BootMeta | null> {
@@ -66,11 +162,11 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const meta = await readMeta();
     if (!meta) return { present: false };
     try {
-      await fs.access(bootPath());
+      const buf = await fs.readFile(bootPath());
+      return { ...meta, version: bootVersion(buf) };
     } catch {
       return { present: false };
     }
-    return meta;
   });
 
   app.get("/firmware/boot", { preHandler: requireDeviceToken }, async (_request, reply) => {
@@ -104,12 +200,67 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
       sp: hexAddr(vec.sp),
       pc: hexAddr(vec.pc),
       note,
+      version: bootVersion(body),
     };
     await fs.mkdir(env.firmwareDir, { recursive: true });
     const tmp = bootPath() + ".tmp";
     await fs.writeFile(tmp, body);
     await fs.rename(tmp, bootPath());
     await fs.writeFile(metaPath(), JSON.stringify(meta));
+    return meta;
+  });
+
+  app.get("/firmware/app/info", { preHandler: requireDeviceToken }, async () => {
+    const meta = await readAppMeta();
+    if (!meta) return { present: false };
+    try {
+      await fs.access(appPath());
+    } catch {
+      return { present: false };
+    }
+    return meta;
+  });
+
+  app.get("/firmware/app", { preHandler: requireDeviceToken }, async (_request, reply) => {
+    const meta = await readAppMeta();
+    if (!meta) return reply.code(404).send({ error: "no_app" });
+    try {
+      const buf = await fs.readFile(appPath());
+      reply.header("Cache-Control", "no-store");
+      reply.header("Content-Disposition", 'attachment; filename="j2534_app.zip"');
+      return reply.type("application/zip").send(buf);
+    } catch {
+      return reply.code(404).send({ error: "no_app" });
+    }
+  });
+
+  app.post("/firmware/app", { preHandler: requireDeviceToken }, async (request, reply) => {
+    const body = request.body;
+    if (!Buffer.isBuffer(body) || body.length < 32 || body.length > APP_MAX) {
+      return reply.code(400).send({ error: "bad_body" });
+    }
+    const entries = readZip(body);
+    if (!entries) return reply.code(400).send({ error: "bad_zip" });
+    const names = entries.map((e) => e.name);
+    if (names.some((n) => n.endsWith("/") || n.includes("..") || n.includes("/") || !APP_ALLOW.has(n))) {
+      return reply.code(400).send({ error: "bad_files" });
+    }
+    if (APP_NEED.some((n) => !names.includes(n))) return reply.code(400).send({ error: "bad_files" });
+    const version = appVersionOf(entries);
+    if (!version) return reply.code(400).send({ error: "no_version" });
+    const meta: AppMeta = {
+      present: true,
+      version,
+      size: body.length,
+      uploadedAt: new Date().toISOString(),
+      sha256: createHash("sha256").update(body).digest("hex"),
+      files: names,
+    };
+    await fs.mkdir(env.firmwareDir, { recursive: true });
+    const tmp = appPath() + ".tmp";
+    await fs.writeFile(tmp, body);
+    await fs.rename(tmp, appPath());
+    await fs.writeFile(appMetaPath(), JSON.stringify(meta));
     return meta;
   });
 }
