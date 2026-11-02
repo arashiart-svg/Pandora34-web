@@ -1,4 +1,4 @@
-const CACHE = "p34-pwa-v10";
+const CACHE = "p34-pwa-v11";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -21,7 +21,8 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/sync") ||
     url.pathname.startsWith("/auth") ||
     url.pathname.startsWith("/health") ||
-    url.pathname.startsWith("/ocr")
+    url.pathname.startsWith("/ocr") ||
+    url.pathname.startsWith("/firmware")
   ) {
     return;
   }

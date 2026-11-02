@@ -480,7 +480,7 @@
       <button type="button" id="crmWho" class="crm-who" onclick="crmLogoutAsk()" title="Нажми, чтобы выйти"></button>
     </div>
     <div class="menu" id="navMenu">
-    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
+    <button id="menuWork" class="active" onclick="showSection('work')"><span>Работа</span></button><button id="menuCalendar" onclick="showSection('calendar')"><span>Запись</span></button><button id="menuStock" onclick="showSection('stock')"><span>Склад</span></button><button id="menuReport" onclick="showSection('report')"><span>Отчёты</span></button><button id="menuArchive" onclick="showSection('archive')"><span>Архив авто</span></button><button id="menuClients" onclick="showSection('clients')"><span>Контрагенты</span></button><button id="menuCfs" onclick="showSection('cfs')"><span>CFS</span></button><button id="menuSettings" onclick="showSection('settings')"><span>Настройки</span></button><button id="menuLogout" onclick="crmLogout()" style="display:none;margin-top:12px"><span>Выйти</span></button>
   </div></aside>
   <button type="button" class="nav-scrim" id="navScrim" onclick="closeNav()" aria-label="Закрыть меню"></button>
   <main>
@@ -611,6 +611,18 @@
           <button onclick="openBackupFile()">Загрузить базу из файла</button>
         </div>
         <div id="backupStatus" class="small" style="margin-top:14px;color:var(--muted)">Версия: v27 · владелец Андрей · ЗП · смежные · выдача fix</div>
+      </div>
+    </section>
+
+    <section id="cfsSection" style="display:none">
+      <div class="top"><div><div class="title">CFS</div><div class="date">Загрузчик фильтра. Его забирает окно J2534 перед прошивкой по UART.</div></div></div>
+      <div class="report-card">
+        <div id="cfsInfo" class="small" style="margin-bottom:14px">Загрузка…</div>
+        <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="cfsFile" type="file" accept=".bin,application/octet-stream" style="max-width:280px">
+          <input id="cfsNote" placeholder="Заметка, необязательно" maxlength="200" style="min-width:200px;max-width:360px;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">
+          <button class="primary" onclick="uploadCfsBoot()">Выложить boot.bin</button>
+        </div>
       </div>
     </section>
 
@@ -836,10 +848,11 @@ const ACCESS_SECTIONS=[
   ['report','Отчёты'],
   ['archive','Архив авто'],
   ['clients','Контрагенты'],
+  ['cfs','CFS'],
   ['settings','Настройки']
 ];
 const ACCESS_CHIPS=ACCESS_SECTIONS.concat([['deleteCar','Удаление карточки']]);
-const MENU_BY_SECTION={work:'menuWork',calendar:'menuCalendar',stock:'menuStock',report:'menuReport',archive:'menuArchive',clients:'menuClients',settings:'menuSettings'};
+const MENU_BY_SECTION={work:'menuWork',calendar:'menuCalendar',stock:'menuStock',report:'menuReport',archive:'menuArchive',clients:'menuClients',cfs:'menuCfs',settings:'menuSettings'};
 let crmSession=null;
 try{crmSession=JSON.parse(storeGet('pandora_crm_session','null'));}catch(e){crmSession=null;}
 
@@ -883,7 +896,7 @@ function canAccessSection(section){
   return !!crmSession.access[section];
 }
 function firstAllowedSection(){
-  const order=['work','calendar','stock','report','archive','clients','settings'];
+  const order=['work','calendar','stock','report','archive','clients','cfs','settings'];
   return order.find(s=>canAccessSection(s))||'work';
 }
 function applyCrmAccess(){
@@ -1041,6 +1054,7 @@ function showSection(section){
   const archive=document.getElementById('archiveSection');
   const backup=document.getElementById('backupSection');
   const clientsSection=document.getElementById('clientsSection');
+  const cfs=document.getElementById('cfsSection');
 
   const menuWork=document.getElementById('menuWork');
   const menuReport=document.getElementById('menuReport');
@@ -1050,6 +1064,7 @@ function showSection(section){
   const menuArchive=document.getElementById('menuArchive');
   const menuBackup=document.getElementById('menuBackup');
   const menuClients=document.getElementById('menuClients');
+  const menuCfs=document.getElementById('menuCfs');
 
   work.style.display=section==='work'?'block':'none';
   report.style.display=section==='report'?'block':'none';
@@ -1059,6 +1074,7 @@ function showSection(section){
   if(archive) archive.style.display=section==='archive'?'block':'none';
   if(backup) backup.style.display=section==='backup'?'block':'none';
   if(clientsSection) clientsSection.style.display=section==='clients'?'block':'none';
+  if(cfs) cfs.style.display=section==='cfs'?'block':'none';
 
   menuWork.classList.toggle('active',section==='work');
   menuReport.classList.toggle('active',section==='report');
@@ -1068,6 +1084,7 @@ function showSection(section){
   if(menuArchive) menuArchive.classList.toggle('active',section==='archive');
   if(menuBackup) menuBackup.classList.toggle('active',section==='backup');
   if(menuClients) menuClients.classList.toggle('active',section==='clients');
+  if(menuCfs) menuCfs.classList.toggle('active',section==='cfs');
 
   if(section==='report'){
     applyMasterReportUi();
@@ -1092,6 +1109,8 @@ function showSection(section){
   if(section==='backup') renderBackupStatus();
 
   if(section==='clients') renderClients();
+
+  if(section==='cfs') renderCfs();
 
   if(section==='archive'){
     renderArchive();
@@ -5661,6 +5680,56 @@ function orderHtml(d,sheet){
   </div>`;
 }
 
+
+function cfsWhen(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString('ru-RU');
+}
+async function renderCfs(){
+  const box=document.getElementById('cfsInfo');
+  if(!box) return;
+  box.textContent='Загрузка…';
+  try{
+    const r=await fetch(API_BASE_URL+'/firmware/boot/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    if(r.status===401){box.textContent='Сервер не пустил.';return;}
+    if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
+    const j=await r.json();
+    if(!j||!j.present){box.textContent='Загрузчика на сервере нет. Выложи boot.bin.';return;}
+    box.textContent='';
+    const line=document.createElement('div');
+    line.textContent='На сервере: '+j.size+' байт · '+cfsWhen(j.uploadedAt)+' · SP '+j.sp+' · PC '+j.pc+' · sha '+String(j.sha256||'').slice(0,12);
+    box.appendChild(line);
+    if(j.note){
+      const n=document.createElement('div');
+      n.textContent=String(j.note);
+      box.appendChild(n);
+    }
+  }catch(e){
+    box.textContent='Сервер не ответил.';
+  }
+}
+async function uploadCfsBoot(){
+  const input=document.getElementById('cfsFile');
+  const file=input&&input.files&&input.files[0];
+  if(!file){alert('Выбери boot.bin');return;}
+  if(file.size>8192){alert('Это не загрузчик. Файл больше 8 КБ.');return;}
+  const noteEl=document.getElementById('cfsNote');
+  const note=noteEl?String(noteEl.value||'').trim().slice(0,200):'';
+  const buf=await file.arrayBuffer();
+  const r=await fetch(API_BASE_URL+'/firmware/boot',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+SYNC_TOKEN,'Content-Type':'application/octet-stream','x-boot-note':note},
+    body:buf,
+    cache:'no-store'
+  });
+  if(r.status===400){alert('Сервер не принял файл. Нужен boot.bin, не прошивка.');return;}
+  if(r.status===401){alert('Сервер не пустил.');return;}
+  if(!r.ok){alert('Не вышло ('+r.status+').');return;}
+  if(input) input.value='';
+  renderCfs();
+}
 
 /* === Pandora34 Cloud Sync: собственный сервер (заменяет Supabase) v4 === */
 const API_BASE_URL=''; // веб-версия: относительный путь, тот же домен/порт, что и страница
