@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { requireDeviceToken, requireWebGate, signDeskToken } from "../auth/middleware";
+import { requireDeviceToken } from "../auth/middleware";
 import { env } from "../env";
 import { prisma } from "../prisma";
 
@@ -445,42 +445,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return reply.type("application/octet-stream").send(stamped.image);
   });
 
-  const doorFails = new Map<string, { n: number; at: number }>();
-
-  function doorPasswordOk(user: string, pass: string): boolean {
-    const adminUser = String(process.env.ADMIN_USERNAME || "admin").trim();
-    const adminPass = String(process.env.ADMIN_PASSWORD || "");
-    const gateUser = String(process.env.WEB_GATE_USER || adminUser).trim();
-    const gatePass = String(process.env.WEB_GATE_PASSWORD || adminPass);
-    if (!pass) return false;
-    if (gatePass && user === gateUser && pass === gatePass) return true;
-    if (adminPass && user === adminUser && pass === adminPass) return true;
-    return false;
-  }
-
-  app.post("/firmware/desk/login", async (request, reply) => {
-    await ensureFilterTables();
-    const ip = clientIp(request);
-    const now = Date.now();
-    const prev = doorFails.get(ip);
-    if (prev && now - prev.at > 60 * 60 * 1000) doorFails.delete(ip);
-    const row = doorFails.get(ip);
-    if (row && row.n >= 8) return reply.code(429).send({ error: "door_limited" });
-    const body = request.body as { user?: unknown; pass?: unknown };
-    const user = String((body && body.user) || "").trim().slice(0, 80);
-    const pass = String((body && body.pass) || "").slice(0, 200);
-    if (!doorPasswordOk(user, pass)) {
-      const cur = doorFails.get(ip);
-      doorFails.set(ip, { n: (cur?.n || 0) + 1, at: cur?.at || now });
-      await journal("door", "не тот пароль", ip);
-      return reply.code(401).send({ error: "bad_password" });
-    }
-    doorFails.delete(ip);
-    await journal("door", "открыл заявки", ip);
-    return { token: signDeskToken() };
-  });
-
-  app.get("/firmware/desk", { preHandler: requireWebGate }, async () => {
+  app.get("/firmware/desk", { preHandler: requireDeviceToken }, async () => {
     await ensureFilterTables();
     await expireAsks();
     const asks: AskRow[] = await prisma.$queryRaw`
@@ -514,7 +479,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post("/firmware/desk/ask/:id/allow", { preHandler: requireWebGate }, async (request, reply) => {
+  app.post("/firmware/desk/ask/:id/allow", { preHandler: requireDeviceToken }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -529,7 +494,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/ask/:id/deny", { preHandler: requireWebGate }, async (request, reply) => {
+  app.post("/firmware/desk/ask/:id/deny", { preHandler: requireDeviceToken }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -544,7 +509,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/filter/:bootId/ban", { preHandler: requireWebGate }, async (request, reply) => {
+  app.post("/firmware/desk/filter/:bootId/ban", { preHandler: requireDeviceToken }, async (request, reply) => {
     await ensureFilterTables();
     const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
     if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
@@ -555,7 +520,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireWebGate }, async (request, reply) => {
+  app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireDeviceToken }, async (request, reply) => {
     await ensureFilterTables();
     const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
     if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
@@ -566,7 +531,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/boot", { preHandler: [requireDeviceToken, requireWebGate] }, async (request, reply) => {
+  app.post("/firmware/boot", { preHandler: requireDeviceToken }, async (request, reply) => {
     const body = request.body;
     if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: "bad_body" });
     const vec = inspectBoot(body);
