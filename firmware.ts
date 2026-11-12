@@ -409,7 +409,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const ip = clientIp(request);
     const now = new Date();
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: typeof prisma) => {
         const claimed = await tx.$executeRaw`
           UPDATE "FilterAsk"
           SET "status" = 'delivered', "bootId" = ${stamped.id}, "deliveredAt" = ${now}
@@ -448,18 +448,18 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   app.get("/firmware/desk", { preHandler: requireWebGate }, async () => {
     await ensureFilterTables();
     await expireAsks();
-    const asks = await prisma.$queryRaw<AskRow[]>`
+    const asks: AskRow[] = await prisma.$queryRaw`
       SELECT "id", "label", "status", "ip", "bootId", "createdAt", "expiresAt", "decidedAt", "deliveredAt"
       FROM "FilterAsk" ORDER BY "createdAt" DESC LIMIT 40`;
-    const filters = await prisma.$queryRaw<UnitRow[]>`
+    const filters: UnitRow[] = await prisma.$queryRaw`
       SELECT "bootId", "label", "status", "askId", "firmware", "imageCount", "createdAt", "lastImageAt"
       FROM "FilterUnit" ORDER BY "createdAt" DESC LIMIT 200`;
-    const journalRows = await prisma.$queryRaw<LogRow[]>`
+    const journalRows: LogRow[] = await prisma.$queryRaw`
       SELECT "id", "at", "kind", "bootId", "askId", "ip", "result", "detail"
       FROM "FilterLog" ORDER BY "at" DESC LIMIT 80`;
     return {
-      asks: asks.map((row) => askView(row)),
-      filters: filters.map((row) => ({
+      asks: asks.map((row: AskRow) => askView(row)),
+      filters: filters.map((row: UnitRow) => ({
         bootId: row.bootId,
         label: row.label,
         status: row.status,
@@ -468,7 +468,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
         createdAt: iso(row.createdAt),
         lastImageAt: iso(row.lastImageAt),
       })),
-      journal: journalRows.map((row) => ({
+      journal: journalRows.map((row: LogRow) => ({
         at: iso(row.at),
         kind: row.kind,
         bootId: row.bootId,
