@@ -1,9 +1,10 @@
 import { createHash, randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
-import { FastifyInstance } from "fastify";
-import { requireDeviceToken } from "../auth/middleware";
+import { FastifyInstance, FastifyRequest } from "fastify";
+import { requireDeviceToken, requireWebGate } from "../auth/middleware";
 import { env } from "../env";
+import { prisma } from "../prisma";
 
 const BOOT_BASE = 0x08000000;
 const APP_BASE = 0x08002000;
@@ -26,32 +27,6 @@ function bootPath(): string {
 
 function metaPath(): string {
   return path.join(env.firmwareDir, "boot.json");
-}
-
-function issuedPath(): string {
-  return path.join(env.firmwareDir, "boots.json");
-}
-
-type IssuedBoot = { id: string; at: string };
-
-async function readIssued(): Promise<IssuedBoot[]> {
-  try {
-    const raw = await fs.readFile(issuedPath(), "utf8");
-    const parsed = JSON.parse(raw) as { ids?: IssuedBoot[] };
-    if (!parsed || !Array.isArray(parsed.ids)) return [];
-    return parsed.ids.filter((row) => row && typeof row.id === "string" && /^[0-9a-f]{32}$/.test(row.id));
-  } catch {
-    return [];
-  }
-}
-
-async function rememberBoot(id: string): Promise<void> {
-  const ids = await readIssued();
-  ids.push({ id, at: new Date().toISOString() });
-  const tmp = issuedPath() + ".tmp";
-  await fs.mkdir(env.firmwareDir, { recursive: true });
-  await fs.writeFile(tmp, JSON.stringify({ ids }));
-  await fs.rename(tmp, issuedPath());
 }
 
 function stampBoot(template: Buffer): { image: Buffer; id: string } | null {
@@ -206,7 +181,170 @@ async function readMeta(): Promise<BootMeta | null> {
   }
 }
 
+const ASK_TTL_MS = 24 * 60 * 60 * 1000;
+const BURST_HOUR = 8;
+
+class AskTaken extends Error {
+  constructor() {
+    super("taken");
+  }
+}
+
+function clientIp(request: FastifyRequest): string {
+  const real = request.headers["x-real-ip"];
+  const raw = (Array.isArray(real) ? real[0] : real || "").toString().split(",")[0].trim();
+  return (raw || request.ip || "").slice(0, 64);
+}
+
+function iso(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString();
+}
+
+let tablesReady: Promise<void> | null = null;
+
+function ensureFilterTables(): Promise<void> {
+  if (!tablesReady) {
+    tablesReady = (async () => {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "FilterAsk" (
+          "id" TEXT PRIMARY KEY,
+          "label" TEXT NOT NULL,
+          "status" TEXT NOT NULL,
+          "ip" TEXT NOT NULL DEFAULT '',
+          "bootId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "expiresAt" TIMESTAMP(3) NOT NULL,
+          "decidedAt" TIMESTAMP(3),
+          "deliveredAt" TIMESTAMP(3)
+        )`);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "FilterUnit" (
+          "bootId" TEXT PRIMARY KEY,
+          "label" TEXT NOT NULL,
+          "status" TEXT NOT NULL,
+          "askId" TEXT NOT NULL DEFAULT '',
+          "firmware" TEXT NOT NULL DEFAULT '',
+          "imageCount" INTEGER NOT NULL DEFAULT 0,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "lastImageAt" TIMESTAMP(3)
+        )`);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "FilterLog" (
+          "id" TEXT PRIMARY KEY,
+          "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "kind" TEXT NOT NULL,
+          "bootId" TEXT NOT NULL DEFAULT '',
+          "askId" TEXT NOT NULL DEFAULT '',
+          "ip" TEXT NOT NULL DEFAULT '',
+          "result" TEXT NOT NULL,
+          "detail" TEXT NOT NULL DEFAULT ''
+        )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "FilterLog_at_idx" ON "FilterLog" ("at")`);
+    })().catch((err) => {
+      tablesReady = null;
+      throw err;
+    });
+  }
+  return tablesReady;
+}
+
+type AskRow = {
+  id: string;
+  label: string;
+  status: string;
+  ip: string;
+  bootId: string | null;
+  createdAt: Date;
+  expiresAt: Date;
+  decidedAt: Date | null;
+  deliveredAt: Date | null;
+};
+
+type UnitRow = {
+  bootId: string;
+  label: string;
+  status: string;
+  askId: string;
+  firmware: string;
+  imageCount: number;
+  createdAt: Date;
+  lastImageAt: Date | null;
+};
+
+type LogRow = {
+  id: string;
+  at: Date;
+  kind: string;
+  bootId: string;
+  askId: string;
+  ip: string;
+  result: string;
+  detail: string;
+};
+
+async function journal(
+  kind: string,
+  result: string,
+  ip: string,
+  extra?: { bootId?: string; askId?: string; detail?: string }
+): Promise<void> {
+  await prisma.$executeRaw`
+    INSERT INTO "FilterLog" ("id", "at", "kind", "bootId", "askId", "ip", "result", "detail")
+    VALUES (
+      ${randomBytes(16).toString("hex")},
+      ${new Date()},
+      ${kind},
+      ${extra?.bootId || ""},
+      ${extra?.askId || ""},
+      ${ip.slice(0, 64)},
+      ${result},
+      ${(extra?.detail || "").slice(0, 200)}
+    )`;
+}
+
+async function expireAsks(): Promise<void> {
+  await prisma.$executeRaw`
+    UPDATE "FilterAsk"
+    SET "status" = 'expired'
+    WHERE "status" IN ('pending', 'approved') AND "expiresAt" < ${new Date()}`;
+}
+
+async function noteBurst(ip: string): Promise<void> {
+  const since = new Date(Date.now() - 60 * 60 * 1000);
+  const rows = await prisma.$queryRaw<Array<{ n: bigint }>>`
+    SELECT COUNT(*) AS n FROM "FilterAsk" WHERE "createdAt" >= ${since}`;
+  const n = Number(rows[0]?.n || 0);
+  if (n < BURST_HOUR) return;
+  const seen = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "FilterLog" WHERE "kind" = 'burst' AND "at" >= ${since} LIMIT 1`;
+  if (seen.length) return;
+  await journal("burst", "много заявок", ip, { detail: "за час много заявок, похоже софт расползся" });
+}
+
+async function readAsk(id: string): Promise<AskRow | null> {
+  const rows = await prisma.$queryRaw<AskRow[]>`
+    SELECT "id", "label", "status", "ip", "bootId", "createdAt", "expiresAt", "decidedAt", "deliveredAt"
+    FROM "FilterAsk" WHERE "id" = ${id}`;
+  return rows[0] || null;
+}
+
+function askView(row: AskRow): Record<string, string> {
+  return {
+    id: row.id,
+    label: row.label,
+    status: row.status,
+    ip: row.ip,
+    bootId: row.bootId || "",
+    createdAt: iso(row.createdAt),
+    expiresAt: iso(row.expiresAt),
+  };
+}
+
 export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
+  await ensureFilterTables();
   app.get("/firmware/boot/info", { preHandler: requireDeviceToken }, async () => {
     const meta = await readMeta();
     if (!meta) return { present: false };
@@ -219,23 +357,181 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/firmware/boot", { preHandler: requireDeviceToken }, async (_request, reply) => {
-    const meta = await readMeta();
-    if (!meta) return reply.code(404).send({ error: "no_boot" });
+    return reply.code(403).send({ error: "boot_needs_approval" });
+  });
+
+  app.post("/firmware/boot/ask", { preHandler: requireDeviceToken }, async (request, reply) => {
+    await ensureFilterTables();
+    await expireAsks();
+    const body = request.body as { label?: unknown };
+    const label = String((body && body.label) || "").trim().slice(0, 80);
+    if (!label) return reply.code(400).send({ error: "need_label" });
+    const ip = clientIp(request);
+    const id = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + ASK_TTL_MS);
+    await prisma.$executeRaw`
+      INSERT INTO "FilterAsk" ("id", "label", "status", "ip", "createdAt", "expiresAt")
+      VALUES (${id}, ${label}, 'pending', ${ip}, ${new Date()}, ${expiresAt})`;
+    await journal("ask", "ждет", ip, { askId: id, detail: label });
+    await noteBurst(ip);
+    return { id, status: "pending", expiresAt: expiresAt.toISOString() };
+  });
+
+  app.get("/firmware/boot/ask/:id", { preHandler: requireDeviceToken }, async (request, reply) => {
+    await ensureFilterTables();
+    await expireAsks();
+    const id = String((request.params as { id?: string }).id || "");
+    if (!/^[0-9a-f]{32}$/.test(id)) return reply.code(404).send({ error: "no_ask" });
+    const row = await readAsk(id);
+    if (!row) return reply.code(404).send({ error: "no_ask" });
+    return askView(row);
+  });
+
+  app.get("/firmware/boot/ask/:id/file", { preHandler: requireDeviceToken }, async (request, reply) => {
+    await ensureFilterTables();
+    await expireAsks();
+    const id = String((request.params as { id?: string }).id || "");
+    if (!/^[0-9a-f]{32}$/.test(id)) return reply.code(404).send({ error: "no_ask" });
+    const row = await readAsk(id);
+    if (!row) return reply.code(404).send({ error: "no_ask" });
+    if (row.status !== "approved") {
+      return reply.code(409).send({ error: "not_ready", status: row.status });
+    }
+    let stamped: { image: Buffer; id: string };
     try {
       const buf = await fs.readFile(bootPath());
-      const stamped = stampBoot(buf);
-      if (!stamped) return reply.code(409).send({ error: "boot_no_slot" });
-      await rememberBoot(stamped.id);
-      reply.header("Cache-Control", "no-store");
-      reply.header("X-Boot-Id", stamped.id);
-      reply.header("Content-Disposition", 'attachment; filename="boot.bin"');
-      return reply.type("application/octet-stream").send(stamped.image);
+      const made = stampBoot(buf);
+      if (!made) return reply.code(409).send({ error: "boot_no_slot" });
+      stamped = made;
     } catch {
       return reply.code(404).send({ error: "no_boot" });
     }
+    const ip = clientIp(request);
+    const now = new Date();
+    try {
+      await prisma.$transaction(async (tx) => {
+        const claimed = await tx.$executeRaw`
+          UPDATE "FilterAsk"
+          SET "status" = 'delivered', "bootId" = ${stamped.id}, "deliveredAt" = ${now}
+          WHERE "id" = ${id} AND "status" = 'approved'`;
+        if (claimed !== 1) throw new AskTaken();
+        await tx.$executeRaw`
+          INSERT INTO "FilterUnit" ("bootId", "label", "status", "askId", "firmware", "imageCount", "createdAt")
+          VALUES (${stamped.id}, ${row.label}, 'active', ${id}, '', 0, ${now})`;
+        await tx.$executeRaw`
+          INSERT INTO "FilterLog" ("id", "at", "kind", "bootId", "askId", "ip", "result", "detail")
+          VALUES (
+            ${randomBytes(16).toString("hex")},
+            ${now},
+            'deliver',
+            ${stamped.id},
+            ${id},
+            ${ip},
+            'отдан загрузчик',
+            ${row.label}
+          )`;
+      });
+    } catch (err) {
+      const taken = err instanceof AskTaken || (err instanceof Error && err.message.includes("taken"));
+      if (taken) {
+        const again = await readAsk(id);
+        return reply.code(409).send({ error: "not_ready", status: again?.status || "delivered" });
+      }
+      throw err;
+    }
+    reply.header("Cache-Control", "no-store");
+    reply.header("X-Boot-Id", stamped.id);
+    reply.header("Content-Disposition", 'attachment; filename="boot.bin"');
+    return reply.type("application/octet-stream").send(stamped.image);
   });
 
-  app.post("/firmware/boot", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.get("/firmware/desk", { preHandler: requireWebGate }, async () => {
+    await ensureFilterTables();
+    await expireAsks();
+    const asks = await prisma.$queryRaw<AskRow[]>`
+      SELECT "id", "label", "status", "ip", "bootId", "createdAt", "expiresAt", "decidedAt", "deliveredAt"
+      FROM "FilterAsk" ORDER BY "createdAt" DESC LIMIT 40`;
+    const filters = await prisma.$queryRaw<UnitRow[]>`
+      SELECT "bootId", "label", "status", "askId", "firmware", "imageCount", "createdAt", "lastImageAt"
+      FROM "FilterUnit" ORDER BY "createdAt" DESC LIMIT 200`;
+    const journalRows = await prisma.$queryRaw<LogRow[]>`
+      SELECT "id", "at", "kind", "bootId", "askId", "ip", "result", "detail"
+      FROM "FilterLog" ORDER BY "at" DESC LIMIT 80`;
+    return {
+      asks: asks.map((row) => askView(row)),
+      filters: filters.map((row) => ({
+        bootId: row.bootId,
+        label: row.label,
+        status: row.status,
+        firmware: row.firmware,
+        imageCount: Number(row.imageCount || 0),
+        createdAt: iso(row.createdAt),
+        lastImageAt: iso(row.lastImageAt),
+      })),
+      journal: journalRows.map((row) => ({
+        at: iso(row.at),
+        kind: row.kind,
+        bootId: row.bootId,
+        ip: row.ip,
+        result: row.result,
+        detail: row.detail,
+      })),
+    };
+  });
+
+  app.post("/firmware/desk/ask/:id/allow", { preHandler: requireWebGate }, async (request, reply) => {
+    await ensureFilterTables();
+    await expireAsks();
+    const id = String((request.params as { id?: string }).id || "");
+    if (!/^[0-9a-f]{32}$/.test(id)) return reply.code(404).send({ error: "no_ask" });
+    const now = new Date();
+    const n = await prisma.$executeRaw`
+      UPDATE "FilterAsk" SET "status" = 'approved', "decidedAt" = ${now}
+      WHERE "id" = ${id} AND "status" = 'pending'`;
+    if (n !== 1) return reply.code(409).send({ error: "not_pending" });
+    const row = await readAsk(id);
+    await journal("allow", "разрешена", clientIp(request), { askId: id, detail: row?.label || "" });
+    return { ok: true };
+  });
+
+  app.post("/firmware/desk/ask/:id/deny", { preHandler: requireWebGate }, async (request, reply) => {
+    await ensureFilterTables();
+    await expireAsks();
+    const id = String((request.params as { id?: string }).id || "");
+    if (!/^[0-9a-f]{32}$/.test(id)) return reply.code(404).send({ error: "no_ask" });
+    const now = new Date();
+    const n = await prisma.$executeRaw`
+      UPDATE "FilterAsk" SET "status" = 'denied', "decidedAt" = ${now}
+      WHERE "id" = ${id} AND "status" = 'pending'`;
+    if (n !== 1) return reply.code(409).send({ error: "not_pending" });
+    const row = await readAsk(id);
+    await journal("deny", "отказана", clientIp(request), { askId: id, detail: row?.label || "" });
+    return { ok: true };
+  });
+
+  app.post("/firmware/desk/filter/:bootId/ban", { preHandler: requireWebGate }, async (request, reply) => {
+    await ensureFilterTables();
+    const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
+    const n = await prisma.$executeRaw`
+      UPDATE "FilterUnit" SET "status" = 'banned' WHERE "bootId" = ${bootId} AND "status" = 'active'`;
+    if (n !== 1) return reply.code(409).send({ error: "not_active" });
+    await journal("ban", "запрещён", clientIp(request), { bootId });
+    return { ok: true };
+  });
+
+  app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireWebGate }, async (request, reply) => {
+    await ensureFilterTables();
+    const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
+    const n = await prisma.$executeRaw`
+      UPDATE "FilterUnit" SET "status" = 'active' WHERE "bootId" = ${bootId} AND "status" = 'banned'`;
+    if (n !== 1) return reply.code(409).send({ error: "not_banned" });
+    await journal("unban", "снова разрешён", clientIp(request), { bootId });
+    return { ok: true };
+  });
+
+  app.post("/firmware/boot", { preHandler: [requireDeviceToken, requireWebGate] }, async (request, reply) => {
     const body = request.body;
     if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: "bad_body" });
     const vec = inspectBoot(body);
@@ -337,15 +633,36 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/firmware/image", { preHandler: requireDeviceToken }, async (request, reply) => {
+    await ensureFilterTables();
+    const ip = clientIp(request);
     const rawId = request.headers["x-boot-id"];
     const bootId = (Array.isArray(rawId) ? rawId[0] : rawId || "").toString().trim().toLowerCase();
-    if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(403).send({ error: "need_boot_id" });
-    const issued = await readIssued();
-    if (!issued.some((row) => row.id === bootId)) return reply.code(403).send({ error: "unknown_boot" });
+    if (!/^[0-9a-f]{32}$/.test(bootId)) {
+      await journal("image", "прошивку не отдал", ip, { detail: "нет номера" });
+      return reply.code(403).send({ error: "need_boot_id" });
+    }
+    const units = await prisma.$queryRaw<UnitRow[]>`
+      SELECT "bootId", "label", "status", "askId", "firmware", "imageCount", "createdAt", "lastImageAt"
+      FROM "FilterUnit" WHERE "bootId" = ${bootId}`;
+    const unit = units[0];
+    if (!unit) {
+      await journal("image", "прошивку не отдал", ip, { bootId, detail: "номер не из базы" });
+      return reply.code(403).send({ error: "unknown_boot" });
+    }
+    if (unit.status !== "active") {
+      await journal("image", "прошивку не отдал", ip, { bootId, detail: "фильтр запрещён" });
+      return reply.code(403).send({ error: "banned" });
+    }
     const meta = await readImageMeta();
     if (!meta) return reply.code(404).send({ error: "no_image" });
     try {
       const buf = await fs.readFile(imagePath());
+      const now = new Date();
+      await prisma.$executeRaw`
+        UPDATE "FilterUnit"
+        SET "firmware" = ${meta.version}, "lastImageAt" = ${now}, "imageCount" = "imageCount" + 1
+        WHERE "bootId" = ${bootId}`;
+      await journal("image", "отдана прошивка", ip, { bootId, detail: meta.version || "" });
       reply.header("Cache-Control", "no-store");
       reply.header("Content-Disposition", 'attachment; filename="firmware.bin"');
       return reply.type("application/octet-stream").send(buf);
