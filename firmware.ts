@@ -520,6 +520,14 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
+  app.post("/firmware/desk/clear", { preHandler: requireDeviceToken }, async () => {
+    await ensureFilterTables();
+    await prisma.$executeRaw`DELETE FROM "FilterLog"`;
+    await prisma.$executeRaw`DELETE FROM "FilterUnit"`;
+    await prisma.$executeRaw`DELETE FROM "FilterAsk"`;
+    return { ok: true };
+  });
+
   app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireDeviceToken }, async (request, reply) => {
     await ensureFilterTables();
     const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();

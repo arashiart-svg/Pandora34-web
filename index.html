@@ -636,6 +636,7 @@
           <button id="cfsAskBtn" type="button" class="cfs-calm" onclick="cfsToggle('asks')">Заявки</button>
           <button id="cfsFilterBtn" type="button" onclick="cfsToggle('filters')">Фильтры</button>
           <button id="cfsLogBtn" type="button" onclick="cfsToggle('log')">Журнал</button>
+          <button type="button" onclick="cfsClearDesk()">Очистить</button>
         </div>
       </div>
       <div id="cfsWin-asks" class="cfs-win" onclick="if(event.target.id==='cfsWin-asks') cfsToggle('asks')"><div class="cfs-win-box"><div class="cfs-win-top"><b>Заявки</b><button type="button" onclick="cfsToggle('asks')">Закрыть</button></div><div id="cfsBody-asks" class="small"></div></div></div>
@@ -5879,6 +5880,22 @@ async function cfsAskDo(id, action){
   });
   if(r.status===401){alert('Сервер не пустил.');return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
+  renderCfsDesk();
+}
+async function cfsClearDesk(){
+  if(!confirm('Стереть заявки, фильтры и журнал? Эти фильтры сервер больше не узнает.')) return;
+  const r=await fetch(API_BASE_URL+'/firmware/desk/clear',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
+    cache:'no-store'
+  });
+  if(r.status===401){alert('Сервер не пустил.');return;}
+  if(!r.ok){alert('Не вышло ('+r.status+').');return;}
+  cfsDeskCache=null;
+  ['asks','filters','log'].forEach(function(name){
+    const body=document.getElementById('cfsBody-'+name);
+    if(body) delete body.dataset.paint;
+  });
   renderCfsDesk();
 }
 async function cfsFilterDo(id, action){
