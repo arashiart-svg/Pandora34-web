@@ -434,6 +434,9 @@
     #liveScanRaw{color:#cbd5e1;font-size:13px;text-align:center}
     .live-scan-hint{color:#facc15;font-size:12px;text-align:center;margin-top:6px}
     .live-scan-frame{position:absolute;left:4%;right:4%;top:50%;height:150px;margin-top:-75px;border:2px solid var(--neon);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);z-index:1;pointer-events:none}
+    button.cfs-calm{background:#2e7d32!important;color:#fff!important;border-color:#1b5e20!important}
+    button.cfs-hot{animation:cfsHot .8s steps(2) infinite}
+    @keyframes cfsHot{0%{background:#c62828;color:#fff;border-color:#b71c1c}50%{background:#ff8a80;color:#3b0000;border-color:#c62828}}
 
 </style>
 </head>
@@ -625,16 +628,12 @@
         </div>
       </div>
       <div class="report-card" style="margin-top:14px">
-        <h2 style="font-size:20px;margin:0 0 8px">Заявки</h2>
-        <div id="cfsAsks" class="small">Загрузка…</div>
-      </div>
-      <div class="report-card" style="margin-top:14px">
-        <h2 style="font-size:20px;margin:0 0 8px">Фильтры</h2>
-        <div id="cfsFilters" class="small">Загрузка…</div>
-      </div>
-      <div class="report-card" style="margin-top:14px">
-        <h2 style="font-size:20px;margin:0 0 8px">Журнал</h2>
-        <div id="cfsLog" class="small">Загрузка…</div>
+        <div class="actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+          <button id="cfsAskBtn" type="button" class="cfs-calm" onclick="cfsToggle('asks')">Заявки</button>
+          <button id="cfsFilterBtn" type="button" onclick="cfsToggle('filters')">Фильтры</button>
+          <button id="cfsLogBtn" type="button" onclick="cfsToggle('log')">Журнал</button>
+        </div>
+        <div id="cfsDeskBody" class="small" style="display:none;margin-top:12px"></div>
       </div>
       <div class="report-card" style="margin-top:14px">
         <h2 style="font-size:20px;margin:0 0 8px">Прошивка</h2>
@@ -5766,6 +5765,11 @@ async function renderCfs(){
     box.textContent='Сервер не ответил.';
   }
 }
+var cfsDeskOpen='';
+function cfsToggle(which){
+  cfsDeskOpen=cfsDeskOpen===which?'':which;
+  renderCfsDesk();
+}
 function cfsAskWord(status){
   if(status==='pending') return 'ждёт';
   if(status==='approved') return 'разрешена, файл ещё не забрали';
@@ -5774,63 +5778,78 @@ function cfsAskWord(status){
   if(status==='delivered') return 'отдан';
   return status||'';
 }
+function cfsShow(html){
+  const body=document.getElementById('cfsDeskBody');
+  if(!body || body.dataset.paint===html) return;
+  body.dataset.paint=html;
+  if(html.indexOf('<')>=0) body.innerHTML=html;
+  else body.textContent=html;
+}
 async function renderCfsDesk(){
-  const asks=document.getElementById('cfsAsks');
-  const filters=document.getElementById('cfsFilters');
-  const log=document.getElementById('cfsLog');
-  if(!asks||!filters||!log) return;
+  const body=document.getElementById('cfsDeskBody');
+  const askBtn=document.getElementById('cfsAskBtn');
+  if(!body||!askBtn) return;
   try{
     const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
     if(r.status===401){
-      asks.textContent='Сервер не пустил.';
-      filters.textContent='';
-      log.textContent='';
+      askBtn.className='';
+      if(cfsDeskOpen) body.textContent='Сервер не пустил.';
       return;
     }
     if(!r.ok){
-      asks.textContent='Сервер не ответил ('+r.status+').';
+      if(cfsDeskOpen) body.textContent='Сервер не ответил ('+r.status+').';
       return;
     }
     const j=await r.json();
     const askRows=Array.isArray(j.asks)?j.asks:[];
-    const filterRows=Array.isArray(j.filters)?j.filters:[];
+    const hot=askRows.some(function(row){return row.status==='pending';});
+    askBtn.className=hot?'cfs-hot':'cfs-calm';
+    body.style.display=cfsDeskOpen?'block':'none';
+    if(!cfsDeskOpen){ cfsShow(''); return; }
+    if(cfsDeskOpen==='asks'){
+      if(!askRows.length) cfsShow('Заявок нет.');
+      else cfsShow(askRows.map(function(row){
+        const id=String(row.id||'');
+        const buttons=row.status==='pending' && /^[0-9a-f]{32}$/.test(id)
+          ? '<button class="primary" onclick="cfsAskDo(\''+id+'\',\'allow\')">Разрешить</button> <button onclick="cfsAskDo(\''+id+'\',\'deny\')">Отказать</button>'
+          : '';
+        return '<div style="margin:0 0 10px">'
+          +escapeHtml(cfsWhen(row.createdAt))+' · '+escapeHtml(row.label||'')
+          +' · '+escapeHtml(cfsAskWord(row.status))
+          +' · '+escapeHtml(row.ip||'')
+          +(buttons?'<div style="margin-top:6px">'+buttons+'</div>':'')
+          +'</div>';
+      }).join(''));
+      return;
+    }
+    if(cfsDeskOpen==='filters'){
+      const filterRows=Array.isArray(j.filters)?j.filters:[];
+      if(!filterRows.length) cfsShow('Фильтров ещё нет.');
+      else cfsShow(filterRows.map(function(row){
+        const id=String(row.bootId||'');
+        const short=id.slice(0,8);
+        if(!/^[0-9a-f]{32}$/.test(id)) return '';
+        const ban=row.status==='banned'
+          ? '<button onclick="cfsFilterDo(\''+id+'\',\'unban\')">Снова разрешить</button>'
+          : '<button onclick="cfsFilterDo(\''+id+'\',\'ban\')">Запретить</button>';
+        const seen=row.lastImageAt?('последняя прошивка '+cfsWhen(row.lastImageAt)):'прошивку ещё не брал';
+        return '<div style="margin:0 0 10px">'
+          +escapeHtml(short)+' · '+escapeHtml(row.label||'')
+          +' · '+(row.status==='banned'?'запрещён':'в базе')
+          +' · '+escapeHtml(row.firmware?('прошивка '+row.firmware):'прошивка не скачивалась')
+          +' · '+escapeHtml(seen)
+          +'<div style="margin-top:6px">'+ban+'</div></div>';
+      }).join(''));
+      return;
+    }
     const logRows=Array.isArray(j.journal)?j.journal:[];
-    if(!askRows.length) asks.textContent='Заявок нет.';
-    else asks.innerHTML=askRows.map(function(row){
-      const id=String(row.id||'');
-      const buttons=row.status==='pending' && /^[0-9a-f]{32}$/.test(id)
-        ? '<button class="primary" onclick="cfsAskDo(\''+id+'\',\'allow\')">Разрешить</button> <button onclick="cfsAskDo(\''+id+'\',\'deny\')">Отказать</button>'
-        : '';
-      return '<div style="margin:0 0 10px">'
-        +escapeHtml(cfsWhen(row.createdAt))+' · '+escapeHtml(row.label||'')
-        +' · '+escapeHtml(cfsAskWord(row.status))
-        +' · '+escapeHtml(row.ip||'')
-        +(buttons?'<div style="margin-top:6px">'+buttons+'</div>':'')
-        +'</div>';
-    }).join('');
-    if(!filterRows.length) filters.textContent='Фильтров ещё нет.';
-    else filters.innerHTML=filterRows.map(function(row){
-      const id=String(row.bootId||'');
-      const short=id.slice(0,8);
-      if(!/^[0-9a-f]{32}$/.test(id)) return '';
-      const ban=row.status==='banned'
-        ? '<button onclick="cfsFilterDo(\''+id+'\',\'unban\')">Снова разрешить</button>'
-        : '<button onclick="cfsFilterDo(\''+id+'\',\'ban\')">Запретить</button>';
-      const seen=row.lastImageAt?('последняя прошивка '+cfsWhen(row.lastImageAt)):'прошивку ещё не брал';
-      return '<div style="margin:0 0 10px">'
-        +escapeHtml(short)+' · '+escapeHtml(row.label||'')
-        +' · '+(row.status==='banned'?'запрещён':'в базе')
-        +' · '+escapeHtml(row.firmware?('прошивка '+row.firmware):'прошивка не скачивалась')
-        +' · '+escapeHtml(seen)
-        +'<div style="margin-top:6px">'+ban+'</div></div>';
-    }).join('');
-    if(!logRows.length) log.textContent='Журнал пуст.';
-    else log.innerHTML=logRows.map(function(row){
+    if(!logRows.length) cfsShow('Журнал пуст.');
+    else cfsShow(logRows.map(function(row){
       const tail=[row.result,row.detail,row.ip].filter(Boolean).join(' · ');
       return '<div>'+escapeHtml(cfsWhen(row.at))+' · '+escapeHtml(tail)+'</div>';
-    }).join('');
+    }).join(''));
   }catch(e){
-    asks.textContent='Сервер не ответил.';
+    if(cfsDeskOpen) body.textContent='Сервер не ответил.';
   }
 }
 async function cfsAskDo(id, action){
