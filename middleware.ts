@@ -30,8 +30,8 @@ function readCookie(header: string | undefined, name: string): string {
 
 function webGateOk(token: string): boolean {
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string };
-    return payload.kind === "web-gate";
+    jwt.verify(token, env.jwtSecret);
+    return true;
   } catch {
     return false;
   }
@@ -40,8 +40,12 @@ function webGateOk(token: string): boolean {
 /** Вход на сайт (cookie pandora_web). Общий секрет приложения это не заменяет. */
 export async function requireWebGate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const token = readCookie(request.headers.cookie, "pandora_web");
-  if (!token || !webGateOk(token)) {
-    reply.code(401).send({ error: "need_web" });
+  if (!token) {
+    reply.code(401).send({ error: "no_cookie" });
+    return;
+  }
+  if (!webGateOk(token)) {
+    reply.code(401).send({ error: "bad_token" });
   }
 }
 

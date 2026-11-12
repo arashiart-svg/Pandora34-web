@@ -5780,9 +5780,9 @@ async function renderCfsDesk(){
   const log=document.getElementById('cfsLog');
   if(!asks||!filters||!log) return;
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},credentials:'include',cache:'no-store'});
     if(r.status===401){
-      asks.textContent='Сайт не узнал вход. Зайди заново.';
+      asks.textContent=await cfsDeniedText(r);
       filters.textContent='';
       log.textContent='';
       return;
@@ -5833,13 +5833,21 @@ async function renderCfsDesk(){
     asks.textContent='Сервер не ответил.';
   }
 }
+async function cfsDeniedText(r){
+  let why='';
+  try{ const j=await r.json(); why=j&&j.error||''; }catch(e){ why=''; }
+  if(why==='no_cookie') return 'Браузер не передал вход сайта. Выйди и зайди через страницу входа.';
+  if(why==='bad_token') return 'Вход сайта не подошёл. Выйди и зайди заново.';
+  return 'Сайт не узнал вход. Зайди заново.';
+}
 async function cfsAskDo(id, action){
   const r=await fetch(API_BASE_URL+'/firmware/desk/ask/'+id+'/'+action,{
     method:'POST',
     headers:{'Authorization':'Bearer '+SYNC_TOKEN},
+    credentials:'include',
     cache:'no-store'
   });
-  if(r.status===401){alert('Сайт не узнал вход. Зайди заново.');return;}
+  if(r.status===401){alert(await cfsDeniedText(r));return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
@@ -5847,9 +5855,10 @@ async function cfsFilterDo(id, action){
   const r=await fetch(API_BASE_URL+'/firmware/desk/filter/'+id+'/'+action,{
     method:'POST',
     headers:{'Authorization':'Bearer '+SYNC_TOKEN},
+    credentials:'include',
     cache:'no-store'
   });
-  if(r.status===401){alert('Сайт не узнал вход. Зайди заново.');return;}
+  if(r.status===401){alert(await cfsDeniedText(r));return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
