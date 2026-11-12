@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyRequest } from "fastify";
-import { requireDeviceToken, requireWebGate } from "../auth/middleware";
+import { requireDeviceToken, requireWebGate, signDeskToken } from "../auth/middleware";
 import { env } from "../env";
 import { prisma } from "../prisma";
 
@@ -443,6 +443,41 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     reply.header("X-Boot-Id", stamped.id);
     reply.header("Content-Disposition", 'attachment; filename="boot.bin"');
     return reply.type("application/octet-stream").send(stamped.image);
+  });
+
+  const doorFails = new Map<string, { n: number; at: number }>();
+
+  function doorPasswordOk(user: string, pass: string): boolean {
+    const adminUser = String(process.env.ADMIN_USERNAME || "admin").trim();
+    const adminPass = String(process.env.ADMIN_PASSWORD || "");
+    const gateUser = String(process.env.WEB_GATE_USER || adminUser).trim();
+    const gatePass = String(process.env.WEB_GATE_PASSWORD || adminPass);
+    if (!pass) return false;
+    if (gatePass && user === gateUser && pass === gatePass) return true;
+    if (adminPass && user === adminUser && pass === adminPass) return true;
+    return false;
+  }
+
+  app.post("/firmware/desk/login", async (request, reply) => {
+    await ensureFilterTables();
+    const ip = clientIp(request);
+    const now = Date.now();
+    const prev = doorFails.get(ip);
+    if (prev && now - prev.at > 60 * 60 * 1000) doorFails.delete(ip);
+    const row = doorFails.get(ip);
+    if (row && row.n >= 8) return reply.code(429).send({ error: "door_limited" });
+    const body = request.body as { user?: unknown; pass?: unknown };
+    const user = String((body && body.user) || "").trim().slice(0, 80);
+    const pass = String((body && body.pass) || "").slice(0, 200);
+    if (!doorPasswordOk(user, pass)) {
+      const cur = doorFails.get(ip);
+      doorFails.set(ip, { n: (cur?.n || 0) + 1, at: cur?.at || now });
+      await journal("door", "не тот пароль", ip);
+      return reply.code(401).send({ error: "bad_password" });
+    }
+    doorFails.delete(ip);
+    await journal("door", "открыл заявки", ip);
+    return { token: signDeskToken() };
   });
 
   app.get("/firmware/desk", { preHandler: requireWebGate }, async () => {

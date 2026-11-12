@@ -28,25 +28,30 @@ function readCookie(header: string | undefined, name: string): string {
   return "";
 }
 
-function webGateOk(token: string): boolean {
+function jwtKind(token: string): string {
   try {
-    jwt.verify(token, env.jwtSecret);
-    return true;
+    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string };
+    return payload.kind || "";
   } catch {
-    return false;
+    return "";
   }
 }
 
-/** Вход на сайт (cookie pandora_web). Общий секрет приложения это не заменяет. */
+export function signDeskToken(): string {
+  return jwt.sign({ kind: "cfs-desk" }, env.jwtSecret, { expiresIn: "12h" });
+}
+
+function deskBearerOk(request: FastifyRequest): boolean {
+  const header = request.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return false;
+  return jwtKind(header.slice("Bearer ".length).trim()) === "cfs-desk";
+}
+
+/** Вход на сайт или отдельный допуск заявок. Секрет приложения это не заменяет. */
 export async function requireWebGate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const token = readCookie(request.headers.cookie, "pandora_web");
-  if (!token) {
-    reply.code(401).send({ error: "no_cookie" });
-    return;
-  }
-  if (!webGateOk(token)) {
-    reply.code(401).send({ error: "bad_token" });
-  }
+  const cookie = readCookie(request.headers.cookie, "pandora_web");
+  if ((cookie && jwtKind(cookie)) || deskBearerOk(request)) return;
+  reply.code(401).send({ error: "need_password" });
 }
 
 /** Проверяет общий секрет устройства (Android-приложение), которым раньше был SUPABASE_KEY. */

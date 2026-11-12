@@ -5780,9 +5780,15 @@ async function renderCfsDesk(){
   const log=document.getElementById('cfsLog');
   if(!asks||!filters||!log) return;
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},credentials:'include',cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:cfsDeskHeaders(),credentials:'include',cache:'no-store'});
     if(r.status===401){
-      asks.textContent=await cfsDeniedText(r);
+      if(document.getElementById('cfsDoor')) return;
+      asks.innerHTML='<div id="cfsDoor">Пароль входа на сайт. Один раз за эту вкладку.'
+        +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+        +'<input id="cfsDoorUser" placeholder="логин" style="min-width:140px;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">'
+        +'<input id="cfsDoorPass" type="password" placeholder="пароль" style="min-width:160px;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;background:var(--panel);color:var(--text);border:1px solid var(--border-strong)">'
+        +'<button class="primary" onclick="cfsDoor()">Открыть</button></div>'
+        +'<div id="cfsDoorErr" style="margin-top:8px"></div></div>';
       filters.textContent='';
       log.textContent='';
       return;
@@ -5833,32 +5839,48 @@ async function renderCfsDesk(){
     asks.textContent='Сервер не ответил.';
   }
 }
-async function cfsDeniedText(r){
-  let why='';
-  try{ const j=await r.json(); why=j&&j.error||''; }catch(e){ why=''; }
-  if(why==='no_cookie') return 'Браузер не передал вход сайта. Выйди и зайди через страницу входа.';
-  if(why==='bad_token') return 'Вход сайта не подошёл. Выйди и зайди заново.';
-  return 'Сайт не узнал вход. Зайди заново.';
+function cfsDeskHeaders(){
+  const token=sessionStorage.getItem('cfsDesk')||'';
+  return {'Authorization':'Bearer '+token};
+}
+async function cfsDoor(){
+  const userEl=document.getElementById('cfsDoorUser');
+  const passEl=document.getElementById('cfsDoorPass');
+  const err=document.getElementById('cfsDoorErr');
+  const user=userEl?userEl.value.trim():'';
+  const pass=passEl?passEl.value:'';
+  const r=await fetch(API_BASE_URL+'/firmware/desk/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({user:user,pass:pass}),
+    cache:'no-store'
+  });
+  if(r.status===429){ if(err) err.textContent='Слишком много попыток. Подожди час.'; return; }
+  if(!r.ok){ if(err) err.textContent='Не тот логин или пароль.'; return; }
+  const j=await r.json();
+  sessionStorage.setItem('cfsDesk', String(j.token||''));
+  if(passEl) passEl.value='';
+  renderCfsDesk();
 }
 async function cfsAskDo(id, action){
   const r=await fetch(API_BASE_URL+'/firmware/desk/ask/'+id+'/'+action,{
     method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
+    headers:cfsDeskHeaders(),
     credentials:'include',
     cache:'no-store'
   });
-  if(r.status===401){alert(await cfsDeniedText(r));return;}
+  if(r.status===401){sessionStorage.removeItem('cfsDesk'); renderCfsDesk(); return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
 async function cfsFilterDo(id, action){
   const r=await fetch(API_BASE_URL+'/firmware/desk/filter/'+id+'/'+action,{
     method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
+    headers:cfsDeskHeaders(),
     credentials:'include',
     cache:'no-store'
   });
-  if(r.status===401){alert(await cfsDeniedText(r));return;}
+  if(r.status===401){sessionStorage.removeItem('cfsDesk'); renderCfsDesk(); return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
