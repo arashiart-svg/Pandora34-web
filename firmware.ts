@@ -3,7 +3,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
-import { requireDeviceToken } from "../auth/middleware";
 import { env } from "../env";
 import { prisma } from "../prisma";
 
@@ -375,20 +374,46 @@ function siteCookieOk(token: string): boolean {
   }
 }
 
+function bearerOf(request: FastifyRequest): string {
+  const header = request.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return "";
+  return header.slice("Bearer ".length).trim();
+}
+
+function deskOk(request: FastifyRequest): boolean {
+  const cookie = readCookie(request.headers.cookie, "pandora_web");
+  if (cookie && siteCookieOk(cookie)) return true;
+  const desk = (process.env.DESK_TOKEN || "").trim();
+  const bearer = bearerOf(request);
+  return Boolean(desk && bearer && sameSecret(bearer, desk));
+}
+
+function windowOk(request: FastifyRequest): boolean {
+  const want = (process.env.WINDOW_TOKEN || "").trim();
+  const got = bearerOf(request);
+  return Boolean(want && got && sameSecret(got, want));
+}
+
 /** Стол CRM: кука входа на сайт или отдельный ключ из .env. Ключ окна сюда не проходит. */
 async function requireDesk(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookie = readCookie(request.headers.cookie, "pandora_web");
-  if (cookie && siteCookieOk(cookie)) return;
-  const header = request.headers.authorization;
-  const bearer = header && header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
-  const desk = (process.env.DESK_TOKEN || "").trim();
-  if (desk && bearer && sameSecret(bearer, desk)) return;
+  if (deskOk(request)) return;
   reply.code(401).send({ error: "desk_denied" });
+}
+
+/** Окно J2534. Этот ключ не открывает базу клиентов. */
+async function requireWindow(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (windowOk(request)) return;
+  reply.code(401).send({ error: "unauthorized_device" });
+}
+
+async function requireWindowOrDesk(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (windowOk(request) || deskOk(request)) return;
+  reply.code(401).send({ error: "unauthorized_device" });
 }
 
 export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   await ensureFilterTables();
-  app.get("/firmware/boot/info", { preHandler: requireDeviceToken }, async () => {
+  app.get("/firmware/boot/info", { preHandler: requireWindowOrDesk }, async () => {
     const meta = await readMeta();
     if (!meta) return { present: false };
     try {
@@ -399,11 +424,11 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get("/firmware/boot", { preHandler: requireDeviceToken }, async (_request, reply) => {
+  app.get("/firmware/boot", { preHandler: requireWindow }, async (_request, reply) => {
     return reply.code(403).send({ error: "boot_needs_approval" });
   });
 
-  app.post("/firmware/boot/ask", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/boot/ask", { preHandler: requireWindow }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const body = request.body as { label?: unknown };
@@ -420,7 +445,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { id, status: "pending", expiresAt: expiresAt.toISOString() };
   });
 
-  app.get("/firmware/boot/ask/:id", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.get("/firmware/boot/ask/:id", { preHandler: requireWindow }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -430,7 +455,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return askView(row);
   });
 
-  app.get("/firmware/boot/ask/:id/file", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.get("/firmware/boot/ask/:id/file", { preHandler: requireWindow }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -610,7 +635,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return meta;
   });
 
-  app.get("/firmware/app/info", { preHandler: requireDeviceToken }, async () => {
+  app.get("/firmware/app/info", { preHandler: requireWindowOrDesk }, async () => {
     const meta = await readAppMeta();
     if (!meta) return { present: false };
     try {
@@ -621,7 +646,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return meta;
   });
 
-  app.get("/firmware/app/file/:name", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.get("/firmware/app/file/:name", { preHandler: requireWindow }, async (request, reply) => {
     const name = (request.params as { name?: string }).name || "";
     if (!APP_ALLOW.has(name)) return reply.code(404).send({ error: "no_file" });
     const meta = await readAppMeta();
@@ -672,7 +697,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return meta;
   });
 
-  app.get("/firmware/image/info", { preHandler: requireDeviceToken }, async () => {
+  app.get("/firmware/image/info", { preHandler: requireWindowOrDesk }, async () => {
     const meta = await readImageMeta();
     if (!meta) return { present: false };
     try {
@@ -683,7 +708,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return meta;
   });
 
-  app.get("/firmware/image", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.get("/firmware/image", { preHandler: requireWindow }, async (request, reply) => {
     await ensureFilterTables();
     const ip = clientIp(request);
     const rawId = request.headers["x-boot-id"];

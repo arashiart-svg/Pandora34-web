@@ -5724,7 +5724,7 @@ function cfsBootVer(u){
 }
 async function cfsVerFromFile(){
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/boot',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/boot',cfsDeskOpts());
     if(!r.ok) return '';
     return cfsBootVer(new Uint8Array(await r.arrayBuffer()));
   }catch(e){
@@ -5752,7 +5752,7 @@ async function renderCfs(){
     }, 4000);
   }
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/boot/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/boot/info',cfsDeskOpts());
     if(r.status===401){box.textContent='Сервер не пустил.';return;}
     if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
     const j=await r.json();
@@ -5911,7 +5911,7 @@ async function renderCfsImage(){
   if(!box) return;
   box.textContent='Загрузка…';
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/image/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/image/info',cfsDeskOpts());
     if(r.status===401){box.textContent='Сервер не пустил.';return;}
     if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
     const j=await r.json();
@@ -5927,7 +5927,7 @@ async function renderCfsApp(){
   if(!box) return;
   box.textContent='Загрузка…';
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/app/info',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/app/info',cfsDeskOpts());
     if(r.status===401){box.textContent='Сервер не пустил.';return;}
     if(!r.ok){box.textContent='Сервер не ответил ('+r.status+').';return;}
     const j=await r.json();
@@ -5959,7 +5959,7 @@ async function uploadCfsBoot(){
 
 /* === Pandora34 Cloud Sync: собственный сервер (заменяет Supabase) v4 === */
 const API_BASE_URL=''; // веб-версия: относительный путь, тот же домен/порт, что и страница
-const SYNC_TOKEN='e355b348d499ae97238cbfdb6507c000b398c59af247b56b';
+const SYNC_TOKEN='';
 const CLOUD_ROW_ID='main';
 let cloudSyncTimer=null, cloudPollTimer=null, cloudApplying=false, cloudBusy=false, cloudLive=null;
 let cloudEnabled=storeGet('pandora_cloud_enabled','1')!=='0';
