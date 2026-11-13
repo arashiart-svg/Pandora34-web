@@ -411,8 +411,69 @@ async function requireWindowOrDesk(request: FastifyRequest, reply: FastifyReply)
   reply.code(401).send({ error: "unauthorized_device" });
 }
 
+function gateCookieOk(token: string): boolean {
+  try {
+    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string };
+    return payload.kind === "web-gate";
+  } catch {
+    return false;
+  }
+}
+
+function doorPasswordOk(username: string, password: string): boolean {
+  const user = username.trim();
+  if (!user || !password) return false;
+  const gateUser = (process.env.WEB_GATE_USER || env.adminUsername || "").trim();
+  const gatePass = (process.env.WEB_GATE_PASSWORD || "").trim() || env.adminPassword;
+  if (!gateUser || !gatePass) return false;
+  return sameSecret(user, gateUser) && sameSecret(password, gatePass);
+}
+
+function gateCookie(token: string): string {
+  return `pandora_web=${encodeURIComponent(token)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`;
+}
+
 export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   await ensureFilterTables();
+
+  try {
+    app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(String(body))));
+      } catch (err) {
+        done(err as Error);
+      }
+    });
+  } catch {
+    // разбор формы уже включён
+  }
+
+  app.post("/auth/web-login-form", async (request, reply) => {
+    const body = (request.body || {}) as { username?: string; password?: string };
+    const username = String(body.username || "");
+    const password = String(body.password || "");
+    if (!doorPasswordOk(username, password)) {
+      return reply.code(303).redirect("/enter.html?err=1");
+    }
+    const token = jwt.sign(
+      { sub: "web-gate", username: username.trim(), role: "ADMIN", kind: "web-gate" },
+      env.jwtSecret,
+      { expiresIn: "365d" }
+    );
+    reply.header("Set-Cookie", gateCookie(token));
+    return reply.code(303).redirect("/");
+  });
+
+  app.get("/auth/web-check", async (request, reply) => {
+    const token = readCookie(request.headers.cookie, "pandora_web");
+    if (!token || !gateCookieOk(token)) return reply.code(401).send();
+    return reply.code(200).send();
+  });
+
+  app.get("/auth/web-logout", async (_request, reply) => {
+    reply.header("Set-Cookie", "pandora_web=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax");
+    return reply.code(303).redirect("/enter.html");
+  });
   app.get("/firmware/boot/info", { preHandler: requireWindowOrDesk }, async () => {
     const meta = await readMeta();
     if (!meta) return { present: false };
