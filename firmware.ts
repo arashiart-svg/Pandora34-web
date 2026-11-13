@@ -1,7 +1,8 @@
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
-import { FastifyInstance, FastifyRequest } from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import jwt from "jsonwebtoken";
 import { requireDeviceToken } from "../auth/middleware";
 import { env } from "../env";
 import { prisma } from "../prisma";
@@ -343,6 +344,48 @@ function askView(row: AskRow): Record<string, string> {
   };
 }
 
+function readCookie(header: string | undefined, name: string): string {
+  const raw = header || "";
+  for (const part of raw.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(eq + 1).trim());
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+function sameSecret(got: string, want: string): boolean {
+  const a = Buffer.from(got);
+  const b = Buffer.from(want);
+  if (a.length === 0 || a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function siteCookieOk(token: string): boolean {
+  try {
+    jwt.verify(token, env.jwtSecret);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Стол CRM: кука входа на сайт или отдельный ключ из .env. Ключ окна сюда не проходит. */
+async function requireDesk(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const cookie = readCookie(request.headers.cookie, "pandora_web");
+  if (cookie && siteCookieOk(cookie)) return;
+  const header = request.headers.authorization;
+  const bearer = header && header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+  const desk = (process.env.DESK_TOKEN || "").trim();
+  if (desk && bearer && sameSecret(bearer, desk)) return;
+  reply.code(401).send({ error: "desk_denied" });
+}
+
 export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   await ensureFilterTables();
   app.get("/firmware/boot/info", { preHandler: requireDeviceToken }, async () => {
@@ -445,7 +488,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return reply.type("application/octet-stream").send(stamped.image);
   });
 
-  app.get("/firmware/desk", { preHandler: requireDeviceToken }, async () => {
+  app.get("/firmware/desk", { preHandler: requireDesk }, async () => {
     await ensureFilterTables();
     await expireAsks();
     const asks: AskRow[] = await prisma.$queryRaw`
@@ -479,7 +522,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post("/firmware/desk/ask/:id/allow", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/desk/ask/:id/allow", { preHandler: requireDesk }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -494,7 +537,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/ask/:id/deny", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/desk/ask/:id/deny", { preHandler: requireDesk }, async (request, reply) => {
     await ensureFilterTables();
     await expireAsks();
     const id = String((request.params as { id?: string }).id || "");
@@ -509,7 +552,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/filter/:bootId/ban", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/desk/filter/:bootId/ban", { preHandler: requireDesk }, async (request, reply) => {
     await ensureFilterTables();
     const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
     if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
@@ -520,7 +563,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/clear", { preHandler: requireDeviceToken }, async () => {
+  app.post("/firmware/desk/clear", { preHandler: requireDesk }, async () => {
     await ensureFilterTables();
     await prisma.$executeRaw`DELETE FROM "FilterLog"`;
     await prisma.$executeRaw`DELETE FROM "FilterUnit"`;
@@ -528,7 +571,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/desk/filter/:bootId/unban", { preHandler: requireDesk }, async (request, reply) => {
     await ensureFilterTables();
     const bootId = String((request.params as { bootId?: string }).bootId || "").toLowerCase();
     if (!/^[0-9a-f]{32}$/.test(bootId)) return reply.code(404).send({ error: "no_filter" });
@@ -539,7 +582,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post("/firmware/boot", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/boot", { preHandler: requireDesk }, async (request, reply) => {
     const body = request.body;
     if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: "bad_body" });
     const vec = inspectBoot(body);
@@ -592,7 +635,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.post("/firmware/app", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/app", { preHandler: requireDesk }, async (request, reply) => {
     const body = request.body as { files?: Record<string, string> };
     const incoming = body && body.files;
     if (!incoming || typeof incoming !== "object") return reply.code(400).send({ error: "bad_body" });
@@ -679,7 +722,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.post("/firmware/image", { preHandler: requireDeviceToken }, async (request, reply) => {
+  app.post("/firmware/image", { preHandler: requireDesk }, async (request, reply) => {
     const body = request.body;
     if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: "bad_body" });
     const img = inspectImage(body);

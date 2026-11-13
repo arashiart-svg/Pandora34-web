@@ -5849,14 +5849,24 @@ function cfsPaint(j){
     return '<div>'+escapeHtml(cfsWhen(row.at))+' · '+escapeHtml(tail)+'</div>';
   }).join(''));
 }
+var CFS_DESK='';
+function cfsDeskOpts(extra){
+  const opts=extra||{};
+  opts.credentials='include';
+  opts.cache='no-store';
+  if(CFS_DESK){
+    opts.headers=Object.assign({}, opts.headers||{}, {'Authorization':'Bearer '+CFS_DESK});
+  }
+  return opts;
+}
 async function renderCfsDesk(){
   const askBtn=document.getElementById('cfsAskBtn');
   if(!askBtn) return;
   try{
-    const r=await fetch(API_BASE_URL+'/firmware/desk',{headers:{'Authorization':'Bearer '+SYNC_TOKEN},cache:'no-store'});
+    const r=await fetch(API_BASE_URL+'/firmware/desk',cfsDeskOpts());
     if(r.status===401){
       askBtn.className='';
-      if(cfsDeskOpen) cfsShow(cfsDeskOpen,'Сервер не пустил.');
+      if(cfsDeskOpen) cfsShow(cfsDeskOpen,'Зайди на сайт заново.');
       return;
     }
     if(!r.ok){
@@ -5873,23 +5883,15 @@ async function renderCfsDesk(){
   }
 }
 async function cfsAskDo(id, action){
-  const r=await fetch(API_BASE_URL+'/firmware/desk/ask/'+id+'/'+action,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
-    cache:'no-store'
-  });
-  if(r.status===401){alert('Сервер не пустил.');return;}
+  const r=await fetch(API_BASE_URL+'/firmware/desk/ask/'+id+'/'+action,cfsDeskOpts({method:'POST'}));
+  if(r.status===401){alert('Зайди на сайт заново.');return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
 async function cfsClearDesk(){
   if(!confirm('Стереть заявки, фильтры и журнал? Эти фильтры сервер больше не узнает.')) return;
-  const r=await fetch(API_BASE_URL+'/firmware/desk/clear',{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
-    cache:'no-store'
-  });
-  if(r.status===401){alert('Сервер не пустил.');return;}
+  const r=await fetch(API_BASE_URL+'/firmware/desk/clear',cfsDeskOpts({method:'POST'}));
+  if(r.status===401){alert('Зайди на сайт заново.');return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   cfsDeskCache=null;
   ['asks','filters','log'].forEach(function(name){
@@ -5899,12 +5901,8 @@ async function cfsClearDesk(){
   renderCfsDesk();
 }
 async function cfsFilterDo(id, action){
-  const r=await fetch(API_BASE_URL+'/firmware/desk/filter/'+id+'/'+action,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN},
-    cache:'no-store'
-  });
-  if(r.status===401){alert('Сервер не пустил.');return;}
+  const r=await fetch(API_BASE_URL+'/firmware/desk/filter/'+id+'/'+action,cfsDeskOpts({method:'POST'}));
+  if(r.status===401){alert('Зайди на сайт заново.');return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   renderCfsDesk();
 }
@@ -5947,14 +5945,13 @@ async function uploadCfsBoot(){
   const noteEl=document.getElementById('cfsNote');
   const note=noteEl?String(noteEl.value||'').trim().slice(0,200):'';
   const buf=await file.arrayBuffer();
-  const r=await fetch(API_BASE_URL+'/firmware/boot',{
+  const r=await fetch(API_BASE_URL+'/firmware/boot',cfsDeskOpts({
     method:'POST',
-    headers:{'Authorization':'Bearer '+SYNC_TOKEN,'Content-Type':'application/octet-stream','x-boot-note':note},
-    body:buf,
-    cache:'no-store'
-  });
+    headers:{'Content-Type':'application/octet-stream','x-boot-note':note},
+    body:buf
+  }));
   if(r.status===400){alert('Сервер не принял файл. Нужен boot.bin, не прошивка.');return;}
-  if(r.status===401){alert('Сервер не пустил.');return;}
+  if(r.status===401){alert('Зайди на сайт заново.');return;}
   if(!r.ok){alert('Не вышло ('+r.status+').');return;}
   if(input) input.value='';
   renderCfs();
