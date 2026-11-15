@@ -1,4 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from "crypto";
+import { createCipheriv, createHash, randomBytes, timingSafeEqual } from "crypto";
+import { crc32 } from "zlib";
 import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -30,16 +31,45 @@ function metaPath(): string {
   return path.join(env.firmwareDir, "boot.json");
 }
 
-function stampBoot(template: Buffer): { image: Buffer; id: string } | null {
+function stampBoot(template: Buffer): { image: Buffer; id: string; key: string } | null {
   const at = template.indexOf("CFID");
   if (at < 0 || at + 20 > template.length) return null;
   for (let i = 0; i < 16; i++) {
     if (template[at + 4 + i] !== 0) return null;
   }
-  const id = randomBytes(16);
   const image = Buffer.from(template);
+  const id = randomBytes(16);
   id.copy(image, at + 4);
-  return { image, id: id.toString("hex") };
+  let key = "";
+  let ky = image.indexOf("CFKY");
+  while (ky >= 0 && Math.abs(ky - at) < 20) ky = image.indexOf("CFKY", ky + 1);
+  if (ky >= 0 && ky + 20 <= image.length) {
+    for (let i = 0; i < 16; i++) {
+      if (image[ky + 4 + i] !== 0) return null;
+    }
+    const rawKey = randomBytes(16);
+    rawKey.copy(image, ky + 4);
+    key = rawKey.toString("hex");
+  }
+  return { image, id: id.toString("hex"), key };
+}
+
+function wrapForKey(file: Buffer, keyHex: string): Buffer | null {
+  if (file.length <= IMAGE_OFF + 8) return null;
+  const plain = file.subarray(IMAGE_OFF, Math.min(file.length, IMAGE_MAX));
+  if (plain.length < 8) return null;
+  const key = Buffer.from(keyHex, "hex");
+  const iv = randomBytes(16);
+  const pad = (16 - (plain.length % 16)) % 16;
+  const src = pad ? Buffer.concat([plain, Buffer.alloc(pad)]) : plain;
+  const cipher = createCipheriv("aes-128-ctr", key, iv);
+  const ct = Buffer.concat([cipher.update(src), cipher.final()]);
+  const head = Buffer.alloc(28);
+  head.write("CFEN", 0, "ascii");
+  head.writeUInt32LE(plain.length, 4);
+  head.writeUInt32LE(crc32(plain) >>> 0, 8);
+  iv.copy(head, 12);
+  return Buffer.concat([head, ct]);
 }
 
 const APP_MAX = 8 * 1024 * 1024;
@@ -314,6 +344,9 @@ function ensureFilterTables(): Promise<void> {
           "detail" TEXT NOT NULL DEFAULT ''
         )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "FilterLog_at_idx" ON "FilterLog" ("at")`);
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "FilterUnit" ADD COLUMN IF NOT EXISTS "imageKey" TEXT NOT NULL DEFAULT ''`,
+      );
     })().catch((err) => {
       tablesReady = null;
       throw err;
@@ -657,7 +690,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     if (row.status !== "approved") {
       return reply.code(409).send({ error: "not_ready", status: row.status });
     }
-    let stamped: { image: Buffer; id: string };
+    let stamped: { image: Buffer; id: string; key: string };
     try {
       const buf = await fs.readFile(bootPath());
       const made = stampBoot(buf);
@@ -676,8 +709,8 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
           WHERE "id" = ${id} AND "status" = 'approved'`;
         if (claimed !== 1) throw new AskTaken();
         await tx.$executeRaw`
-          INSERT INTO "FilterUnit" ("bootId", "label", "status", "askId", "firmware", "imageCount", "createdAt")
-          VALUES (${stamped.id}, ${row.label}, 'active', ${id}, '', 0, ${now})`;
+          INSERT INTO "FilterUnit" ("bootId", "label", "status", "askId", "firmware", "imageCount", "imageKey", "createdAt")
+          VALUES (${stamped.id}, ${row.label}, 'active', ${id}, '', 0, ${stamped.key}, ${now})`;
         await tx.$executeRaw`
           INSERT INTO "FilterLog" ("id", "at", "kind", "bootId", "askId", "ip", "result", "detail")
           VALUES (
@@ -983,15 +1016,33 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     if (!meta) return reply.code(404).send({ error: "no_image" });
     try {
       const buf = await fs.readFile(imagePath());
+      const keys = await prisma.$queryRaw<Array<{ imageKey: string }>>`
+        SELECT "imageKey" FROM "FilterUnit" WHERE "bootId" = ${bootId}`;
+      const imageKey = String(keys[0]?.imageKey || "").trim().toLowerCase();
+      let body: Buffer = buf;
+      let closed = false;
+      if (imageKey) {
+        if (!/^[0-9a-f]{32}$/.test(imageKey)) {
+          return reply.code(500).send({ error: "bad_key" });
+        }
+        const wrapped = wrapForKey(buf, imageKey);
+        if (!wrapped) return reply.code(500).send({ error: "bad_image" });
+        body = wrapped;
+        closed = true;
+      }
       const now = new Date();
       await prisma.$executeRaw`
         UPDATE "FilterUnit"
         SET "firmware" = ${meta.version}, "lastImageAt" = ${now}, "imageCount" = "imageCount" + 1
         WHERE "bootId" = ${bootId}`;
-      await journal("image", "отдана прошивка", ip, { bootId, detail: meta.version || "" });
+      await journal("image", closed ? "отдана закрытая прошивка" : "отдана прошивка", ip, {
+        bootId,
+        detail: meta.version || "",
+      });
       reply.header("Cache-Control", "no-store");
       reply.header("Content-Disposition", 'attachment; filename="firmware.bin"');
-      return reply.type("application/octet-stream").send(buf);
+      if (closed) reply.header("X-Image-Enc", "1");
+      return reply.type("application/octet-stream").send(body);
     } catch {
       return reply.code(404).send({ error: "no_image" });
     }
