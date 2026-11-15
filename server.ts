@@ -31,7 +31,7 @@ async function bootstrapAdmin(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const app = Fastify({ logger: true, bodyLimit: 80 * 1024 * 1024 });
+  const app = Fastify({ logger: true, bodyLimit: 200 * 1024 * 1024 });
 
   app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
     try {

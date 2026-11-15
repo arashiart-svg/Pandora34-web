@@ -161,7 +161,7 @@ type AppMeta = {
 };
 
 const EXE_KEEP = 10;
-const EXE_LIMIT = 80 * 1024 * 1024;
+const EXE_LIMIT = 200 * 1024 * 1024;
 
 type ExeVer = {
   version: string;
