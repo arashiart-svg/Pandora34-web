@@ -6,6 +6,7 @@ import { hashPassword } from "./auth/password";
 import { healthRoutes } from "./routes/health";
 import { authRoutes } from "./routes/auth";
 import { syncRoutes } from "./routes/sync";
+import { firmwareRoutes } from "./routes/firmware";
 
 /** Создаёт первого администратора из ADMIN_USERNAME/ADMIN_PASSWORD, если пользователей ещё нет. */
 async function bootstrapAdmin(): Promise<void> {
@@ -30,7 +31,7 @@ async function bootstrapAdmin(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const app = Fastify({ logger: true, bodyLimit: 20 * 1024 * 1024 });
+  const app = Fastify({ logger: true, bodyLimit: 80 * 1024 * 1024 });
 
   app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
     try {
@@ -42,9 +43,14 @@ async function main(): Promise<void> {
 
   await app.register(cors, { origin: true });
 
+  app.addContentTypeParser("application/octet-stream", { parseAs: "buffer" }, (_req, body, done) => {
+    done(null, body);
+  });
+
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(syncRoutes);
+  await app.register(firmwareRoutes);
 
   await bootstrapAdmin();
 

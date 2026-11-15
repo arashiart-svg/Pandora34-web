@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
+import { verifyPassword } from "../auth/password";
 import { env } from "../env";
 import { prisma } from "../prisma";
 
@@ -158,6 +159,76 @@ type AppMeta = {
   uploadedAt: string;
   files: Record<string, AppFileInfo>;
 };
+
+const EXE_KEEP = 10;
+const EXE_LIMIT = 80 * 1024 * 1024;
+
+type ExeVer = {
+  version: string;
+  size: number;
+  sha256: string;
+  uploadedAt: string;
+  file: string;
+};
+
+type ExeMeta = ExeVer & {
+  present: true;
+  versions: ExeVer[];
+};
+
+function exeDir(): string {
+  return path.join(env.firmwareDir, "appexe");
+}
+
+function exeMetaPath(): string {
+  return path.join(exeDir(), "current.json");
+}
+
+function exeVersionOk(version: string): boolean {
+  return /^\d+(?:\.\d+){0,3}$/.test(version);
+}
+
+async function readExeMeta(): Promise<ExeMeta | null> {
+  try {
+    const raw = await fs.readFile(exeMetaPath(), "utf8");
+    const parsed = JSON.parse(raw) as ExeMeta;
+    if (!parsed || parsed.present !== true || !exeVersionOk(parsed.version || "")) return null;
+    if (!Array.isArray(parsed.versions)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function writeExe(version: string, body: Buffer): Promise<ExeMeta> {
+  const file = `${version}.exe`;
+  const item: ExeVer = {
+    version,
+    size: body.length,
+    sha256: createHash("sha256").update(body).digest("hex"),
+    uploadedAt: new Date().toISOString(),
+    file,
+  };
+  await fs.mkdir(exeDir(), { recursive: true });
+  const tmp = path.join(exeDir(), `${file}.tmp`);
+  await fs.writeFile(tmp, body);
+  await fs.rename(tmp, path.join(exeDir(), file));
+  const prev = await readExeMeta();
+  let versions = (prev?.versions || []).filter((row) => row.version !== version && exeVersionOk(row.version));
+  versions.unshift(item);
+  versions.sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : a.uploadedAt > b.uploadedAt ? -1 : 0));
+  const dropped = versions.slice(EXE_KEEP);
+  versions = versions.slice(0, EXE_KEEP);
+  for (const old of dropped) {
+    if (!old.file || old.file.includes("/") || old.file.includes("\\") || old.file === file) continue;
+    await fs.rm(path.join(exeDir(), old.file), { force: true });
+  }
+  const meta: ExeMeta = { present: true, ...item, versions };
+  const metaTmp = exeMetaPath() + ".tmp";
+  await fs.writeFile(metaTmp, JSON.stringify(meta));
+  await fs.rename(metaTmp, exeMetaPath());
+  return meta;
+}
 
 async function readAppMeta(): Promise<AppMeta | null> {
   try {
@@ -380,9 +451,18 @@ function bearerOf(request: FastifyRequest): string {
   return header.slice("Bearer ".length).trim();
 }
 
+function deskCookieOk(token: string): boolean {
+  try {
+    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string; desk?: boolean };
+    return payload.kind === "web-gate" && payload.desk === true;
+  } catch {
+    return false;
+  }
+}
+
 function deskOk(request: FastifyRequest): boolean {
   const cookie = readCookie(request.headers.cookie, "pandora_web");
-  if (cookie && siteCookieOk(cookie)) return true;
+  if (cookie && deskCookieOk(cookie)) return true;
   const desk = (process.env.DESK_TOKEN || "").trim();
   const bearer = bearerOf(request);
   return Boolean(desk && bearer && sameSecret(bearer, desk));
@@ -420,13 +500,63 @@ function gateCookieOk(token: string): boolean {
   }
 }
 
-function doorPasswordOk(username: string, password: string): boolean {
+function envClean(name: string, fallback = ""): string {
+  let value = (process.env[name] ?? fallback).replace(/\r/g, "").trim();
+  if (value.length >= 2) {
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value.endsWith(quote)) value = value.slice(1, -1);
+  }
+  return value;
+}
+
+async function doorPasswordOk(username: string, password: string): Promise<"" | "desk" | "gate"> {
   const user = username.trim();
-  if (!user || !password) return false;
-  const gateUser = (process.env.WEB_GATE_USER || env.adminUsername || "").trim();
-  const gatePass = (process.env.WEB_GATE_PASSWORD || "").trim() || env.adminPassword;
-  if (!gateUser || !gatePass) return false;
-  return sameSecret(user, gateUser) && sameSecret(password, gatePass);
+  const pass = password.replace(/\r/g, "");
+  if (!user || !pass) return "";
+  const pairs: Array<[string, string]> = [
+    [envClean("WEB_GATE_USER", env.adminUsername), envClean("WEB_GATE_PASSWORD")],
+    [envClean("ADMIN_USERNAME", env.adminUsername), envClean("ADMIN_PASSWORD", env.adminPassword)],
+  ];
+  for (const [wantUser, wantPass] of pairs) {
+    if (!wantUser || !wantPass) continue;
+    if (sameSecret(user, wantUser) && sameSecret(pass, wantPass)) return "desk";
+  }
+  const row = await prisma.user.findUnique({ where: { username: user } });
+  if (row && (await verifyPassword(pass, row.passwordHash))) return row.role === "OWNER" ? "desk" : "gate";
+  if (await crmMasterOk(user, pass)) return "gate";
+  return "";
+}
+
+function crmPassHash(password: string): string {
+  return createHash("sha256").update("pandora34:" + password).digest("hex");
+}
+
+async function crmMasterOk(username: string, password: string): Promise<boolean> {
+  const login = username.trim().toLowerCase();
+  if (!login || login === "admin") return false;
+  const hash = crmPassHash(password);
+  const saved = await prisma.appState.findUnique({ where: { id: "main" } });
+  const raw = saved?.data as unknown;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  let masters = (raw as { masters?: unknown }).masters;
+  if (typeof masters === "string") {
+    try {
+      masters = JSON.parse(masters);
+    } catch {
+      return false;
+    }
+  }
+  if (!Array.isArray(masters)) return false;
+  for (const item of masters) {
+    if (!item || typeof item !== "object") continue;
+    const master = item as { login?: unknown; passwordHash?: unknown; accessEnabled?: unknown };
+    if (!master.accessEnabled) continue;
+    const masterLogin = String(master.login || "").trim().toLowerCase();
+    const masterHash = String(master.passwordHash || "");
+    if (!masterLogin || !masterHash) continue;
+    if (masterLogin === login && sameSecret(hash, masterHash)) return true;
+  }
+  return false;
 }
 
 function gateCookie(token: string): string {
@@ -452,11 +582,12 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const body = (request.body || {}) as { username?: string; password?: string };
     const username = String(body.username || "");
     const password = String(body.password || "");
-    if (!doorPasswordOk(username, password)) {
+    const door = await doorPasswordOk(username, password);
+    if (!door) {
       return reply.code(303).redirect("/enter.html?err=1");
     }
     const token = jwt.sign(
-      { sub: "web-gate", username: username.trim(), role: "ADMIN", kind: "web-gate" },
+      { sub: "web-gate", username: username.trim(), role: "ADMIN", kind: "web-gate", desk: door === "desk" },
       env.jwtSecret,
       { expiresIn: "365d" }
     );
@@ -757,6 +888,64 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     await fs.writeFile(appMetaPath(), JSON.stringify(meta));
     return meta;
   });
+
+  app.get("/firmware/app/exe/info", { preHandler: requireWindowOrDesk }, async () => {
+    const meta = await readExeMeta();
+    if (!meta) return { present: false };
+    try {
+      await fs.access(path.join(exeDir(), meta.file));
+    } catch {
+      return { present: false };
+    }
+    return meta;
+  });
+
+  app.get("/firmware/app/exe", { preHandler: requireWindow }, async (_request, reply) => {
+    const meta = await readExeMeta();
+    if (!meta) return reply.code(404).send({ error: "no_file" });
+    try {
+      const buf = await fs.readFile(path.join(exeDir(), meta.file));
+      reply.header("Cache-Control", "no-store");
+      reply.header("X-App-Version", meta.version);
+      reply.header("X-App-Sha256", meta.sha256);
+      return reply.type("application/octet-stream").send(buf);
+    } catch {
+      return reply.code(404).send({ error: "no_file" });
+    }
+  });
+
+  app.get("/firmware/app/exe/:version", { preHandler: requireWindow }, async (request, reply) => {
+    const version = (request.params as { version?: string }).version || "";
+    if (!exeVersionOk(version)) return reply.code(404).send({ error: "no_file" });
+    const meta = await readExeMeta();
+    const item = meta?.versions.find((row) => row.version === version);
+    if (!item) return reply.code(404).send({ error: "no_file" });
+    try {
+      const buf = await fs.readFile(path.join(exeDir(), item.file));
+      reply.header("Cache-Control", "no-store");
+      reply.header("X-App-Version", item.version);
+      reply.header("X-App-Sha256", item.sha256);
+      return reply.type("application/octet-stream").send(buf);
+    } catch {
+      return reply.code(404).send({ error: "no_file" });
+    }
+  });
+
+  app.post(
+    "/firmware/app/exe",
+    { bodyLimit: EXE_LIMIT, preHandler: requireDesk },
+    async (request, reply) => {
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length < 2 || body[0] !== 0x4d || body[1] !== 0x5a) {
+        return reply.code(400).send({ error: "bad_body" });
+      }
+      if (body.length > EXE_LIMIT) return reply.code(400).send({ error: "bad_body" });
+      const rawVer = request.headers["x-app-version"];
+      const version = (Array.isArray(rawVer) ? rawVer[0] : rawVer || "").toString().trim();
+      if (!exeVersionOk(version)) return reply.code(400).send({ error: "no_version" });
+      return writeExe(version, body);
+    },
+  );
 
   app.get("/firmware/image/info", { preHandler: requireWindowOrDesk }, async () => {
     const meta = await readImageMeta();
