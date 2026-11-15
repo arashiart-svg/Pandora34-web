@@ -4,6 +4,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
+import { clearWebSessionCookie, loginBlocked, loginFailed, loginIp, loginSucceeded, webSessionCookie } from "../auth/login-guard";
 import { verifyPassword } from "../auth/password";
 import { env } from "../env";
 import { prisma } from "../prisma";
@@ -484,10 +485,16 @@ function bearerOf(request: FastifyRequest): string {
   return header.slice("Bearer ".length).trim();
 }
 
+const WEB_MAX_MS = 7 * 24 * 60 * 60 * 1000;
+
+function webGateFresh(payload: { iat?: number }): boolean {
+  return typeof payload.iat === "number" && payload.iat * 1000 > Date.now() - WEB_MAX_MS;
+}
+
 function deskCookieOk(token: string): boolean {
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string; desk?: boolean };
-    return payload.kind === "web-gate" && payload.desk === true;
+    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string; desk?: boolean; iat?: number };
+    return payload.kind === "web-gate" && payload.desk === true && webGateFresh(payload);
   } catch {
     return false;
   }
@@ -526,8 +533,8 @@ async function requireWindowOrDesk(request: FastifyRequest, reply: FastifyReply)
 
 function gateCookieOk(token: string): boolean {
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string };
-    return payload.kind === "web-gate";
+    const payload = jwt.verify(token, env.jwtSecret) as { kind?: string; iat?: number };
+    return payload.kind === "web-gate" && webGateFresh(payload);
   } catch {
     return false;
   }
@@ -593,7 +600,7 @@ async function crmMasterOk(username: string, password: string): Promise<boolean>
 }
 
 function gateCookie(token: string): string {
-  return `pandora_web=${encodeURIComponent(token)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`;
+  return webSessionCookie(token);
 }
 
 export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
@@ -615,14 +622,20 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
     const body = (request.body || {}) as { username?: string; password?: string };
     const username = String(body.username || "");
     const password = String(body.password || "");
+    const ip = loginIp(request);
+    if (loginBlocked(ip, username)) {
+      return reply.code(303).redirect("/enter.html?err=2");
+    }
     const door = await doorPasswordOk(username, password);
     if (!door) {
+      loginFailed(ip, username);
       return reply.code(303).redirect("/enter.html?err=1");
     }
+    loginSucceeded(ip, username);
     const token = jwt.sign(
       { sub: "web-gate", username: username.trim(), role: "ADMIN", kind: "web-gate", desk: door === "desk" },
       env.jwtSecret,
-      { expiresIn: "365d" }
+      { expiresIn: "7d" }
     );
     reply.header("Set-Cookie", gateCookie(token));
     return reply.code(303).redirect("/");
@@ -635,7 +648,7 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/auth/web-logout", async (_request, reply) => {
-    reply.header("Set-Cookie", "pandora_web=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax");
+    reply.header("Set-Cookie", clearWebSessionCookie());
     return reply.code(303).redirect("/enter.html");
   });
   app.get("/firmware/boot/info", { preHandler: requireWindowOrDesk }, async () => {

@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Pandora34">
   <title>Pandora34 — вход</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <style>
     :root{--neon:#4fc7ea;--neon-glow:rgba(79,199,234,.35)}
     *{box-sizing:border-box}
@@ -38,6 +38,7 @@
   </div>
   <script>
     if(/[?&]err=1/.test(location.search)) document.getElementById('err').textContent='Неверный логин или пароль';
+    if(/[?&]err=2/.test(location.search)) document.getElementById('err').textContent='Слишком много попыток. Подожди 15 минут';
   </script>
 </body>
 </html>

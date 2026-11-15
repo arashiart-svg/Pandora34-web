@@ -5866,6 +5866,8 @@ async function renderCfsDesk(){
     const r=await fetch(API_BASE_URL+'/firmware/desk',cfsDeskOpts());
     if(r.status===401){
       askBtn.className='';
+      const menu=document.getElementById('menuCfs');
+      if(menu) menu.style.display='none';
       if(cfsDeskOpen) cfsShow(cfsDeskOpen,'Зайди на сайт заново.');
       return;
     }
