@@ -220,8 +220,54 @@ function exeVersionOk(version: string): boolean {
 }
 
 async function readExeMeta(): Promise<ExeMeta | null> {
+  return readExeMetaFrom(exeMetaPath());
+}
+
+async function writeExe(version: string, body: Buffer): Promise<ExeMeta> {
+  return writeExeTo(version, body, exeDir(), exeMetaPath());
+}
+
+function odomExeDir(): string {
+  return path.join(env.firmwareDir, "odomexe");
+}
+
+function odomExeMetaPath(): string {
+  return path.join(odomExeDir(), "current.json");
+}
+
+async function writeExeTo(version: string, body: Buffer, dir: string, metaPath: string): Promise<ExeMeta> {
+  const file = `${version}.exe`;
+  const item: ExeVer = {
+    version,
+    size: body.length,
+    sha256: createHash("sha256").update(body).digest("hex"),
+    uploadedAt: new Date().toISOString(),
+    file,
+  };
+  await fs.mkdir(dir, { recursive: true });
+  const tmp = path.join(dir, `${file}.tmp`);
+  await fs.writeFile(tmp, body);
+  await fs.rename(tmp, path.join(dir, file));
+  const prev = await readExeMetaFrom(metaPath);
+  let versions = (prev?.versions || []).filter((row) => row.version !== version && exeVersionOk(row.version));
+  versions.unshift(item);
+  versions.sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : a.uploadedAt > b.uploadedAt ? -1 : 0));
+  const dropped = versions.slice(EXE_KEEP);
+  versions = versions.slice(0, EXE_KEEP);
+  for (const old of dropped) {
+    if (!old.file || old.file.includes("/") || old.file.includes("\\") || old.file === file) continue;
+    await fs.rm(path.join(dir, old.file), { force: true });
+  }
+  const meta: ExeMeta = { present: true, ...item, versions };
+  const metaTmp = metaPath + ".tmp";
+  await fs.writeFile(metaTmp, JSON.stringify(meta));
+  await fs.rename(metaTmp, metaPath);
+  return meta;
+}
+
+async function readExeMetaFrom(metaPath: string): Promise<ExeMeta | null> {
   try {
-    const raw = await fs.readFile(exeMetaPath(), "utf8");
+    const raw = await fs.readFile(metaPath, "utf8");
     const parsed = JSON.parse(raw) as ExeMeta;
     if (!parsed || parsed.present !== true || !exeVersionOk(parsed.version || "")) return null;
     if (!Array.isArray(parsed.versions)) return null;
@@ -231,34 +277,8 @@ async function readExeMeta(): Promise<ExeMeta | null> {
   }
 }
 
-async function writeExe(version: string, body: Buffer): Promise<ExeMeta> {
-  const file = `${version}.exe`;
-  const item: ExeVer = {
-    version,
-    size: body.length,
-    sha256: createHash("sha256").update(body).digest("hex"),
-    uploadedAt: new Date().toISOString(),
-    file,
-  };
-  await fs.mkdir(exeDir(), { recursive: true });
-  const tmp = path.join(exeDir(), `${file}.tmp`);
-  await fs.writeFile(tmp, body);
-  await fs.rename(tmp, path.join(exeDir(), file));
-  const prev = await readExeMeta();
-  let versions = (prev?.versions || []).filter((row) => row.version !== version && exeVersionOk(row.version));
-  versions.unshift(item);
-  versions.sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : a.uploadedAt > b.uploadedAt ? -1 : 0));
-  const dropped = versions.slice(EXE_KEEP);
-  versions = versions.slice(0, EXE_KEEP);
-  for (const old of dropped) {
-    if (!old.file || old.file.includes("/") || old.file.includes("\\") || old.file === file) continue;
-    await fs.rm(path.join(exeDir(), old.file), { force: true });
-  }
-  const meta: ExeMeta = { present: true, ...item, versions };
-  const metaTmp = exeMetaPath() + ".tmp";
-  await fs.writeFile(metaTmp, JSON.stringify(meta));
-  await fs.rename(metaTmp, exeMetaPath());
-  return meta;
+async function readOdomExeMeta(): Promise<ExeMeta | null> {
+  return readExeMetaFrom(odomExeMetaPath());
 }
 
 async function readAppMeta(): Promise<AppMeta | null> {
@@ -990,6 +1010,47 @@ export async function firmwareRoutes(app: FastifyInstance): Promise<void> {
       const version = (Array.isArray(rawVer) ? rawVer[0] : rawVer || "").toString().trim();
       if (!exeVersionOk(version)) return reply.code(400).send({ error: "no_version" });
       return writeExe(version, body);
+    },
+  );
+
+  app.get("/firmware/odom/exe/info", { preHandler: requireWindowOrDesk }, async () => {
+    const meta = await readOdomExeMeta();
+    if (!meta) return { present: false };
+    try {
+      await fs.access(path.join(odomExeDir(), meta.file));
+    } catch {
+      return { present: false };
+    }
+    return meta;
+  });
+
+  app.get("/firmware/odom/exe", { preHandler: requireWindow }, async (_request, reply) => {
+    const meta = await readOdomExeMeta();
+    if (!meta) return reply.code(404).send({ error: "no_file" });
+    try {
+      const buf = await fs.readFile(path.join(odomExeDir(), meta.file));
+      reply.header("Cache-Control", "no-store");
+      reply.header("X-App-Version", meta.version);
+      reply.header("X-App-Sha256", meta.sha256);
+      return reply.type("application/octet-stream").send(buf);
+    } catch {
+      return reply.code(404).send({ error: "no_file" });
+    }
+  });
+
+  app.post(
+    "/firmware/odom/exe",
+    { bodyLimit: EXE_LIMIT, preHandler: requireDesk },
+    async (request, reply) => {
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length < 2 || body[0] !== 0x4d || body[1] !== 0x5a) {
+        return reply.code(400).send({ error: "bad_body" });
+      }
+      if (body.length > EXE_LIMIT) return reply.code(400).send({ error: "bad_body" });
+      const rawVer = request.headers["x-app-version"];
+      const version = (Array.isArray(rawVer) ? rawVer[0] : rawVer || "").toString().trim();
+      if (!exeVersionOk(version)) return reply.code(400).send({ error: "no_version" });
+      return writeExeTo(version, body, odomExeDir(), odomExeMetaPath());
     },
   );
 
